@@ -141,6 +141,31 @@ QByteArray QHttpNetworkRequestPrivate::header(const QHttpNetworkRequest &request
     ba += QByteArray::number(request.minorVersion());
     ba += "\r\n";
 
+    //new code start, (for QT 5.5.1, paste into line 144)
+    QStringList headerOrder;
+    headerOrder << "Host" << "Connection" << "User-Agent" << "Accept" << "Referer" << "Accept-Encoding" << "Accept-Language" << "Cookie";
+
+    for (int i = 0; i < headerOrder.size(); i++)
+    {
+    	for (int j = 0; j < fields.count(); j++)
+    	{
+    		QPair<QByteArray, QByteArray> t_header = fields.at(j);
+    		if (t_header.first == headerOrder.at(i))
+    		{
+    			ba += t_header.first;
+    			ba += ": ";
+    			//not sure if this check is really needed
+    			if (t_header.first == "Accept" && request.d->url.toString().contains("_Incapsula_Resource"))
+    				ba += "*/*";
+    			else
+    				ba += t_header.second;
+    			ba += "\r\n";
+    			fields.removeAt(j);
+    			break;
+    		}
+    	}
+    }
+
     QList<QPair<QByteArray, QByteArray> >::const_iterator it = fields.constBegin();
     QList<QPair<QByteArray, QByteArray> >::const_iterator endIt = fields.constEnd();
     for (; it != endIt; ++it) {
