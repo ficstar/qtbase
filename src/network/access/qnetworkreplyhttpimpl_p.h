@@ -89,7 +89,6 @@ public:
 
     Q_DECLARE_PRIVATE(QNetworkReplyHttpImpl)
     Q_PRIVATE_SLOT(d_func(), void _q_startOperation())
-    Q_PRIVATE_SLOT(d_func(), bool start(const QNetworkRequest &))
     Q_PRIVATE_SLOT(d_func(), void _q_cacheLoadReadyRead())
     Q_PRIVATE_SLOT(d_func(), void _q_bufferOutgoingData())
     Q_PRIVATE_SLOT(d_func(), void _q_bufferOutgoingDataFinished())
@@ -128,7 +127,7 @@ public:
     Q_PRIVATE_SLOT(d_func(), void emitReplyUploadProgress(qint64, qint64))
     Q_PRIVATE_SLOT(d_func(), void _q_cacheSaveDeviceAboutToClose())
     Q_PRIVATE_SLOT(d_func(), void _q_metaDataChanged())
-    Q_PRIVATE_SLOT(d_func(), void onRedirected(const QUrl &, int, int))
+
 
 #ifndef QT_NO_SSL
 protected:
@@ -159,7 +158,7 @@ public:
     QNetworkReplyHttpImplPrivate();
     ~QNetworkReplyHttpImplPrivate();
 
-    bool start(const QNetworkRequest &newHttpRequest);
+    bool start();
     void _q_startOperation();
 
     void _q_cacheLoadReadyRead();
@@ -204,7 +203,6 @@ public:
     QIODevice *outgoingData;
     QSharedPointer<QRingBuffer> outgoingDataBuffer;
     void emitReplyUploadProgress(qint64 bytesSent, qint64 bytesTotal); // dup?
-    void onRedirected(const QUrl &redirectUrl, int httpStatus, int maxRedirectsRemainig);
     qint64 bytesUploaded;
 
 
@@ -264,10 +262,9 @@ public:
     QNetworkCacheMetaData fetchCacheMetaData(const QNetworkCacheMetaData &metaData) const;
 
 
-    void postRequest(const QNetworkRequest& newHttpRequest);
-    QNetworkAccessManager::Operation getRedirectOperation(QNetworkAccessManager::Operation currentOp, int httpStatus);
-    QNetworkRequest createRedirectRequest(const QNetworkRequest &originalRequests, const QUrl &url, int maxRedirectsRemainig);
-    bool isHttpRedirectResponse() const;
+    void postRequest();
+
+
 
 public:
     // From HTTP thread:

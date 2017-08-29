@@ -64,13 +64,7 @@ HRESULT NativeWindow::createSwapChain(ID3D11Device* device, DXGIFactory* factory
     swapChainDesc.Windowed = TRUE;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-    const HRESULT result = factory->CreateSwapChain(device, &swapChainDesc, swapChain);
-    if (SUCCEEDED(result))
-    {
-        const HRESULT makeWindowAssociationResult = factory->MakeWindowAssociation(mWindow, DXGI_MWA_NO_ALT_ENTER);
-        UNUSED_TRACE_VARIABLE(makeWindowAssociationResult);
-    }
-    return result;
+    return factory->CreateSwapChain(device, &swapChainDesc, swapChain);
 }
 #endif
 }

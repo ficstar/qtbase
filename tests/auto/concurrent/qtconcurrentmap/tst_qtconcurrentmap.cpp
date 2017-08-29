@@ -2250,38 +2250,38 @@ void tst_QtConcurrentMap::noDetach()
         QVERIFY(l.isDetached());
 
         QList<int> ll = l;
-        QVERIFY(!l.isDetached());
+        QVERIFY(l.isDetached() == false);
 
         QtConcurrent::mapped(l, mapper).waitForFinished();
 
-        QVERIFY(!l.isDetached());
-        QVERIFY(!ll.isDetached());
+        QVERIFY(l.isDetached() == false);
+        QVERIFY(ll.isDetached() == false);
 
         QtConcurrent::mappedReduced(l, mapper, intSumReduce).waitForFinished();
 
-        QVERIFY(!l.isDetached());
-        QVERIFY(!ll.isDetached());
+        QVERIFY(l.isDetached() == false);
+        QVERIFY(ll.isDetached() == false);
 
         QtConcurrent::map(l, multiplyBy2Immutable).waitForFinished();
-        QVERIFY(l.isDetached());
-        QVERIFY(ll.isDetached());
+        QVERIFY(l.isDetached() == true);
+        QVERIFY(ll.isDetached() == true);
     }
     {
         const QList<int> l = QList<int>() << 1;
         QVERIFY(l.isDetached());
 
         const QList<int> ll = l;
-        QVERIFY(!l.isDetached());
+        QVERIFY(l.isDetached() == false);
 
         QtConcurrent::mapped(l, mapper).waitForFinished();
 
-        QVERIFY(!l.isDetached());
-        QVERIFY(!ll.isDetached());
+        QVERIFY(l.isDetached() == false);
+        QVERIFY(ll.isDetached() == false);
 
         QtConcurrent::mappedReduced(l, mapper, intSumReduce).waitForFinished();
 
-        QVERIFY(!l.isDetached());
-        QVERIFY(!ll.isDetached());
+        QVERIFY(l.isDetached() == false);
+        QVERIFY(ll.isDetached() == false);
     }
 
 }

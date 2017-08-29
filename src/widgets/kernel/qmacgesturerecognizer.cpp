@@ -115,8 +115,7 @@ QMacPinchGestureRecognizer::recognize(QGesture *gesture, QObject *obj, QEvent *e
         case Qt::ZoomNativeGesture:
             g->setLastScaleFactor(g->scaleFactor());
             g->setLastRotationAngle(g->rotationAngle());
-            g->setScaleFactor(1 + ev->value());
-            g->setTotalScaleFactor(g->totalScaleFactor() * g->scaleFactor());
+            g->setScaleFactor(g->scaleFactor() * (1 + ev->value()));
             g->setChangeFlags(QPinchGesture::ScaleFactorChanged);
             g->setTotalChangeFlags(g->totalChangeFlags() | g->changeFlags());
             g->setHotSpot(ev->screenPos());
@@ -257,7 +256,6 @@ void QMacPanGestureRecognizer::reset(QGesture *gesture)
     QPanGesture *g = static_cast<QPanGesture *>(gesture);
     _startPos = QPointF();
     _panCanceled = true;
-    _panTimer.stop();
     g->setOffset(QPointF(0, 0));
     g->setLastOffset(QPointF(0, 0));
     g->setAcceleration(qreal(1));

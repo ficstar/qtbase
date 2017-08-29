@@ -34,6 +34,8 @@
 #include <qimageiohandler.h>
 #include <qstringlist.h>
 
+#ifndef QT_NO_IMAGEFORMATPLUGIN
+
 #include "main.h"
 
 #ifdef QT_NO_IMAGEFORMAT_GIF
@@ -66,5 +68,7 @@ QImageIOHandler *QGifPlugin::create(QIODevice *device, const QByteArray &format)
     handler->setFormat(format);
     return handler;
 }
+
+#endif // QT_NO_IMAGEFORMATPLUGIN
 
 QT_END_NAMESPACE

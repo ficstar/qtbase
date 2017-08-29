@@ -70,14 +70,13 @@ public:
     bool isReadable() const;
     bool exists() const;
 
-    struct FileInfo
+    struct Q_GUI_EXPORT FileInfo
     {
-        FileInfo() Q_DECL_NOTHROW
-            : isDir(false), isFile(false), isSymLink(false), crc(0), size(0)
-        {}
-
-        bool isValid() const Q_DECL_NOTHROW { return isDir || isFile || isSymLink; }
-
+        FileInfo();
+        FileInfo(const FileInfo &other);
+        ~FileInfo();
+        FileInfo &operator=(const FileInfo &other);
+        bool isValid() const;
         QString filePath;
         uint isDir : 1;
         uint isFile : 1;
@@ -86,9 +85,10 @@ public:
         uint crc;
         qint64 size;
         QDateTime lastModified;
+        void *d;
     };
 
-    QVector<FileInfo> fileInfoList() const;
+    QList<FileInfo> fileInfoList() const;
     int count() const;
 
     FileInfo entryInfoAt(int index) const;
@@ -111,8 +111,6 @@ private:
     QZipReaderPrivate *d;
     Q_DISABLE_COPY(QZipReader)
 };
-Q_DECLARE_TYPEINFO(QZipReader::FileInfo, Q_MOVABLE_TYPE);
-Q_DECLARE_TYPEINFO(QZipReader::Status, Q_PRIMITIVE_TYPE);
 
 QT_END_NAMESPACE
 

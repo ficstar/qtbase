@@ -292,7 +292,7 @@ void QEvdevTabletHandler::readData()
 
 
 QEvdevTabletHandlerThread::QEvdevTabletHandlerThread(const QString &spec, QObject *parent)
-    : QDaemonThread(parent), m_spec(spec), m_handler(0)
+    : QThread(parent), m_spec(spec), m_handler(0)
 {
     start();
 }

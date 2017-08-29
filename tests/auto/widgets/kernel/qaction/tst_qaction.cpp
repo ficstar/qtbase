@@ -242,7 +242,7 @@ void tst_QAction::setStandardKeys()
     QList<QKeySequence> list;
     act.setShortcuts(list);
     act.setShortcuts(QKeySequence::Copy);
-    QCOMPARE(act.shortcut(), act.shortcuts().first());
+    QVERIFY(act.shortcut() == act.shortcuts().first());
 
     QList<QKeySequence> expected;
     const QKeySequence ctrlC = QKeySequence(QStringLiteral("CTRL+C"));

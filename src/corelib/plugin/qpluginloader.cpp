@@ -139,7 +139,7 @@ QPluginLoader::QPluginLoader(QObject *parent)
 
     To be loadable, the file's suffix must be a valid suffix for a
     loadable library in accordance with the platform, e.g. \c .so on
-    Unix, - \c .dylib on \macos and iOS, and \c .dll on Windows. The suffix
+    Unix, - \c .dylib on OS X and iOS, and \c .dll on Windows. The suffix
     can be verified with QLibrary::isLibrary().
 
     \sa setFileName()
@@ -273,33 +273,20 @@ bool QPluginLoader::isLoaded() const
 #if defined(QT_SHARED)
 static QString locatePlugin(const QString& fileName)
 {
-    const bool isAbsolute = QDir::isAbsolutePath(fileName);
-    if (isAbsolute) {
-        QFileInfo fi(fileName);
-        if (fi.isFile()) {
-            return fi.canonicalFilePath();
-        }
-    }
     QStringList prefixes = QLibraryPrivate::prefixes_sys();
     prefixes.prepend(QString());
     QStringList suffixes = QLibraryPrivate::suffixes_sys(QString());
     suffixes.prepend(QString());
 
     // Split up "subdir/filename"
-    const int slash = fileName.lastIndexOf(QLatin1Char('/'));
-    const QStringRef baseName = fileName.midRef(slash + 1);
-    const QStringRef basePath = isAbsolute ? QStringRef() : fileName.leftRef(slash + 1); // keep the '/'
+    const int slash = fileName.lastIndexOf('/');
+    const QString baseName = fileName.mid(slash + 1);
+    const QString basePath = fileName.left(slash + 1); // keep the '/'
 
     const bool debug = qt_debug_component();
 
-    QStringList paths;
-    if (isAbsolute) {
-        paths.append(fileName.left(slash)); // don't include the '/'
-    } else {
-        paths = QCoreApplication::libraryPaths();
-        paths.prepend(QStringLiteral(".")); // search in current dir first
-    }
-
+    QStringList paths = QCoreApplication::libraryPaths();
+    paths.prepend(QStringLiteral("./")); // search in current dir first
     foreach (const QString &path, paths) {
         foreach (const QString &prefix, prefixes) {
             foreach (const QString &suffix, suffixes) {
@@ -350,7 +337,12 @@ void QPluginLoader::setFileName(const QString &fileName)
         did_load = false;
     }
 
-    const QString fn = locatePlugin(fileName);
+    QFileInfo fi(fileName);
+    QString fn;
+    if (fi.isAbsolute())
+        fn = fi.canonicalFilePath();
+    else
+        fn = locatePlugin(fileName);
 
     d = QLibraryPrivate::findOrCreate(fn, QString(), lh);
     if (!fn.isEmpty())
@@ -435,9 +427,7 @@ QObjectList QPluginLoader::staticInstances()
     QObjectList instances;
     const StaticPluginList *plugins = staticPluginList();
     if (plugins) {
-        const int numPlugins = plugins->size();
-        instances.reserve(numPlugins);
-        for (int i = 0; i < numPlugins; ++i)
+        for (int i = 0; i < plugins->size(); ++i)
             instances += plugins->at(i).instance();
     }
     return instances;

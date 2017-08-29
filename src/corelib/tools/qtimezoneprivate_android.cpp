@@ -150,7 +150,7 @@ int QAndroidTimeZonePrivate::daylightTimeOffset(qint64 atMSecsSinceEpoch) const
 bool QAndroidTimeZonePrivate::hasDaylightTime() const
 {
     if ( androidTimeZone.isValid() )
-        /* note: the Java function only tests for future DST transtions, not past */
+        /* note: the Java function only tests for future daylight transtions, not past */
         return androidTimeZone.callMethod<jboolean>("useDaylightTime" );
     else
         return false;
@@ -210,34 +210,34 @@ QTimeZonePrivate::Data QAndroidTimeZonePrivate::dataForLocalTime(qint64 forLocal
     } else {
         qint64 UTCepochMSecs;
 
-        // compare the UTC time with standard offset against normal DST offset of one hour
+        // compare the UTC time with standard offset against normal daylight offset of one hour
         qint64 standardUTCMSecs(forLocalMSecs - (standardTimeOffset(forLocalMSecs) * 1000));
         qint64 daylightUTCMsecs;
 
-        // Check if daylight-saving time applies,
-        // checking also for DST boundaries
+        // Check if daylight time does apply,
+        // checking also for daylight time boundaries
         if (isDaylightTime(standardUTCMSecs)) {
-            // If DST does apply, then standardUTCMSecs will be an hour or so ahead of the real epoch time
+            // If daylight does apply, then standardUTCMSecs will be an hour or so ahead of the real epoch time
             // so check that time
             daylightUTCMsecs = standardUTCMSecs - daylightTimeOffset(standardUTCMSecs)*1000;
             if (isDaylightTime(daylightUTCMsecs)) {
-                // DST confirmed
+                // daylight time confirmed
                 UTCepochMSecs = daylightUTCMsecs;
             } else {
-                // DST has just finished
+                // daylight time has just finished
                 UTCepochMSecs = standardUTCMSecs;
             }
         } else {
             // Standard time indicated, but check for a false negative.
-            // Would a standard one-hour DST offset indicate DST?
+            // Would a standard one-hour daylight offset indicate daylight time?
             daylightUTCMsecs = standardUTCMSecs - 3600000; // 3600000 MSECS_PER_HOUR
             if (isDaylightTime(daylightUTCMsecs)) {
-                // DST may have just started,
-                // but double check against timezone's own DST offset
+                // daylight time may have just started,
+                // but double check against timezone's own daylight offset
                 // (don't necessarily assume a one-hour offset)
                 daylightUTCMsecs = standardUTCMSecs - daylightTimeOffset(daylightUTCMsecs)*1000;
                 if (isDaylightTime(daylightUTCMsecs)) {
-                    // DST confirmed
+                    // daylight time confirmed
                     UTCepochMSecs = daylightUTCMsecs;
                 } else {
                     // false positive, apply standard time after all

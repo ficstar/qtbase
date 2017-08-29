@@ -35,7 +35,6 @@
 
 #ifndef QT_NO_NETWORKPROXY
 
-#include <CFNetwork/CFNetwork.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <SystemConfiguration/SystemConfiguration.h>
 

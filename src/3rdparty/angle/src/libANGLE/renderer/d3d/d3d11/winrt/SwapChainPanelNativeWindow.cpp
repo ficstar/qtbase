@@ -66,7 +66,7 @@ bool SwapChainPanelNativeWindow::initialize(EGLNativeWindowType window, IPropert
         }
         else
         {
-            result = GetSwapChainPanelSize(mSwapChainPanel, &mClientRect, &mRequiresSwapChainScaling);
+            result = GetSwapChainPanelSize(mSwapChainPanel, &mClientRect);
         }
     }
 
@@ -139,6 +139,7 @@ HRESULT SwapChainPanelNativeWindow::createSwapChain(ID3D11Device *device, DXGIFa
 
     ComPtr<IDXGISwapChain1> newSwapChain;
     ComPtr<ISwapChainPanelNative> swapChainPanelNative;
+    RECT currentPanelSize = {};
 
     HRESULT result = factory->CreateSwapChainForComposition(device, &swapChainDesc, nullptr, newSwapChain.ReleaseAndGetAddressOf());
 
@@ -166,13 +167,13 @@ HRESULT SwapChainPanelNativeWindow::createSwapChain(ID3D11Device *device, DXGIFa
     // first reading the current size of the swapchain panel, then scaling
     if (SUCCEEDED(result) && mRequiresSwapChainScaling)
     {
-        ComPtr<ABI::Windows::UI::Xaml::IUIElement> uiElement;
-        result = mSwapChainPanel.As(&uiElement);
-        ASSERT(SUCCEEDED(result));
+        result = GetSwapChainPanelSize(mSwapChainPanel, &currentPanelSize);
+    }
 
-        Size currentSize;
-        result = uiElement->get_RenderSize(&currentSize);
-        ASSERT(SUCCEEDED(result));
+    // Scale the swapchain to fit inside the contents of the panel.
+    if (SUCCEEDED(result) && mRequiresSwapChainScaling)
+    {
+        SIZE currentSize = { currentPanelSize.right, currentPanelSize.bottom };
         result = scaleSwapChain(currentSize);
     }
 
@@ -189,9 +190,9 @@ HRESULT SwapChainPanelNativeWindow::createSwapChain(ID3D11Device *device, DXGIFa
     return result;
 }
 
-HRESULT SwapChainPanelNativeWindow::scaleSwapChain(const Size &newSize)
+HRESULT SwapChainPanelNativeWindow::scaleSwapChain(const SIZE &newSize)
 {
-    ABI::Windows::Foundation::Size renderScale = { newSize.Width / mNewClientRect.right, newSize.Height / mNewClientRect.bottom };
+    ABI::Windows::Foundation::Size renderScale = { (float)newSize.cx/(float)mClientRect.right, (float)newSize.cy/(float)mClientRect.bottom };
     // Setup a scale matrix for the swap chain
     DXGI_MATRIX_3X2_F scaleMatrix = {};
     scaleMatrix._11 = renderScale.Width;
@@ -207,7 +208,7 @@ HRESULT SwapChainPanelNativeWindow::scaleSwapChain(const Size &newSize)
     return result;
 }
 
-HRESULT GetSwapChainPanelSize(const ComPtr<ABI::Windows::UI::Xaml::Controls::ISwapChainPanel> &swapChainPanel, RECT *windowSize, bool *scalingActive)
+HRESULT GetSwapChainPanelSize(const ComPtr<ABI::Windows::UI::Xaml::Controls::ISwapChainPanel> &swapChainPanel, RECT *windowSize)
 {
     ComPtr<ABI::Windows::UI::Xaml::IUIElement> uiElement;
     ABI::Windows::Foundation::Size renderSize = { 0, 0 };
@@ -219,14 +220,7 @@ HRESULT GetSwapChainPanelSize(const ComPtr<ABI::Windows::UI::Xaml::Controls::ISw
 
     if (SUCCEEDED(result))
     {
-        long width = ConvertDipsToPixels(renderSize.Width);
-        long height = ConvertDipsToPixels(renderSize.Height);
-        *windowSize = { 0, 0, width, height };
-
-        if (scalingActive)
-        {
-            *scalingActive = width != renderSize.Width || height != renderSize.Height;
-        }
+        *windowSize = { 0, 0, lround(renderSize.Width), lround(renderSize.Height) };
     }
 
     return result;

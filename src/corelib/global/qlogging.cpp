@@ -65,9 +65,6 @@
 # include <systemd/sd-journal.h>
 # include <syslog.h>
 #endif
-#if defined(QT_USE_SYSLOG) && !defined(QT_BOOTSTRAPPED)
-# include <syslog.h>
-#endif
 #ifdef Q_OS_UNIX
 # include <sys/types.h>
 # include <sys/stat.h>
@@ -96,11 +93,6 @@ extern char *__progname;
 
 #if defined(Q_OS_LINUX) && (defined(__GLIBC__) || __has_include(<sys/syscall.h>))
 #  include <sys/syscall.h>
-
-# if defined(Q_OS_ANDROID) && !defined(SYS_gettid)
-#  define SYS_gettid __NR_gettid
-# endif
-
 static long qt_gettid()
 {
     // no error handling
@@ -255,11 +247,10 @@ static inline void convert_to_wchar_t_elided(wchar_t *d, size_t space, const cha
     if (len + 1 > space) {
         const size_t skip = len - space + 4; // 4 for "..." + '\0'
         s += skip;
-        len -= skip;
         for (int i = 0; i < 3; ++i)
           *d++ = L'.';
     }
-    while (len--)
+    while (*s)
         *d++ = *s++;
     *d++ = 0;
 }
@@ -980,30 +971,28 @@ struct QMessagePattern {
     // 0 terminated arrays of literal tokens / literal or placeholder tokens
     const char **literals;
     const char **tokens;
-    QList<QString> timeArgs;   // timeFormats in sequence of %{time
+    QString timeFormat;
 #ifndef QT_BOOTSTRAPPED
     QElapsedTimer timer;
 #endif
 #ifdef QLOGGING_HAVE_BACKTRACE
-    struct BacktraceParams {
-        QString backtraceSeparator;
-        int backtraceDepth;
-    };
-    QVector<BacktraceParams> backtraceArgs; // backtrace argumens in sequence of %{backtrace
+    QString backtraceSeparator;
+    int backtraceDepth;
 #endif
 
     bool fromEnvironment;
     static QBasicMutex mutex;
 };
-#ifdef QLOGGING_HAVE_BACKTRACE
-Q_DECLARE_TYPEINFO(QMessagePattern::BacktraceParams, Q_MOVABLE_TYPE);
-#endif
 
 QBasicMutex QMessagePattern::mutex;
 
 QMessagePattern::QMessagePattern()
     : literals(0)
     , tokens(0)
+#ifdef QLOGGING_HAVE_BACKTRACE
+    , backtraceSeparator(QLatin1Char('|'))
+    , backtraceDepth(5)
+#endif
     , fromEnvironment(false)
 {
 #ifndef QT_BOOTSTRAPPED
@@ -1106,14 +1095,10 @@ void QMessagePattern::setPattern(const QString &pattern)
                 tokens[i] = timeTokenC;
                 int spaceIdx = lexeme.indexOf(QChar::fromLatin1(' '));
                 if (spaceIdx > 0)
-                    timeArgs.append(lexeme.mid(spaceIdx + 1, lexeme.length() - spaceIdx - 2));
-                else
-                    timeArgs.append(QString());
+                    timeFormat = lexeme.mid(spaceIdx + 1, lexeme.length() - spaceIdx - 2);
             } else if (lexeme.startsWith(QLatin1String(backtraceTokenC))) {
 #ifdef QLOGGING_HAVE_BACKTRACE
                 tokens[i] = backtraceTokenC;
-                QString backtraceSeparator = QStringLiteral("|");
-                int backtraceDepth = 5;
                 QRegularExpression depthRx(QStringLiteral(" depth=(?|\"([^\"]*)\"|([^ }]*))"));
                 QRegularExpression separatorRx(QStringLiteral(" separator=(?|\"([^\"]*)\"|([^ }]*))"));
                 QRegularExpressionMatch m = depthRx.match(lexeme);
@@ -1127,10 +1112,6 @@ void QMessagePattern::setPattern(const QString &pattern)
                 m = separatorRx.match(lexeme);
                 if (m.hasMatch())
                     backtraceSeparator = m.captured(1);
-                BacktraceParams backtraceParams;
-                backtraceParams.backtraceDepth = backtraceDepth;
-                backtraceParams.backtraceSeparator = backtraceSeparator;
-                backtraceArgs.append(backtraceParams);
 #else
                 error += QStringLiteral("QT_MESSAGE_PATTERN: %{backtrace} is not supported by this Qt build\n");
 #endif
@@ -1204,7 +1185,7 @@ static void slog2_default_handler(QtMsgType msgType, const char *message)
 
         buffer_config.buffer_set_name = __progname;
         buffer_config.num_buffers = 1;
-        buffer_config.verbosity_level = SLOG2_DEBUG1;
+        buffer_config.verbosity_level = SLOG2_INFO;
         buffer_config.buffer_config[0].buffer_name = "default";
         buffer_config.buffer_config[0].num_pages = 8;
 
@@ -1273,29 +1254,13 @@ QString qFormatLogMessage(QtMsgType type, const QMessageLogContext &context, con
 
     bool skip = false;
 
-#ifndef QT_BOOTSTRAPPED
-    int timeArgsIdx = 0;
-#ifdef QLOGGING_HAVE_BACKTRACE
-    int backtraceArgsIdx = 0;
-#endif
-#endif
-
     // we do not convert file, function, line literals to local encoding due to overhead
     for (int i = 0; pattern->tokens[i] != 0; ++i) {
         const char *token = pattern->tokens[i];
         if (token == endifTokenC) {
             skip = false;
         } else if (skip) {
-            // we skip adding messages, but we have to iterate over
-            // timeArgsIdx and backtraceArgsIdx anyway
-#ifndef QT_BOOTSTRAPPED
-            if (token == timeTokenC)
-                timeArgsIdx++;
-#ifdef QLOGGING_HAVE_BACKTRACE
-            else if (token == backtraceTokenC)
-                backtraceArgsIdx++;
-#endif
-#endif
+            // do nothing
         } else if (token == messageTokenC) {
             message.append(str);
         } else if (token == categoryTokenC) {
@@ -1333,15 +1298,11 @@ QString qFormatLogMessage(QtMsgType type, const QMessageLogContext &context, con
             message.append(QString::number(qlonglong(QThread::currentThread()->currentThread()), 16));
 #ifdef QLOGGING_HAVE_BACKTRACE
         } else if (token == backtraceTokenC) {
-            QMessagePattern::BacktraceParams backtraceParams = pattern->backtraceArgs.at(backtraceArgsIdx);
-            QString backtraceSeparator = backtraceParams.backtraceSeparator;
-            int backtraceDepth = backtraceParams.backtraceDepth;
-            backtraceArgsIdx++;
-            QVarLengthArray<void*, 32> buffer(7 + backtraceDepth);
+            QVarLengthArray<void*, 32> buffer(7 + pattern->backtraceDepth);
             int n = backtrace(buffer.data(), buffer.size());
             if (n > 0) {
                 int numberPrinted = 0;
-                for (int i = 0; i < n && numberPrinted < backtraceDepth; ++i) {
+                for (int i = 0; i < n && numberPrinted < pattern->backtraceDepth; ++i) {
                     QScopedPointer<char*, QScopedPointerPodDeleter> strings(backtrace_symbols(buffer.data() + i, 1));
                     QString trace = QString::fromLatin1(strings.data()[0]);
                     // The results of backtrace_symbols looks like this:
@@ -1371,7 +1332,7 @@ QString qFormatLogMessage(QtMsgType type, const QMessageLogContext &context, con
                         }
 
                         if (numberPrinted > 0)
-                            message.append(backtraceSeparator);
+                            message.append(pattern->backtraceSeparator);
 
                         if (function.isEmpty()) {
                             if (numberPrinted == 0 && context.function)
@@ -1385,29 +1346,27 @@ QString qFormatLogMessage(QtMsgType type, const QMessageLogContext &context, con
                     } else {
                         if (numberPrinted == 0)
                             continue;
-                        message += backtraceSeparator + QLatin1String("???");
+                        message += pattern->backtraceSeparator + QLatin1String("???");
                     }
                     numberPrinted++;
                 }
             }
 #endif
         } else if (token == timeTokenC) {
-            QString timeFormat = pattern->timeArgs.at(timeArgsIdx);
-            timeArgsIdx++;
-            if (timeFormat == QLatin1String("process")) {
-                    quint64 ms = pattern->timer.elapsed();
-                    message.append(QString::asprintf("%6d.%03d", uint(ms / 1000), uint(ms % 1000)));
-            } else if (timeFormat ==  QLatin1String("boot")) {
+            if (pattern->timeFormat == QLatin1String("process")) {
+                quint64 ms = pattern->timer.elapsed();
+                message.append(QString::asprintf("%6d.%03d", uint(ms / 1000), uint(ms % 1000)));
+            } else if (pattern->timeFormat == QLatin1String("boot")) {
                 // just print the milliseconds since the elapsed timer reference
                 // like the Linux kernel does
                 QElapsedTimer now;
                 now.start();
                 uint ms = now.msecsSinceReference();
                 message.append(QString::asprintf("%6d.%03d", uint(ms / 1000), uint(ms % 1000)));
-            } else if (timeFormat.isEmpty()) {
-                    message.append(QDateTime::currentDateTime().toString(Qt::ISODate));
+            } else if (pattern->timeFormat.isEmpty()) {
+                message.append(QDateTime::currentDateTime().toString(Qt::ISODate));
             } else {
-                message.append(QDateTime::currentDateTime().toString(timeFormat));
+                message.append(QDateTime::currentDateTime().toString(pattern->timeFormat));
             }
 #endif
         } else if (token == ifCategoryTokenC) {
@@ -1477,32 +1436,6 @@ static void systemd_default_message_handler(QtMsgType type,
 }
 #endif
 
-#ifdef QT_USE_SYSLOG
-static void syslog_default_message_handler(QtMsgType type, const char *message)
-{
-    int priority = LOG_INFO; // Informational
-    switch (type) {
-    case QtDebugMsg:
-        priority = LOG_DEBUG; // Debug-level messages
-        break;
-    case QtInfoMsg:
-        priority = LOG_INFO; // Informational conditions
-        break;
-    case QtWarningMsg:
-        priority = LOG_WARNING; // Warning conditions
-        break;
-    case QtCriticalMsg:
-        priority = LOG_CRIT; // Critical conditions
-        break;
-    case QtFatalMsg:
-        priority = LOG_ALERT; // Action must be taken immediately
-        break;
-    }
-
-    syslog(priority, "%s", message);
-}
-#endif
-
 #ifdef Q_OS_ANDROID
 static void android_default_message_handler(QtMsgType type,
                                   const QMessageLogContext &context,
@@ -1547,9 +1480,6 @@ static void qDefaultMessageHandler(QtMsgType type, const QMessageLogContext &con
         return;
 #elif defined(QT_USE_JOURNALD) && !defined(QT_BOOTSTRAPPED)
         systemd_default_message_handler(type, context, logMessage);
-        return;
-#elif defined(QT_USE_SYSLOG) && !defined(QT_BOOTSTRAPPED)
-        syslog_default_message_handler(type, logMessage.toUtf8().constData());
         return;
 #elif defined(Q_OS_ANDROID)
         android_default_message_handler(type, context, logMessage);
@@ -1768,9 +1698,7 @@ void qErrnoWarning(int code, const char *msg, ...)
 
     \brief Changes the output of the default message handler.
 
-    Allows to tweak the output of qDebug(), qInfo(), qWarning(), qCritical(),
-    and qFatal(). The category logging output of qCDebug(), qCInfo(),
-    qCWarning(), and qCCritical() is formatted, too.
+    Allows to tweak the output of qDebug(), qWarning(), qCritical() and qFatal().
 
     Following placeholders are supported:
 
@@ -1823,7 +1751,7 @@ void qErrnoWarning(int code, const char *msg, ...)
 
     Custom message handlers can use qFormatLogMessage() to take \a pattern into account.
 
-    \sa qInstallMessageHandler(), {Debugging Techniques}, {QLoggingCategory}
+    \sa qInstallMessageHandler(), {Debugging Techniques}
  */
 
 QtMessageHandler qInstallMessageHandler(QtMessageHandler h)

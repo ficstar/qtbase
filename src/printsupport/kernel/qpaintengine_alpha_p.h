@@ -99,9 +99,7 @@ public:
 
     QRegion m_alphargn;
     QRegion m_cliprgn;
-    mutable QRegion m_cachedDirtyRgn;
-    mutable int m_numberOfCachedRects;
-    QVector<QRect> m_dirtyRects;
+    QRegion m_dirtyrgn;
 
     bool m_hasalpha;
     bool m_alphaPen;
@@ -117,7 +115,7 @@ public:
     QPen m_pen;
 
     void addAlphaRect(const QRectF &rect);
-    void addDirtyRect(const QRectF &rect) { m_dirtyRects.append(rect.toAlignedRect()); }
+    void addDirtyRect(const QRectF &rect) { m_dirtyrgn |= rect.toAlignedRect(); }
     bool canSeeTroughBackground(bool somethingInRectHasAlpha, const QRectF &rect) const;
 
     QRectF addPenWidth(const QPainterPath &path);

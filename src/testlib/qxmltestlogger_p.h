@@ -47,6 +47,7 @@
 
 
 #include <QtTest/private/qabstracttestlogger_p.h>
+#include <QtCore/qelapsedtimer.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -78,6 +79,8 @@ public:
 
 private:
     XmlMode xmlmode;
+    QElapsedTimer m_functionTime;
+    QElapsedTimer m_totalTime;
 };
 
 QT_END_NAMESPACE

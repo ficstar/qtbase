@@ -1,7 +1,6 @@
 /****************************************************************************
 **
 ** Copyright (C) 2015 The Qt Company Ltd.
-** Copyright (C) 2016 Intel Corporation.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtCore module of the Qt Toolkit.
@@ -59,8 +58,7 @@ template<typename T>
 struct QVariantIntegrator
 {
     static const bool CanUseInternalSpace = sizeof(T) <= sizeof(QVariant::Private::Data)
-                                            && ((QTypeInfoQuery<T>::isRelocatable) || Q_IS_ENUM(T));
-    typedef QtPrivate::integral_constant<bool, CanUseInternalSpace> CanUseInternalSpace_t;
+                                            && ((!QTypeInfo<T>::isStatic) || Q_IS_ENUM(T));
 };
 Q_STATIC_ASSERT(QVariantIntegrator<double>::CanUseInternalSpace);
 Q_STATIC_ASSERT(QVariantIntegrator<long int>::CanUseInternalSpace);
@@ -111,49 +109,31 @@ private:
     T m_t;
 };
 
+// constructs a new variant if copy is 0, otherwise copy-constructs
 template <class T>
-inline void v_construct_helper(QVariant::Private *x, const T &t, QtPrivate::true_type)
+inline void v_construct(QVariant::Private *x, const void *copy, T * = 0)
 {
-    new (&x->data) T(t);
-    x->is_shared = false;
-}
-
-template <class T>
-inline void v_construct_helper(QVariant::Private *x, const T &t, QtPrivate::false_type)
-{
-    x->data.shared = new QVariantPrivateSharedEx<T>(t);
-    x->is_shared = true;
-}
-
-template <class T>
-inline void v_construct_helper(QVariant::Private *x, QtPrivate::true_type)
-{
-    new (&x->data) T();
-    x->is_shared = false;
-}
-
-template <class T>
-inline void v_construct_helper(QVariant::Private *x, QtPrivate::false_type)
-{
-    x->data.shared = new QVariantPrivateSharedEx<T>;
-    x->is_shared = true;
+    if (!QVariantIntegrator<T>::CanUseInternalSpace) {
+        x->data.shared = copy ? new QVariantPrivateSharedEx<T>(*static_cast<const T *>(copy))
+                              : new QVariantPrivateSharedEx<T>;
+        x->is_shared = true;
+    } else {
+        if (copy)
+            new (&x->data.ptr) T(*static_cast<const T *>(copy));
+        else
+            new (&x->data.ptr) T;
+    }
 }
 
 template <class T>
 inline void v_construct(QVariant::Private *x, const T &t)
 {
-    // dispatch
-    v_construct_helper(x, t, typename QVariantIntegrator<T>::CanUseInternalSpace_t());
-}
-
-// constructs a new variant if copy is 0, otherwise copy-constructs
-template <class T>
-inline void v_construct(QVariant::Private *x, const void *copy, T * = 0)
-{
-    if (copy)
-        v_construct<T>(x, *static_cast<const T *>(copy));
-    else
-        v_construct_helper<T>(x, typename QVariantIntegrator<T>::CanUseInternalSpace_t());
+    if (!QVariantIntegrator<T>::CanUseInternalSpace) {
+        x->data.shared = new QVariantPrivateSharedEx<T>(t);
+        x->is_shared = true;
+    } else {
+        new (&x->data.ptr) T(t);
+    }
 }
 
 // deletes the internal structures
@@ -347,11 +327,39 @@ protected:
 template<class Filter>
 class QVariantConstructor
 {
+    template<typename T, bool CanUseInternalSpace = QVariantIntegrator<T>::CanUseInternalSpace>
+    struct CallConstructor {};
+
+    template<typename T>
+    struct CallConstructor<T, /* CanUseInternalSpace = */ true>
+    {
+        CallConstructor(const QVariantConstructor &tc)
+        {
+            if (tc.m_copy)
+                new (&tc.m_x->data.ptr) T(*static_cast<const T*>(tc.m_copy));
+            else
+                new (&tc.m_x->data.ptr) T();
+            tc.m_x->is_shared = false;
+        }
+    };
+
+    template<typename T>
+    struct CallConstructor<T, /* CanUseInternalSpace = */ false>
+    {
+        CallConstructor(const QVariantConstructor &tc)
+        {
+            Q_STATIC_ASSERT(QTypeInfo<T>::isComplex || sizeof(T) > sizeof(QVariant::Private::Data));
+            tc.m_x->data.shared = tc.m_copy ? new QVariantPrivateSharedEx<T>(*static_cast<const T*>(tc.m_copy))
+                                      : new QVariantPrivateSharedEx<T>;
+            tc.m_x->is_shared = true;
+        }
+    };
+
     template<typename T, bool IsAcceptedType = Filter::template Acceptor<T>::IsAccepted>
     struct FilteredConstructor {
         FilteredConstructor(const QVariantConstructor &tc)
         {
-            v_construct<T>(tc.m_x, tc.m_copy);
+            CallConstructor<T> tmp(tc);
             tc.m_x->is_null = !tc.m_copy;
         }
     };

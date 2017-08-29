@@ -122,8 +122,8 @@ public:
         m_assetFile = 0;
         m_assetDir = asset;
         m_fileName =  fileName;
-        if (!m_fileName.endsWith(QLatin1Char('/')))
-            m_fileName += QLatin1Char('/');
+        if (!m_fileName.endsWith(QChar(QLatin1Char('/'))))
+            m_fileName += "/";
     }
 
     ~AndroidAbstractFileEngine()
@@ -231,8 +231,8 @@ public:
             return;
 
         m_fileName = file;
-        if (!m_fileName.endsWith(QLatin1Char('/')))
-            m_fileName += QLatin1Char('/');
+        if (!m_fileName.endsWith(QChar(QLatin1Char('/'))))
+            m_fileName += "/";
 
         close();
     }

@@ -49,8 +49,6 @@
 #include "qthread.h"
 #include "QtCore/qcoreapplication.h"
 
-#include <QtCore/private/qthread_p.h>
-
 #include "qnetworkcookiejar.h"
 
 #ifndef QT_NO_HTTP
@@ -168,7 +166,6 @@ QNetworkReplyHttpImpl::QNetworkReplyHttpImpl(QNetworkAccessManager* const manage
     d->manager = manager;
     d->managerPrivate = manager->d_func();
     d->request = request;
-    d->originalRequest = request;
     d->operation = operation;
     d->outgoingData = outgoingData;
     d->url = request.url();
@@ -486,7 +483,7 @@ bool QNetworkReplyHttpImplPrivate::loadFromCacheIfAllowed(QHttpNetworkRequest &h
     if (!nc)
         return false;                 // no local cache
 
-    QNetworkCacheMetaData metaData = nc->metaData(httpRequest.url());
+    QNetworkCacheMetaData metaData = nc->metaData(request.url());
     if (!metaData.isValid())
         return false;                 // not in cache
 
@@ -512,7 +509,7 @@ bool QNetworkReplyHttpImplPrivate::loadFromCacheIfAllowed(QHttpNetworkRequest &h
             return false;
     }
 
-    QDateTime currentDateTime = QDateTime::currentDateTimeUtc();
+    QDateTime currentDateTime = QDateTime::currentDateTime();
     QDateTime expirationDate = metaData.expirationDate();
 
     bool response_is_fresh;
@@ -545,7 +542,7 @@ bool QNetworkReplyHttpImplPrivate::loadFromCacheIfAllowed(QHttpNetworkRequest &h
             date_value = dateHeader.toTime_t();
         }
 
-        int now = currentDateTime.toTime_t();
+        int now = currentDateTime.toUTC().toTime_t();
         int request_time = now;
         int response_time = now;
 
@@ -600,7 +597,7 @@ QHttpNetworkRequest::Priority QNetworkReplyHttpImplPrivate::convert(const QNetwo
     }
 }
 
-void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpRequest)
+void QNetworkReplyHttpImplPrivate::postRequest()
 {
     Q_Q(QNetworkReplyHttpImpl);
 
@@ -624,11 +621,10 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
         thread = managerPrivate->httpThread;
     }
 
-    QUrl url = newHttpRequest.url();
+    QUrl url = request.url();
     httpRequest.setUrl(url);
-    httpRequest.setRedirectCount(newHttpRequest.maximumRedirectsAllowed());
 
-    QString scheme = url.scheme();
+    QString scheme = url.scheme().toLower();
     bool ssl = (scheme == QLatin1String("https")
                 || scheme == QLatin1String("preconnect-https"));
     q->setAttribute(QNetworkRequest::ConnectionEncryptedAttribute, ssl);
@@ -642,7 +638,7 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
     QNetworkProxy transparentProxy, cacheProxy;
 
     // FIXME the proxy stuff should be done in the HTTP thread
-    foreach (const QNetworkProxy &p, managerPrivate->queryProxy(QNetworkProxyQuery(newHttpRequest.url()))) {
+    foreach (const QNetworkProxy &p, managerPrivate->queryProxy(QNetworkProxyQuery(request.url()))) {
         // use the first proxy that works
         // for non-encrypted connections, any transparent or HTTP proxy
         // for encrypted, only transparent proxies
@@ -673,22 +669,19 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
     }
 #endif
 
-    if (newHttpRequest.attribute(QNetworkRequest::FollowRedirectsAttribute).toBool())
-        httpRequest.setFollowRedirects(true);
 
-    httpRequest.setPriority(convert(newHttpRequest.priority()));
+    bool loadedFromCache = false;
+    httpRequest.setPriority(convert(request.priority()));
 
     switch (operation) {
     case QNetworkAccessManager::GetOperation:
         httpRequest.setOperation(QHttpNetworkRequest::Get);
-        if (loadFromCacheIfAllowed(httpRequest))
-            return; // no need to send the request! :)
+        loadedFromCache = loadFromCacheIfAllowed(httpRequest);
         break;
 
     case QNetworkAccessManager::HeadOperation:
         httpRequest.setOperation(QHttpNetworkRequest::Head);
-        if (loadFromCacheIfAllowed(httpRequest))
-            return; // no need to send the request! :)
+        loadedFromCache = loadFromCacheIfAllowed(httpRequest);
         break;
 
     case QNetworkAccessManager::PostOperation:
@@ -712,7 +705,7 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
         invalidateCache(); // for safety reasons, we don't know what the operation does
         httpRequest.setOperation(QHttpNetworkRequest::Custom);
         createUploadByteDevice();
-        httpRequest.setCustomVerb(newHttpRequest.attribute(
+        httpRequest.setCustomVerb(request.attribute(
                 QNetworkRequest::CustomVerbAttribute).toByteArray());
         break;
 
@@ -720,7 +713,11 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
         break;                  // can't happen
     }
 
-    QList<QByteArray> headers = newHttpRequest.rawHeaderList();
+    if (loadedFromCache) {
+        return;    // no need to send the request! :)
+    }
+
+    QList<QByteArray> headers = request.rawHeaderList();
     if (resumeOffset != 0) {
         if (headers.contains("Range")) {
             // Need to adjust resume offset for user specified range
@@ -728,7 +725,7 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
             headers.removeOne("Range");
 
             // We've already verified that requestRange starts with "bytes=", see canResume.
-            QByteArray requestRange = newHttpRequest.rawHeader("Range").mid(6);
+            QByteArray requestRange = request.rawHeader("Range").mid(6);
 
             int index = requestRange.indexOf('-');
 
@@ -745,20 +742,20 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
     }
 
     foreach (const QByteArray &header, headers)
-        httpRequest.setHeaderField(header, newHttpRequest.rawHeader(header));
+        httpRequest.setHeaderField(header, request.rawHeader(header));
 
-    if (newHttpRequest.attribute(QNetworkRequest::HttpPipeliningAllowedAttribute).toBool())
+    if (request.attribute(QNetworkRequest::HttpPipeliningAllowedAttribute).toBool() == true)
         httpRequest.setPipeliningAllowed(true);
 
-    if (request.attribute(QNetworkRequest::SpdyAllowedAttribute).toBool())
+    if (request.attribute(QNetworkRequest::SpdyAllowedAttribute).toBool() == true)
         httpRequest.setSPDYAllowed(true);
 
     if (static_cast<QNetworkRequest::LoadControl>
-        (newHttpRequest.attribute(QNetworkRequest::AuthenticationReuseAttribute,
+        (request.attribute(QNetworkRequest::AuthenticationReuseAttribute,
                              QNetworkRequest::Automatic).toInt()) == QNetworkRequest::Manual)
         httpRequest.setWithCredentials(false);
 
-    if (request.attribute(QNetworkRequest::EmitAllUploadProgressSignalsAttribute).toBool())
+    if (request.attribute(QNetworkRequest::EmitAllUploadProgressSignalsAttribute).toBool() == true)
         emitAllUploadProgressSignals = true;
 
 
@@ -781,7 +778,7 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
     delegate->ssl = ssl;
 #ifndef QT_NO_SSL
     if (ssl)
-        delegate->incomingSslConfiguration = newHttpRequest.sslConfiguration();
+        delegate->incomingSslConfiguration = request.sslConfiguration();
 #endif
 
     // Do we use synchronous HTTP?
@@ -793,7 +790,7 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
 
     if (!synchronous) {
         // Tell our zerocopy policy to the delegate
-        QVariant downloadBufferMaximumSizeAttribute = newHttpRequest.attribute(QNetworkRequest::MaximumDownloadBufferSizeAttribute);
+        QVariant downloadBufferMaximumSizeAttribute = request.attribute(QNetworkRequest::MaximumDownloadBufferSizeAttribute);
         if (downloadBufferMaximumSizeAttribute.isValid()) {
             delegate->downloadBufferMaximumSize = downloadBufferMaximumSizeAttribute.toLongLong();
         } else {
@@ -827,9 +824,6 @@ void QNetworkReplyHttpImplPrivate::postRequest(const QNetworkRequest &newHttpReq
                 Qt::QueuedConnection);
         QObject::connect(delegate, SIGNAL(error(QNetworkReply::NetworkError,QString)),
                 q, SLOT(httpError(QNetworkReply::NetworkError,QString)),
-                Qt::QueuedConnection);
-        QObject::connect(delegate, SIGNAL(redirected(QUrl,int,int)),
-                q, SLOT(onRedirected(QUrl,int,int)),
                 Qt::QueuedConnection);
 #ifndef QT_NO_SSL
         QObject::connect(delegate, SIGNAL(sslConfigurationChanged(QSslConfiguration)),
@@ -957,7 +951,7 @@ void QNetworkReplyHttpImplPrivate::invalidateCache()
 {
     QAbstractNetworkCache *nc = managerPrivate->networkCache;
     if (nc)
-        nc->remove(httpRequest.url());
+        nc->remove(request.url());
 }
 
 void QNetworkReplyHttpImplPrivate::initCacheSaveDevice()
@@ -1037,29 +1031,20 @@ void QNetworkReplyHttpImplPrivate::replyDownloadData(QByteArray d)
     for (int i = 0; i < pendingDownloadDataCopy.bufferCount(); i++) {
         QByteArray const &item = pendingDownloadDataCopy[i];
 
-        // This is going to look a little strange. When downloading data while a
-        // HTTP redirect is happening (and enabled), we write the redirect
-        // response to the cache. However, we do not append it to our internal
-        // buffer as that will contain the response data only for the final
-        // response
         if (cacheSaveDevice)
             cacheSaveDevice->write(item.constData(), item.size());
-
-        if (!isHttpRedirectResponse())
-            downloadMultiBuffer.append(item);
+        downloadMultiBuffer.append(item);
 
         bytesWritten += item.size();
     }
     pendingDownloadDataCopy.clear();
 
+    bytesDownloaded += bytesWritten;
+
+
     QVariant totalSize = cookedHeaders.value(QNetworkRequest::ContentLengthHeader);
     if (preMigrationDownloaded != Q_INT64_C(-1))
         totalSize = totalSize.toLongLong() + preMigrationDownloaded;
-
-    if (isHttpRedirectResponse())
-        return;
-
-    bytesDownloaded += bytesWritten;
 
     emit q->readyRead();
     // emit readyRead before downloadProgress incase this will cause events to be
@@ -1080,64 +1065,6 @@ void QNetworkReplyHttpImplPrivate::replyFinished()
         return;
 
     finished();
-}
-
-QNetworkAccessManager::Operation QNetworkReplyHttpImplPrivate::getRedirectOperation(QNetworkAccessManager::Operation currentOp, int httpStatus)
-{
-    // HTTP status code can be used to decide if we can redirect with a GET
-    // operation or not. See http://www.ietf.org/rfc/rfc2616.txt [Sec 10.3] for
-    // more details
-    Q_UNUSED(httpStatus);
-
-    switch (currentOp) {
-    case QNetworkAccessManager::HeadOperation:
-        return QNetworkAccessManager::HeadOperation;
-    default:
-        break;
-    }
-    // For now, we're always returning GET for anything other than HEAD
-    return QNetworkAccessManager::GetOperation;
-}
-
-bool QNetworkReplyHttpImplPrivate::isHttpRedirectResponse() const
-{
-    return httpRequest.isFollowRedirects() && QHttpNetworkReply::isHttpRedirect(statusCode);
-}
-
-QNetworkRequest QNetworkReplyHttpImplPrivate::createRedirectRequest(const QNetworkRequest &originalRequest,
-                                                                    const QUrl &url,
-                                                                    int maxRedirectsRemaining)
-{
-    QNetworkRequest newRequest(originalRequest);
-    newRequest.setUrl(url);
-    newRequest.setMaximumRedirectsAllowed(maxRedirectsRemaining);
-
-    return newRequest;
-}
-
-void QNetworkReplyHttpImplPrivate::onRedirected(const QUrl &redirectUrl, int httpStatus, int maxRedirectsRemaining)
-{
-    Q_Q(QNetworkReplyHttpImpl);
-
-    if (isFinished)
-        return;
-
-    if (httpRequest.isFollowRedirects()) // update the reply's url as it could've changed
-        url = redirectUrl;
-
-    QNetworkRequest redirectRequest = createRedirectRequest(originalRequest, redirectUrl, maxRedirectsRemaining);
-    operation = getRedirectOperation(operation, httpStatus);
-
-    cookedHeaders.clear();
-
-    if (managerPrivate->httpThread)
-        managerPrivate->httpThread->disconnect();
-
-    // Recurse
-    QMetaObject::invokeMethod(q, "start", Qt::QueuedConnection,
-                              Q_ARG(QNetworkRequest, redirectRequest));
-
-    emit q->redirected(redirectUrl);
 }
 
 void QNetworkReplyHttpImplPrivate::checkForRedirect(const int statusCode)
@@ -1188,16 +1115,7 @@ void QNetworkReplyHttpImplPrivate::replyDownloadMetaData
                                                         end = headerMap.constEnd();
     for (; it != end; ++it) {
         QByteArray value = q->rawHeader(it->first);
-
-        // Reset any previous "location" header set in the reply. In case of
-        // redirects, we don't want to 'append' multiple location header values,
-        // rather we keep only the latest one
-        if (it->first.toLower() == "location")
-            value.clear();
-
         if (!value.isEmpty()) {
-            // Why are we appending values for headers which are already
-            // present?
             if (qstricmp(it->first.constData(), "set-cookie") == 0)
                 value += '\n';
             else
@@ -1211,13 +1129,12 @@ void QNetworkReplyHttpImplPrivate::replyDownloadMetaData
     q->setAttribute(QNetworkRequest::HttpReasonPhraseAttribute, reasonPhrase);
 
     // is it a redirection?
-    if (!isHttpRedirectResponse())
-        checkForRedirect(statusCode);
+    checkForRedirect(statusCode);
 
     if (statusCode >= 500 && statusCode < 600) {
         QAbstractNetworkCache *nc = managerPrivate->networkCache;
         if (nc) {
-            QNetworkCacheMetaData metaData = nc->metaData(httpRequest.url());
+            QNetworkCacheMetaData metaData = nc->metaData(request.url());
             QNetworkHeadersPrivate cacheHeaders;
             cacheHeaders.setAllRawHeaders(metaData.rawHeaders());
             QNetworkHeadersPrivate::RawHeadersList::ConstIterator it;
@@ -1239,7 +1156,7 @@ void QNetworkReplyHttpImplPrivate::replyDownloadMetaData
 #endif
         QAbstractNetworkCache *nc = managerPrivate->networkCache;
         if (nc) {
-            QNetworkCacheMetaData oldMetaData = nc->metaData(httpRequest.url());
+            QNetworkCacheMetaData oldMetaData = nc->metaData(request.url());
             QNetworkCacheMetaData metaData = fetchCacheMetaData(oldMetaData);
             if (oldMetaData != metaData)
                 nc->updateMetaData(metaData);
@@ -1285,9 +1202,6 @@ void QNetworkReplyHttpImplPrivate::replyDownloadProgressSlot(qint64 bytesReceive
             cacheSaveDevice->write(downloadZerocopyBuffer, bytesTotal);
         // FIXME where is it closed?
     }
-
-    if (isHttpRedirectResponse())
-        return;
 
     bytesDownloaded = bytesReceived;
 
@@ -1447,8 +1361,6 @@ bool QNetworkReplyHttpImplPrivate::sendCacheContents(const QNetworkCacheMetaData
     if (status < 100)
         status = 200;           // fake it
 
-    statusCode = status;
-
     q->setAttribute(QNetworkRequest::HttpStatusCodeAttribute, status);
     q->setAttribute(QNetworkRequest::HttpReasonPhraseAttribute, attributes.value(QNetworkRequest::HttpReasonPhraseAttribute));
     q->setAttribute(QNetworkRequest::SourceIsFromCacheAttribute, true);
@@ -1456,16 +1368,10 @@ bool QNetworkReplyHttpImplPrivate::sendCacheContents(const QNetworkCacheMetaData
     QNetworkCacheMetaData::RawHeaderList rawHeaders = metaData.rawHeaders();
     QNetworkCacheMetaData::RawHeaderList::ConstIterator it = rawHeaders.constBegin(),
                                                        end = rawHeaders.constEnd();
-    QUrl redirectUrl;
-    for ( ; it != end; ++it) {
-        if (httpRequest.isFollowRedirects() &&
-            !qstricmp(it->first.toLower().constData(), "location"))
-            redirectUrl = QUrl::fromEncoded(it->second);
+    for ( ; it != end; ++it)
         setRawHeader(it->first, it->second);
-    }
 
-    if (!isHttpRedirectResponse())
-        checkForRedirect(status);
+    checkForRedirect(status);
 
     cacheLoadDevice = contents;
     q->connect(cacheLoadDevice, SIGNAL(readyRead()), SLOT(_q_cacheLoadReadyRead()));
@@ -1481,14 +1387,6 @@ bool QNetworkReplyHttpImplPrivate::sendCacheContents(const QNetworkCacheMetaData
 #if defined(QNETWORKACCESSHTTPBACKEND_DEBUG)
     qDebug() << "Successfully sent cache:" << url << contents->size() << "bytes";
 #endif
-
-    // Do redirect processing
-    if (httpRequest.isFollowRedirects() && QHttpNetworkReply::isHttpRedirect(status)) {
-        QMetaObject::invokeMethod(q, "onRedirected", Qt::QueuedConnection,
-                                  Q_ARG(QUrl, redirectUrl),
-                                  Q_ARG(int, status),
-                                  Q_ARG(int, httpRequest.redirectCount() - 1));
-    }
 
     // Set the following flag so we can ignore some signals from HTTP thread
     // that would still come
@@ -1582,7 +1480,7 @@ QNetworkCacheMetaData QNetworkReplyHttpImplPrivate::fetchCacheMetaData(const QNe
         QByteArray maxAge = cacheControl.value("max-age");
         if (!maxAge.isEmpty()) {
             checkExpired = false;
-            QDateTime dt = QDateTime::currentDateTimeUtc();
+            QDateTime dt = QDateTime::currentDateTime();
             dt = dt.addSecs(maxAge.toInt());
             metaData.setExpirationDate(dt);
         }
@@ -1685,13 +1583,13 @@ void QNetworkReplyHttpImplPrivate::setResumeOffset(quint64 offset)
     could not be started due to an unopened or roaming session.  The caller should recall this
     function once the session has been opened or the roaming process has finished.
 */
-bool QNetworkReplyHttpImplPrivate::start(const QNetworkRequest &newHttpRequest)
+bool QNetworkReplyHttpImplPrivate::start()
 {
 #ifndef QT_NO_BEARERMANAGEMENT
     QSharedPointer<QNetworkSession> networkSession(managerPrivate->getNetworkSession());
     if (!networkSession) {
 #endif
-        postRequest(newHttpRequest);
+        postRequest();
         return true;
 #ifndef QT_NO_BEARERMANAGEMENT
     }
@@ -1701,7 +1599,7 @@ bool QNetworkReplyHttpImplPrivate::start(const QNetworkRequest &newHttpRequest)
     if (host == QLatin1String("localhost") ||
         QHostAddress(host).isLoopback()) {
         // Don't need an open session for localhost access.
-        postRequest(newHttpRequest);
+        postRequest();
         return true;
     }
 
@@ -1710,13 +1608,13 @@ bool QNetworkReplyHttpImplPrivate::start(const QNetworkRequest &newHttpRequest)
         Q_Q(QNetworkReplyHttpImpl);
         QObject::connect(networkSession.data(), SIGNAL(usagePoliciesChanged(QNetworkSession::UsagePolicies)),
                             q, SLOT(_q_networkSessionUsagePoliciesChanged(QNetworkSession::UsagePolicies)));
-        postRequest(newHttpRequest);
+        postRequest();
         return true;
     } else if (synchronous) {
         // Command line applications using the synchronous path such as xmlpatterns may need an extra push.
         networkSession->open();
         if (networkSession->waitForOpened()) {
-            postRequest(newHttpRequest);
+            postRequest();
             return true;
         }
     }
@@ -1746,8 +1644,10 @@ void QNetworkReplyHttpImplPrivate::_q_startOperation()
         QMetaObject::invokeMethod(q, "_q_finished", synchronous ? Qt::DirectConnection : Qt::QueuedConnection);
         return;
     }
+#endif
 
-    if (!start(request)) {
+    if (!start()) {
+#ifndef QT_NO_BEARERMANAGEMENT
         // backend failed to start because the session state is not Connected.
         // QNetworkAccessManager will call reply->backend->start() again for us when the session
         // state changes.
@@ -1769,25 +1669,28 @@ void QNetworkReplyHttpImplPrivate::_q_startOperation()
             QMetaObject::invokeMethod(q, "_q_finished", synchronous ? Qt::DirectConnection : Qt::QueuedConnection);
             return;
         }
-    } else if (session) {
-        QObject::connect(session.data(), SIGNAL(stateChanged(QNetworkSession::State)),
-                         q, SLOT(_q_networkSessionStateChanged(QNetworkSession::State)),
-                         Qt::QueuedConnection);
-    }
 #else
-    if (!start(request)) {
         qWarning("Backend start failed");
         QMetaObject::invokeMethod(q, "_q_error", synchronous ? Qt::DirectConnection : Qt::QueuedConnection,
             Q_ARG(QNetworkReply::NetworkError, QNetworkReply::UnknownNetworkError),
             Q_ARG(QString, QCoreApplication::translate("QNetworkReply", "backend start error.")));
         QMetaObject::invokeMethod(q, "_q_finished", synchronous ? Qt::DirectConnection : Qt::QueuedConnection);
         return;
+#endif
+    } else {
+#ifndef QT_NO_BEARERMANAGEMENT
+        QObject::connect(session.data(), SIGNAL(stateChanged(QNetworkSession::State)),
+                         q, SLOT(_q_networkSessionStateChanged(QNetworkSession::State)), Qt::QueuedConnection);
+#endif
     }
-#endif // QT_NO_BEARERMANAGEMENT
 
     if (synchronous) {
         state = Finished;
         q_func()->setFinished(true);
+    } else {
+        if (state != Finished) {
+
+        }
     }
 }
 
@@ -1810,20 +1713,18 @@ void QNetworkReplyHttpImplPrivate::_q_cacheLoadReadyRead()
     // emit readyRead before downloadProgress incase this will cause events to be
     // processed and we get into a recursive call (as in QProgressDialog).
 
-    if (!(isHttpRedirectResponse())) {
-        // This readyRead() goes to the user. The user then may or may not read() anything.
-        emit q->readyRead();
-
-        if (downloadProgressSignalChoke.elapsed() >= progressSignalInterval) {
-            downloadProgressSignalChoke.restart();
-            emit q->downloadProgress(bytesDownloaded,
-                                     totalSize.isNull() ? Q_INT64_C(-1) : totalSize.toLongLong());
-        }
+    // This readyRead() goes to the user. The user then may or may not read() anything.
+    emit q->readyRead();
+    if (downloadProgressSignalChoke.elapsed() >= progressSignalInterval) {
+        downloadProgressSignalChoke.restart();
+        emit q->downloadProgress(bytesDownloaded,
+                             totalSize.isNull() ? Q_INT64_C(-1) : totalSize.toLongLong());
     }
+
     // If there are still bytes available in the cacheLoadDevice then the user did not read
     // in response to the readyRead() signal. This means we have to load from the cacheLoadDevice
     // and buffer that stuff. This is needed to be able to properly emit finished() later.
-    while (cacheLoadDevice->bytesAvailable() && !isHttpRedirectResponse()) {
+    while (cacheLoadDevice->bytesAvailable()) {
         downloadMultiBuffer.append(cacheLoadDevice->readAll());
     }
 
@@ -1846,6 +1747,7 @@ void QNetworkReplyHttpImplPrivate::_q_cacheLoadReadyRead()
         cacheLoadDevice = 0;
         QMetaObject::invokeMethod(q, "_q_finished", Qt::QueuedConnection);
     }
+
 }
 
 
@@ -1950,7 +1852,7 @@ void QNetworkReplyHttpImplPrivate::_q_networkSessionConnected()
 void QNetworkReplyHttpImplPrivate::_q_networkSessionStateChanged(QNetworkSession::State sessionState)
 {
     if (sessionState == QNetworkSession::Disconnected
-        && state != Idle && state != Reconnecting) {
+            && (state != Idle || state != Reconnecting)) {
         error(QNetworkReplyImpl::NetworkSessionFailedError,
               QCoreApplication::translate("QNetworkReply", "Network session error."));
         finished();
@@ -2075,15 +1977,6 @@ void QNetworkReplyHttpImplPrivate::finished()
 #endif
     }
 
-    // if we don't know the total size of or we received everything save the cache
-    if (totalSize.isNull() || totalSize == -1 || bytesDownloaded == totalSize)
-        completeCacheSave();
-
-    // We check for errorCode too as in case of SSL handshake failure, we still
-    // get the HTTP redirect status code (301, 303 etc)
-    if (isHttpRedirectResponse() && errorCode == QNetworkReply::NoError)
-        return;
-
     state = Finished;
     q->setFinished(true);
 
@@ -2095,6 +1988,10 @@ void QNetworkReplyHttpImplPrivate::finished()
 
     if (bytesUploaded == -1 && (outgoingData || outgoingDataBuffer))
         emit q->uploadProgress(0, 0);
+
+    // if we don't know the total size of or we received everything save the cache
+    if (totalSize.isNull() || totalSize == -1 || bytesDownloaded == totalSize)
+        completeCacheSave();
 
     emit q->readChannelFinished();
     emit q->finished();

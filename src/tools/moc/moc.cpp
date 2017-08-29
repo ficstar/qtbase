@@ -1,7 +1,6 @@
 /****************************************************************************
 **
 ** Copyright (C) 2015 The Qt Company Ltd.
-** Copyright (C) 2016 Olivier Goffart <ogoffart@woboq.com>
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the tools applications of the Qt Toolkit.
@@ -185,8 +184,6 @@ Type Moc::parseType()
             case Q_SLOT_TOKEN:
                 type.name += lexem();
                 return type;
-            case NOTOKEN:
-                return type;
             default:
                 prev();
                 break;
@@ -221,8 +218,6 @@ Type Moc::parseType()
             type.name += lexem();
             isVoid |= (lookup(0) == VOID);
             break;
-        case NOTOKEN:
-            return type;
         default:
             prev();
             ;
@@ -383,8 +378,8 @@ bool Moc::parseFunction(FunctionDef *def, bool inMacro)
     def->isVirtual = false;
     def->isStatic = false;
     //skip modifiers and attributes
-    while (test(INLINE) || (test(STATIC) && (def->isStatic = true) == true) ||
-        (test(VIRTUAL) && (def->isVirtual = true) == true) //mark as virtual
+    while (test(INLINE) || (test(STATIC) && (def->isStatic = true)) ||
+        (test(VIRTUAL) && (def->isVirtual = true)) //mark as virtual
         || testFunctionAttribute(def) || testFunctionRevision(def)) {}
     bool templateFunction = (lookup() == TEMPLATE);
     def->type = parseType();
@@ -478,8 +473,8 @@ bool Moc::parseMaybeFunction(const ClassDef *cdef, FunctionDef *def)
     def->isVirtual = false;
     def->isStatic = false;
     //skip modifiers and attributes
-    while (test(EXPLICIT) || test(INLINE) || (test(STATIC) && (def->isStatic = true) == true) ||
-        (test(VIRTUAL) && (def->isVirtual = true) == true) //mark as virtual
+    while (test(EXPLICIT) || test(INLINE) || (test(STATIC) && (def->isStatic = true)) ||
+        (test(VIRTUAL) && (def->isVirtual = true)) //mark as virtual
         || testFunctionAttribute(def) || testFunctionRevision(def)) {}
     bool tilde = test(TILDE);
     def->type = parseType();
@@ -1065,7 +1060,6 @@ void Moc::createPropertyDef(PropertyDef &propDef)
         QByteArray v, v2;
         if (test(LPAREN)) {
             v = lexemUntil(RPAREN);
-            v = v.mid(1, v.length() - 2); // removes the '(' and ')'
         } else if (test(INTEGER_LITERAL)) {
             v = lexem();
             if (l != "REVISION")

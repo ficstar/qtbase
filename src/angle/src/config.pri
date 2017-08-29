@@ -16,14 +16,13 @@ equals(QMAKE_HOST.os, Windows) {
     gnutools.value = $$absolute_path(../../../../gnuwin32/bin)
     exists($$gnutools.value/gperf.exe) {
         gnutools.name = PATH
-        gnutools.CONFIG = always_prepend
+        gnutools.CONFIG = prepend
     }
 }
 
 defineReplace(addGnuPath) {
     gnuPath = $$1
     !isEmpty(gnuPath):!isEmpty(gnutools.name) {
-        QT_TOOL_NAME = $$1
         qtAddToolEnv(gnuPath, gnutools)
         silent: gnuPath = @echo generating sources from ${QMAKE_FILE_IN} && $$gnuPath
     }
@@ -53,8 +52,6 @@ CONFIG(debug, debug|release) {
     !static: CONFIG += rtti_off
     DEFINES += NDEBUG
 }
-
-!isEmpty(BUILD_PASS): BUILDSUBDIR = $$lower($$BUILD_PASS)/
 
 # c++11 is needed by MinGW to get support for unordered_map.
 CONFIG += stl exceptions c++11
@@ -97,6 +94,8 @@ gcc {
                             -Wno-strict-aliasing -Wno-type-limits -Wno-unused-local-typedefs
 
     QMAKE_CXXFLAGS_WARN_ON = $$QMAKE_CFLAGS_WARN_ON -Wno-reorder -Wno-conversion-null -Wno-delete-non-virtual-dtor
+
+    sse2: QMAKE_CXXFLAGS += -march=native
 }
 
 QMAKE_CXXFLAGS_DEBUG = $$QMAKE_CFLAGS_DEBUG

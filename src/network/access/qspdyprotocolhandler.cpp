@@ -288,14 +288,16 @@ bool QSpdyProtocolHandler::sendRequest()
 
     m_channel->state = QHttpNetworkConnectionChannel::WritingState;
 
-    int requestsToSend = qMin(m_channel->spdyRequestsToSend.size(), maxPossibleRequests);
-
-    QMultiMap<int, HttpMessagePair>::iterator it = m_channel->spdyRequestsToSend.begin();
     // requests will be ordered by priority (see QMultiMap doc)
+    QList<HttpMessagePair> requests = m_channel->spdyRequestsToSend.values();
+    QList<int> priorities = m_channel->spdyRequestsToSend.keys();
+
+    int requestsToSend = qMin(requests.count(), maxPossibleRequests);
+
     for (int a = 0; a < requestsToSend; ++a) {
-        HttpMessagePair currentPair = *it;
-        QHttpNetworkRequest currentRequest = currentPair.first;
-        QHttpNetworkReply *currentReply = currentPair.second;
+        HttpMessagePair currentPair = requests.at(a);
+        QHttpNetworkRequest currentRequest = requests.at(a).first;
+        QHttpNetworkReply *currentReply = requests.at(a).second;
 
         currentReply->setSpdyWasUsed(true);
         qint32 streamID = generateNextStreamID();
@@ -308,7 +310,10 @@ bool QSpdyProtocolHandler::sendRequest()
         connect(currentReply, SIGNAL(destroyed(QObject*)), this, SLOT(_q_replyDestroyed(QObject*)));
 
         sendSYN_STREAM(currentPair, streamID, /* associatedToStreamID = */ 0);
-        m_channel->spdyRequestsToSend.erase(it++);
+        int requestsRemoved = m_channel->spdyRequestsToSend.remove(
+                    priorities.at(a), currentPair);
+        Q_ASSERT(requestsRemoved == 1);
+        Q_UNUSED(requestsRemoved); // silence -Wunused-variable
     }
     m_channel->state = QHttpNetworkConnectionChannel::IdleState;
     return true;
@@ -452,7 +457,7 @@ bool QSpdyProtocolHandler::uncompressHeader(const QByteArray &input, QByteArray 
             break;
         }
         default: {
-            qWarning() << "got unexpected zlib return value:" << zlibRet;
+            qWarning() << Q_FUNC_INFO << "got unexpected zlib return value:" << zlibRet;
             return false;
         }
         }
@@ -688,7 +693,7 @@ bool QSpdyProtocolHandler::uploadData(qint32 streamID)
     Q_ASSERT(replyPrivate);
 
     if (reply->d_func()->state == QHttpNetworkReplyPrivate::SPDYHalfClosed || reply->d_func()->state == QHttpNetworkReplyPrivate::SPDYClosed) {
-        qWarning("Trying to upload to closed stream");
+        qWarning() << Q_FUNC_INFO << "Trying to upload to closed stream";
         return false;
     }
 
@@ -843,7 +848,7 @@ void QSpdyProtocolHandler::handleControlFrame(const QByteArray &frameHeaders) //
         break;
     }
     default:
-        qWarning() << "cannot handle frame of type" << type;
+        qWarning() << Q_FUNC_INFO << "cannot handle frame of type" << type;
     }
 }
 
@@ -887,13 +892,13 @@ void QSpdyProtocolHandler::parseHttpHeaders(char flags, const QByteArray &frameD
 
     QByteArray uncompressedHeader;
     if (!uncompressHeader(headerValuePairs, &uncompressedHeader)) {
-        qWarning("error reading header from SYN_REPLY message");
+        qWarning() << Q_FUNC_INFO << "error reading header from SYN_REPLY message";
         return;
     }
 
     qint32 headerCount = fourBytesToInt(uncompressedHeader.constData());
     if (headerCount * 8 > uncompressedHeader.size()) {
-        qWarning("error parsing header from SYN_REPLY message");
+        qWarning() << Q_FUNC_INFO << "error parsing header from SYN_REPLY message";
         sendRST_STREAM(streamID, RST_STREAM_PROTOCOL_ERROR);
         return;
     }
@@ -904,7 +909,7 @@ void QSpdyProtocolHandler::parseHttpHeaders(char flags, const QByteArray &frameD
         QByteArray name = uncompressedHeader.mid(readPointer, count);
         readPointer += count;
         if (readPointer > uncompressedHeader.size()) {
-            qWarning("error parsing header from SYN_REPLY message");
+            qWarning() << Q_FUNC_INFO << "error parsing header from SYN_REPLY message";
             sendRST_STREAM(streamID, RST_STREAM_PROTOCOL_ERROR);
             return;
         }
@@ -913,7 +918,7 @@ void QSpdyProtocolHandler::parseHttpHeaders(char flags, const QByteArray &frameD
         QByteArray value = uncompressedHeader.mid(readPointer, count);
         readPointer += count;
         if (readPointer > uncompressedHeader.size()) {
-            qWarning("error parsing header from SYN_REPLY message");
+            qWarning() << Q_FUNC_INFO << "error parsing header from SYN_REPLY message";
             sendRST_STREAM(streamID, RST_STREAM_PROTOCOL_ERROR);
             return;
         }
@@ -1014,7 +1019,7 @@ void QSpdyProtocolHandler::handleRST_STREAM(char /*flags*/, quint32 length,
         errorMessage = "server cannot process the frame because it is too large";
         break;
     default:
-        qWarning("could not understand servers RST_STREAM status code");
+        qWarning() << Q_FUNC_INFO << "could not understand servers RST_STREAM status code";
         errorCode = QNetworkReply::ProtocolFailure;
         errorMessage = "got SPDY RST_STREAM message with unknown error code";
     }
@@ -1078,7 +1083,7 @@ void QSpdyProtocolHandler::handleSETTINGS(char flags, quint32 /*length*/, const 
             break;
         }
         default:
-            qWarning() << "found unknown settings value" << value;
+            qWarning() << Q_FUNC_INFO << "found unknown settings value" << value;
         }
     }
 }
@@ -1117,7 +1122,7 @@ void QSpdyProtocolHandler::handleGOAWAY(char /*flags*/, quint32 /*length*/,
         break;
     }
     default:
-        qWarning() << "unexpected status code" << statusCode;
+        qWarning() << Q_FUNC_INFO << "unexpected status code" << statusCode;
         errorCode = QNetworkReply::ProtocolUnknownError;
     }
 
@@ -1252,7 +1257,7 @@ void QSpdyProtocolHandler::handleDataFrame(const QByteArray &frameHeaders)
     }
 
     if (flag_compress) {
-        qWarning("SPDY level compression is not supported");
+        qWarning() << Q_FUNC_INFO << "SPDY level compression is not supported";
     }
 
     if (flag_fin) {

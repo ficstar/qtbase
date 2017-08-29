@@ -57,13 +57,9 @@ public:
     QStaticText();
     QStaticText(const QString &text);
     QStaticText(const QStaticText &other);
-#ifdef Q_COMPILER_RVALUE_REFS
-    QStaticText &operator=(QStaticText &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
-    QStaticText &operator=(const QStaticText &);
     ~QStaticText();
 
-    void swap(QStaticText &other) Q_DECL_NOTHROW { qSwap(data, other.data); }
+    void swap(QStaticText &other) { qSwap(data, other.data); }
 
     void setText(const QString &text);
     QString text() const;
@@ -84,6 +80,7 @@ public:
     void setPerformanceHint(PerformanceHint performanceHint);
     PerformanceHint performanceHint() const;
 
+    QStaticText &operator=(const QStaticText &);
     bool operator==(const QStaticText &) const;
     bool operator!=(const QStaticText &) const;
 

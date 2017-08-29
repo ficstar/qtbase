@@ -55,19 +55,12 @@ QT_BEGIN_NAMESPACE
 class QDesktopScreenWidget : public QWidget {
     Q_OBJECT
 public:
-    explicit QDesktopScreenWidget(QScreen *screen, const QRect &geometry);
+    QDesktopScreenWidget() : QWidget(Q_NULLPTR, Qt::Desktop)
+    {
+        setVisible(false);
+    }
 
     int screenNumber() const;
-    void setScreenGeometry(const QRect &geometry);
-
-    QScreen *screen() const { return m_screen.data(); }
-    QRect screenGeometry() const { return m_geometry; }
-
-private:
-    // The widget updates its screen and geometry automatically. We need to save them separately
-    // to detect changes, and trigger the appropriate signals.
-    const QPointer<QScreen> m_screen;
-    QRect m_geometry;
 };
 
 class QDesktopWidgetPrivate : public QWidgetPrivate {
@@ -77,7 +70,6 @@ public:
     ~QDesktopWidgetPrivate() { qDeleteAll(screens); }
     void _q_updateScreens();
     void _q_availableGeometryChanged();
-    QDesktopScreenWidget *widgetForScreen(QScreen *qScreen) const;
 
     QList<QDesktopScreenWidget *> screens;
 };

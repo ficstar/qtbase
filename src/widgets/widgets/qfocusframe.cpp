@@ -250,10 +250,6 @@ void
 QFocusFrame::paintEvent(QPaintEvent *)
 {
     Q_D(QFocusFrame);
-
-    if (!d->widget)
-        return;
-
     QStylePainter p(this);
     QStyleOption option;
     initStyleOption(&option);
@@ -333,5 +329,3 @@ bool QFocusFrame::event(QEvent *e)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qfocusframe.cpp"

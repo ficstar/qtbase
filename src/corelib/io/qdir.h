@@ -101,10 +101,11 @@ public:
     QDir &operator=(const QDir &);
     QDir &operator=(const QString &path);
 #ifdef Q_COMPILER_RVALUE_REFS
-    QDir &operator=(QDir &&other) Q_DECL_NOTHROW { swap(other); return *this; }
+    inline QDir &operator=(QDir &&other)
+    { qSwap(d_ptr, other.d_ptr); return *this; }
 #endif
 
-    void swap(QDir &other) Q_DECL_NOTHROW
+    inline void swap(QDir &other)
     { qSwap(d_ptr, other.d_ptr); }
 
     void setPath(const QString &path);
@@ -176,16 +177,7 @@ public:
 
     static QFileInfoList drives();
 
-    Q_DECL_CONSTEXPR static inline QChar listSeparator() Q_DECL_NOTHROW
-    {
-#if defined(Q_OS_WIN)
-        return QLatin1Char(';');
-#else
-        return QLatin1Char(':');
-#endif
-    }
-
-    static QChar separator(); // ### Qt6: Make it inline
+    static QChar separator();
 
     static bool setCurrent(const QString &path);
     static inline QDir current() { return QDir(currentPath()); }

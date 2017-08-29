@@ -34,7 +34,6 @@
 #ifndef QIOSCONTEXT_H
 #define QIOSCONTEXT_H
 
-#include <QtCore/qloggingcategory.h>
 #include <qpa/qplatformopenglcontext.h>
 
 @class EAGLContext;
@@ -84,9 +83,7 @@ private:
     static void deleteBuffers(const FramebufferObject &framebufferObject);
 
     FramebufferObject &backingFramebufferObjectFor(QPlatformSurface *) const;
-    mutable QHash<QPlatformSurface *, FramebufferObject> m_framebufferObjects;
-
-    bool needsRenderbufferResize(QPlatformSurface *) const;
+    mutable QHash<QIOSWindow *, FramebufferObject> m_framebufferObjects;
 };
 
 QT_END_NAMESPACE

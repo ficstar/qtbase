@@ -90,13 +90,13 @@ void QSyntaxHighlighterPrivate::applyFormatChanges()
 
     QTextLayout *layout = currentBlock.layout();
 
-    QVector<QTextLayout::FormatRange> ranges = layout->formats();
+    QList<QTextLayout::FormatRange> ranges = layout->additionalFormats();
 
     const int preeditAreaStart = layout->preeditAreaPosition();
     const int preeditAreaLength = layout->preeditAreaText().length();
 
     if (preeditAreaLength != 0) {
-        QVector<QTextLayout::FormatRange>::Iterator it = ranges.begin();
+        QList<QTextLayout::FormatRange>::Iterator it = ranges.begin();
         while (it != ranges.end()) {
             if (it->start >= preeditAreaStart
                 && it->start + it->length <= preeditAreaStart + preeditAreaLength) {
@@ -142,7 +142,7 @@ void QSyntaxHighlighterPrivate::applyFormatChanges()
     }
 
     if (formatsChanged) {
-        layout->setFormats(ranges);
+        layout->setAdditionalFormats(ranges);
         doc->markContentsDirty(currentBlock.position(), currentBlock.length());
     }
 }
@@ -329,7 +329,7 @@ void QSyntaxHighlighter::setDocument(QTextDocument *doc)
         QTextCursor cursor(d->doc);
         cursor.beginEditBlock();
         for (QTextBlock blk = d->doc->begin(); blk.isValid(); blk = blk.next())
-            blk.layout()->clearFormats();
+            blk.layout()->clearAdditionalFormats();
         cursor.endEditBlock();
     }
     d->doc = doc;

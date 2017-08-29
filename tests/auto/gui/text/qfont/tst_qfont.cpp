@@ -149,7 +149,7 @@ void tst_QFont::exactMatch()
 #endif
 
 
-    if (!QGuiApplication::platformName().compare("xcb", Qt::CaseInsensitive)) {
+    if (QGuiApplication::platformName() == QLatin1String("xcb")) {
         QVERIFY(QFont("sans").exactMatch());
         QVERIFY(QFont("sans-serif").exactMatch());
         QVERIFY(QFont("serif").exactMatch());
@@ -217,15 +217,15 @@ void tst_QFont::exactMatch()
                                     || fontinfo.family().isEmpty());
                         }
                         if (font.pointSize() != -1) {
-                            QCOMPARE(font.pointSize(), fontinfo.pointSize());
+                            QVERIFY(font.pointSize() == fontinfo.pointSize());
                         } else {
-                            QCOMPARE(font.pixelSize(), fontinfo.pixelSize());
+                            QVERIFY(font.pixelSize() == fontinfo.pixelSize());
                         }
-                        QCOMPARE(font.italic(), fontinfo.italic());
+                        QVERIFY(font.italic() == fontinfo.italic());
                         if (font.weight() != fontinfo.weight()) {
                             qDebug("font is %s", font.toString().toLatin1().constData());
                         }
-                        QCOMPARE(font.weight(), fontinfo.weight());
+                        QVERIFY(font.weight() == fontinfo.weight());
                     } else {
                         font.setFixedPitch(!fontinfo.fixedPitch());
                         QFontInfo fontinfo1(font);
@@ -274,12 +274,12 @@ void tst_QFont::exactMatch()
                                     || fontinfo.family().contains(font.family())
                                     || fontinfo.family().isEmpty());
                             if (font.pointSize() != -1) {
-                                QCOMPARE(font.pointSize(), fontinfo.pointSize());
+                                QVERIFY(font.pointSize() == fontinfo.pointSize());
                             } else {
-                                QCOMPARE(font.pixelSize(), fontinfo.pixelSize());
+                                QVERIFY(font.pixelSize() == fontinfo.pixelSize());
                             }
-                            QCOMPARE(font.italic(), fontinfo.italic());
-                            QCOMPARE(font.weight(), fontinfo.weight());
+                            QVERIFY(font.italic() == fontinfo.italic());
+                            QVERIFY(font.weight() == fontinfo.weight());
                         } else {
                             font.setFixedPitch(!fontinfo.fixedPitch());
                             QFontInfo fontinfo1(font, (QFont::Script) script);
@@ -371,42 +371,42 @@ void tst_QFont::compare()
         QVERIFY(font != font2);
         QCOMPARE(font < font2,!(font2 < font));
         font2.setItalic(false);
-        QCOMPARE(font, font2);
+        QVERIFY(font == font2);
         QVERIFY(!(font < font2));
 
         font2.setWeight(QFont::Bold);
         QVERIFY(font != font2);
         QCOMPARE(font < font2,!(font2 < font));
         font2.setWeight(QFont::Normal);
-        QCOMPARE(font, font2);
+        QVERIFY(font == font2);
         QVERIFY(!(font < font2));
 
         font.setUnderline(true);
         QVERIFY(font != font2);
         QCOMPARE(font < font2,!(font2 < font));
         font.setUnderline(false);
-        QCOMPARE(font, font2);
+        QVERIFY(font == font2);
         QVERIFY(!(font < font2));
 
         font.setStrikeOut(true);
         QVERIFY(font != font2);
         QCOMPARE(font < font2,!(font2 < font));
         font.setStrikeOut(false);
-        QCOMPARE(font, font2);
+        QVERIFY(font == font2);
         QVERIFY(!(font < font2));
 
         font.setOverline(true);
         QVERIFY(font != font2);
         QCOMPARE(font < font2,!(font2 < font));
         font.setOverline(false);
-        QCOMPARE(font, font2);
+        QVERIFY(font == font2);
         QVERIFY(!(font < font2));
 
         font.setCapitalization(QFont::SmallCaps);
         QVERIFY(font != font2);
         QCOMPARE(font < font2,!(font2 < font));
         font.setCapitalization(QFont::MixedCase);
-        QCOMPARE(font, font2);
+        QVERIFY(font == font2);
         QVERIFY(!(font < font2));
     }
 }
@@ -426,27 +426,27 @@ void tst_QFont::resolve()
     font1.setWeight(QFont::Bold);
     QFont font2 = font1.resolve(font);
 
-    QCOMPARE(font2.weight(), font1.weight());
+    QVERIFY(font2.weight() == font1.weight());
 
-    QCOMPARE(font2.pointSize(), font.pointSize());
-    QCOMPARE(font2.italic(), font.italic());
-    QCOMPARE(font2.underline(), font.underline());
-    QCOMPARE(font2.overline(), font.overline());
-    QCOMPARE(font2.strikeOut(), font.strikeOut());
-    QCOMPARE(font2.stretch(), font.stretch());
+    QVERIFY(font2.pointSize() == font.pointSize());
+    QVERIFY(font2.italic() == font.italic());
+    QVERIFY(font2.underline() == font.underline());
+    QVERIFY(font2.overline() == font.overline());
+    QVERIFY(font2.strikeOut() == font.strikeOut());
+    QVERIFY(font2.stretch() == font.stretch());
 
     QFont font3;
     font3.setStretch(QFont::UltraCondensed);
     QFont font4 = font3.resolve(font1).resolve(font);
 
-    QCOMPARE(font4.stretch(), font3.stretch());
+    QVERIFY(font4.stretch() == font3.stretch());
 
-    QCOMPARE(font4.weight(), font.weight());
-    QCOMPARE(font4.pointSize(), font.pointSize());
-    QCOMPARE(font4.italic(), font.italic());
-    QCOMPARE(font4.underline(), font.underline());
-    QCOMPARE(font4.overline(), font.overline());
-    QCOMPARE(font4.strikeOut(), font.strikeOut());
+    QVERIFY(font4.weight() == font.weight());
+    QVERIFY(font4.pointSize() == font.pointSize());
+    QVERIFY(font4.italic() == font.italic());
+    QVERIFY(font4.underline() == font.underline());
+    QVERIFY(font4.overline() == font.overline());
+    QVERIFY(font4.strikeOut() == font.strikeOut());
 
 
     QFont f1,f2,f3;
@@ -479,8 +479,8 @@ void tst_QFont::resetFont()
 
     child->setFont(QFont()); // reset font
 
-    QCOMPARE(child->font().resolve(), uint(0));
-    QCOMPARE(child->font().pointSize(), parent.font().pointSize());
+    QVERIFY(child->font().resolve() == 0);
+    QVERIFY(child->font().pointSize() == parent.font().pointSize());
     QVERIFY(parent.font().resolve() != 0);
 }
 #endif
@@ -608,11 +608,6 @@ void tst_QFont::serialize_data()
     font.setStyleName("Regular Black Condensed");
     // This wasn't read until 5.4.
     QTest::newRow("styleName") << font << QDataStream::Qt_5_4;
-
-    font = basicFont;
-    font.setCapitalization(QFont::AllUppercase);
-    // This wasn't read until 5.6.
-    QTest::newRow("capitalization") << font << QDataStream::Qt_5_6;
 }
 
 void tst_QFont::serialize()
@@ -733,24 +728,24 @@ void tst_QFont::sharing()
     QCOMPARE(QFontPrivate::get(f)->engineData->ref.load(), 1 + refs_by_cache);
 
     QFont f2(f);
-    QCOMPARE(QFontPrivate::get(f2), QFontPrivate::get(f));
+    QVERIFY(QFontPrivate::get(f2) == QFontPrivate::get(f));
     QCOMPARE(QFontPrivate::get(f2)->ref.load(), 2);
     QVERIFY(QFontPrivate::get(f2)->engineData);
-    QCOMPARE(QFontPrivate::get(f2)->engineData, QFontPrivate::get(f)->engineData);
+    QVERIFY(QFontPrivate::get(f2)->engineData == QFontPrivate::get(f)->engineData);
     QCOMPARE(QFontPrivate::get(f2)->engineData->ref.load(), 1 + refs_by_cache);
 
     f2.setKerning(!f.kerning());
     QVERIFY(QFontPrivate::get(f2) != QFontPrivate::get(f));
     QCOMPARE(QFontPrivate::get(f2)->ref.load(), 1);
     QVERIFY(QFontPrivate::get(f2)->engineData);
-    QCOMPARE(QFontPrivate::get(f2)->engineData, QFontPrivate::get(f)->engineData);
+    QVERIFY(QFontPrivate::get(f2)->engineData == QFontPrivate::get(f)->engineData);
     QCOMPARE(QFontPrivate::get(f2)->engineData->ref.load(), 2 + refs_by_cache);
 
     f2 = f;
-    QCOMPARE(QFontPrivate::get(f2), QFontPrivate::get(f));
+    QVERIFY(QFontPrivate::get(f2) == QFontPrivate::get(f));
     QCOMPARE(QFontPrivate::get(f2)->ref.load(), 2);
     QVERIFY(QFontPrivate::get(f2)->engineData);
-    QCOMPARE(QFontPrivate::get(f2)->engineData, QFontPrivate::get(f)->engineData);
+    QVERIFY(QFontPrivate::get(f2)->engineData == QFontPrivate::get(f)->engineData);
     QCOMPARE(QFontPrivate::get(f2)->engineData->ref.load(), 1 + refs_by_cache);
 
     if (f.pointSize() > 0)

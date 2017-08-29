@@ -1224,9 +1224,6 @@ void tst_QRegExp::operator_eq()
         for (int j = 0; j < I * J * K * ELL; ++j) {
             QCOMPARE(rxtable[i] == rxtable[j], i / ELL == j / ELL);
             QCOMPARE(rxtable[i] != rxtable[j], i / ELL != j / ELL);
-            // this just happens to have no hash collisions. If at some point
-            // we get collisions, restrict the test to only equal elements:
-            QCOMPARE(qHash(rxtable[i]) == qHash(rxtable[j]), i / ELL == j / ELL);
         }
     }
 }

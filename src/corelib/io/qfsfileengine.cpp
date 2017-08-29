@@ -724,33 +724,29 @@ qint64 QFSFileEnginePrivate::writeFdFh(const char *data, qint64 len)
 
     qint64 writtenBytes = 0;
 
-    if (len) { // avoid passing nullptr to fwrite() or QT_WRITE() (UB)
+    if (fh) {
+        // Buffered stdlib mode.
 
-        if (fh) {
-            // Buffered stdlib mode.
+        size_t result;
+        do {
+            result = fwrite(data + writtenBytes, 1, size_t(len - writtenBytes), fh);
+            writtenBytes += result;
+        } while (result == 0 ? errno == EINTR : writtenBytes < len);
 
-            size_t result;
-            do {
-                result = fwrite(data + writtenBytes, 1, size_t(len - writtenBytes), fh);
-                writtenBytes += result;
-            } while (result == 0 ? errno == EINTR : writtenBytes < len);
+    } else if (fd != -1) {
+        // Unbuffered stdio mode.
 
-        } else if (fd != -1) {
-            // Unbuffered stdio mode.
-
-            SignedIOType result;
-            do {
-                // calculate the chunk size
-                // on Windows or 32-bit no-largefile Unix, we'll need to read in chunks
-                // we limit to the size of the signed type, otherwise we could get a negative number as a result
-                quint64 wantedBytes = quint64(len) - quint64(writtenBytes);
-                UnsignedIOType chunkSize = std::numeric_limits<SignedIOType>::max();
-                if (chunkSize > wantedBytes)
-                    chunkSize = wantedBytes;
-                result = QT_WRITE(fd, data + writtenBytes, chunkSize);
-            } while (result > 0 && (writtenBytes += result) < len);
-        }
-
+        SignedIOType result;
+        do {
+            // calculate the chunk size
+            // on Windows or 32-bit no-largefile Unix, we'll need to read in chunks
+            // we limit to the size of the signed type, otherwise we could get a negative number as a result
+            quint64 wantedBytes = quint64(len) - quint64(writtenBytes);
+            UnsignedIOType chunkSize = std::numeric_limits<SignedIOType>::max();
+            if (chunkSize > wantedBytes)
+                chunkSize = wantedBytes;
+            result = QT_WRITE(fd, data + writtenBytes, chunkSize);
+        } while (result > 0 && (writtenBytes += result) < len);
     }
 
     if (len &&  writtenBytes == 0) {

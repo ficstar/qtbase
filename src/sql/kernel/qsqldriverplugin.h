@@ -49,7 +49,7 @@ class Q_SQL_EXPORT QSqlDriverPlugin : public QObject
 {
     Q_OBJECT
 public:
-    explicit QSqlDriverPlugin(QObject *parent = Q_NULLPTR);
+    explicit QSqlDriverPlugin(QObject *parent = 0);
     ~QSqlDriverPlugin();
 
     virtual QSqlDriver *create(const QString &key) = 0;

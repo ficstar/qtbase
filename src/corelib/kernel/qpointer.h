@@ -35,7 +35,6 @@
 #define QPOINTER_H
 
 #include <QtCore/qsharedpointer.h>
-#include <QtCore/qtypeinfo.h>
 
 #ifndef QT_NO_QOBJECT
 
@@ -46,8 +45,6 @@ class QVariant;
 template <class T>
 class QPointer
 {
-    Q_STATIC_ASSERT_X(!QtPrivate::is_pointer<T>::value, "QPointer's template type must not be a pointer type");
-
     template<typename U>
     struct TypeSelector
     {
@@ -64,14 +61,7 @@ public:
     inline QPointer() { }
     inline QPointer(T *p) : wp(p, true) { }
     // compiler-generated copy/move ctor/assignment operators are fine!
-    // compiler-generated dtor is fine!
-
-#ifdef Q_QDOC
-    // Stop qdoc from complaining about missing function
-    ~QPointer();
-#endif
-
-    inline void swap(QPointer &other) { wp.swap(other.wp); }
+    inline ~QPointer() { }
 
     inline QPointer<T> &operator=(T* p)
     { wp.assign(static_cast<QObjectType*>(p)); return *this; }

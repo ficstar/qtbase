@@ -31,7 +31,6 @@
 **
 ****************************************************************************/
 
-#include "androidjnimain.h"
 #include "androidjnimenu.h"
 #include "qandroidplatformtheme.h"
 #include "qandroidplatformmenubar.h"
@@ -46,7 +45,6 @@
 #include <QVariant>
 
 #include <private/qguiapplication_p.h>
-#include <private/qhighdpiscaling_p.h>
 #include <qandroidplatformintegration.h>
 
 QT_BEGIN_NAMESPACE
@@ -195,7 +193,7 @@ QJsonObject AndroidStyle::loadStyleData()
     }
     Q_ASSERT(!stylePath.isEmpty());
 
-    if (!androidTheme.isEmpty() && QFileInfo::exists(stylePath + androidTheme + QLatin1String("style.json")))
+    if (!androidTheme.isEmpty() && QFileInfo(stylePath + androidTheme + QLatin1String("style.json")).exists())
         stylePath += androidTheme;
 
     QFile f(stylePath + QLatin1String("style.json"));
@@ -218,7 +216,6 @@ QJsonObject AndroidStyle::loadStyleData()
 
 static std::shared_ptr<AndroidStyle> loadAndroidStyle(QPalette *defaultPalette)
 {
-    double pixelDensity = QHighDpiScaling::isActive() ? QtAndroid::pixelDensity() : 1.0;
     std::shared_ptr<AndroidStyle> style(new AndroidStyle);
     style->m_styleData = AndroidStyle::loadStyleData();
     if (style->m_styleData.isEmpty())
@@ -248,7 +245,7 @@ static std::shared_ptr<AndroidStyle> loadAndroidStyle(QPalette *defaultPalette)
             // Font size (in pixels)
             attributeIterator = item.find(QLatin1String("TextAppearance_textSize"));
             if (attributeIterator != item.constEnd())
-                font.setPixelSize(int(attributeIterator.value().toDouble() / pixelDensity));
+                font.setPixelSize(int(attributeIterator.value().toDouble()));
 
             // Font style
             attributeIterator = item.find(QLatin1String("TextAppearance_textStyle"));
@@ -362,9 +359,6 @@ QAndroidPlatformTheme::QAndroidPlatformTheme(QAndroidPlatformNativeInterface *an
 
     // default in case the style has not set a font
     m_systemFont = QFont(QLatin1String("Roboto"), 14.0 * 100 / 72); // keep default size the same after changing from 100 dpi to 72 dpi
-
-    // by default use native menu bar
-    QCoreApplication::setAttribute(Qt::AA_DontUseNativeMenuBar, false);
 }
 
 QPlatformMenuBar *QAndroidPlatformTheme::createPlatformMenuBar() const

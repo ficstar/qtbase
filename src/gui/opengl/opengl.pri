@@ -36,8 +36,7 @@ contains(QT_CONFIG, opengl)|contains(QT_CONFIG, opengles2) {
                opengl/qopengltexture.h \
                opengl/qopengltexture_p.h \
                opengl/qopengltexturehelper_p.h \
-               opengl/qopenglpixeltransferoptions.h \
-               opengl/qopenglextrafunctions.h
+               opengl/qopenglpixeltransferoptions.h
 
     SOURCES += opengl/qopengl.cpp \
                opengl/qopenglfunctions.cpp \

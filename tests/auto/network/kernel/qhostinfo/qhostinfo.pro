@@ -14,5 +14,3 @@ wince {
 
 # needed for getaddrinfo with official MinGW
 mingw:DEFINES += _WIN32_WINNT=0x0501
-
-winrt: WINRT_MANIFEST.capabilities += internetClientServer

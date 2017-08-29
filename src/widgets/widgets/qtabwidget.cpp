@@ -331,11 +331,13 @@ void QTabWidget::initStyleOption(QStyleOptionTabWidgetFrame *option) const
 
     option->tabBarSize = t;
 
-    QRect tbRect = tabBar()->geometry();
-    QRect selectedTabRect = tabBar()->tabRect(tabBar()->currentIndex());
-    option->tabBarRect = tbRect;
-    selectedTabRect.moveTopLeft(selectedTabRect.topLeft() + tbRect.topLeft());
-    option->selectedTabRect = selectedTabRect;
+    if (QStyleOptionTabWidgetFrameV2 *tabframe = qstyleoption_cast<QStyleOptionTabWidgetFrameV2*>(option)) {
+        QRect tbRect = tabBar()->geometry();
+        QRect selectedTabRect = tabBar()->tabRect(tabBar()->currentIndex());
+        tabframe->tabBarRect = tbRect;
+        selectedTabRect.moveTopLeft(selectedTabRect.topLeft() + tbRect.topLeft());
+        tabframe->selectedTabRect = selectedTabRect;
+    }
 }
 
 /*!
@@ -766,7 +768,7 @@ void QTabWidget::setUpLayout(bool onlyCheck)
     if (onlyCheck && !d->dirty)
         return; // nothing to do
 
-    QStyleOptionTabWidgetFrame option;
+    QStyleOptionTabWidgetFrameV2 option;
     initStyleOption(&option);
 
     // this must be done immediately, because QWidgetItem relies on it (even if !isVisible())
@@ -815,7 +817,7 @@ QSize QTabWidget::sizeHint() const
 {
     Q_D(const QTabWidget);
     QSize lc(0, 0), rc(0, 0);
-    QStyleOptionTabWidgetFrame opt;
+    QStyleOptionTabWidgetFrameV2 opt;
     initStyleOption(&opt);
     opt.state = QStyle::State_None;
 
@@ -864,7 +866,7 @@ QSize QTabWidget::minimumSizeHint() const
 
     QSize sz = basicSize(d->pos == North || d->pos == South, lc, rc, s, t);
 
-    QStyleOptionTabWidgetFrame opt;
+    QStyleOptionTabWidgetFrameV2 opt;
     initStyleOption(&opt);
     opt.palette = palette();
     opt.state = QStyle::State_None;
@@ -878,7 +880,7 @@ QSize QTabWidget::minimumSizeHint() const
 int QTabWidget::heightForWidth(int width) const
 {
     Q_D(const QTabWidget);
-    QStyleOptionTabWidgetFrame opt;
+    QStyleOptionTabWidgetFrameV2 opt;
     initStyleOption(&opt);
     opt.state = QStyle::State_None;
 
@@ -1224,14 +1226,14 @@ void QTabWidget::paintEvent(QPaintEvent *)
     if (documentMode()) {
         QStylePainter p(this, tabBar());
         if (QWidget *w = cornerWidget(Qt::TopLeftCorner)) {
-            QStyleOptionTabBarBase opt;
+            QStyleOptionTabBarBaseV2 opt;
             QTabBarPrivate::initStyleBaseOption(&opt, tabBar(), w->size());
             opt.rect.moveLeft(w->x() + opt.rect.x());
             opt.rect.moveTop(w->y() + opt.rect.y());
             p.drawPrimitive(QStyle::PE_FrameTabBarBase, opt);
         }
         if (QWidget *w = cornerWidget(Qt::TopRightCorner)) {
-            QStyleOptionTabBarBase opt;
+            QStyleOptionTabBarBaseV2 opt;
             QTabBarPrivate::initStyleBaseOption(&opt, tabBar(), w->size());
             opt.rect.moveLeft(w->x() + opt.rect.x());
             opt.rect.moveTop(w->y() + opt.rect.y());
@@ -1241,7 +1243,7 @@ void QTabWidget::paintEvent(QPaintEvent *)
     }
     QStylePainter p(this);
 
-    QStyleOptionTabWidgetFrame opt;
+    QStyleOptionTabWidgetFrameV2 opt;
     initStyleOption(&opt);
     opt.rect = d->panelRect;
     p.drawPrimitive(QStyle::PE_FrameTabWidget, opt);
@@ -1316,7 +1318,7 @@ void QTabWidget::setUsesScrollButtons(bool useButtons)
 /*!
     \property QTabWidget::documentMode
     \brief Whether or not the tab widget is rendered in a mode suitable for document
-     pages. This is the same as document mode on \macos.
+     pages. This is the same as document mode on OS X.
     \since 4.5
 
     When this property is set the tab widget frame is not rendered. This mode is useful

@@ -50,9 +50,6 @@
 #include <QtCore/private/qtools_p.h>
 #include <QtCore/qdiriterator.h>
 #include <QtCore/qtemporarydir.h>
-#include <QtCore/qthread.h>
-#include <QtCore/qwaitcondition.h>
-#include <QtCore/qmutex.h>
 
 #include <QtTest/private/qtestlog_p.h>
 #include <QtTest/private/qtesttable_p.h>
@@ -65,9 +62,6 @@
 #if defined(HAVE_XCTEST)
 #include <QtTest/private/qxctestlogger_p.h>
 #endif
-#if defined Q_OS_MACOS
-#include <QtTest/private/qtestutil_macos_p.h>
-#endif
 
 #include <numeric>
 #include <algorithm>
@@ -75,12 +69,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#if defined(Q_OS_LINUX)
-#include <sys/types.h>
-#include <unistd.h>
-#include <fcntl.h>
-#endif
 
 #ifdef Q_OS_WIN
 #ifndef Q_OS_WINCE
@@ -104,41 +92,6 @@ QT_BEGIN_NAMESPACE
 
 using QtMiscUtils::toHexUpper;
 using QtMiscUtils::fromHex;
-
-
-static void stackTrace()
-{
-    bool ok = false;
-    const int disableStackDump = qEnvironmentVariableIntValue("QTEST_DISABLE_STACK_DUMP", &ok);
-    if (ok && disableStackDump == 1)
-        return;
-#ifdef Q_OS_LINUX
-    fprintf(stderr, "\n========= Received signal, dumping stack ==============\n");
-    char cmd[512];
-    qsnprintf(cmd, 512, "gdb --pid %d 2>/dev/null <<EOF\n"
-                         "set prompt\n"
-                         "set height 0\n"
-                         "thread apply all where full\n"
-                         "detach\n"
-                         "quit\n"
-                         "EOF\n",
-                         (int)getpid());
-    if (system(cmd) == -1)
-        fprintf(stderr, "calling gdb failed\n");
-    fprintf(stderr, "========= End of stack trace ==============\n");
-#elif defined(Q_OS_OSX)
-    fprintf(stderr, "\n========= Received signal, dumping stack ==============\n");
-    char cmd[512];
-    qsnprintf(cmd, 512, "lldb -p %d 2>/dev/null <<EOF\n"
-                         "bt all\n"
-                         "quit\n"
-                         "EOF\n",
-                         (int)getpid());
-    if (system(cmd) == -1)
-        fprintf(stderr, "calling lldb failed\n");
-    fprintf(stderr, "========= End of stack trace ==============\n");
-#endif
-}
 
 /*!
    \namespace QTest
@@ -252,7 +205,7 @@ static void stackTrace()
    \note This macro can only be used in a test function that is invoked
    by the test framework.
 
-   \sa QTRY_VERIFY(), QTRY_VERIFY2_WITH_TIMEOUT(), QVERIFY(), QCOMPARE(), QTRY_COMPARE()
+   \sa QTRY_VERIFY(), QVERIFY(), QCOMPARE(), QTRY_COMPARE()
 */
 
 
@@ -266,47 +219,7 @@ static void stackTrace()
    \note This macro can only be used in a test function that is invoked
    by the test framework.
 
-   \sa QTRY_VERIFY_WITH_TIMEOUT(), QTRY_VERIFY2(), QVERIFY(), QCOMPARE(), QTRY_COMPARE()
-*/
-
-/*! \macro QTRY_VERIFY2_WITH_TIMEOUT(condition, message, timeout)
-   \since 5.6
-
-   \relates QTest
-
-   The QTRY_VERIFY2_WITH_TIMEOUT macro is similar to QTRY_VERIFY_WITH_TIMEOUT()
-   except that it outputs a verbose \a message when \a condition is still false
-   after the specified \a timeout. The \a message is a plain C string.
-
-   Example:
-   \code
-   QTRY_VERIFY2_WITH_TIMEOUT(list.size() > 2, QByteArray::number(list.size()).constData(), 10000);
-   \endcode
-
-   \note This macro can only be used in a test function that is invoked
-   by the test framework.
-
-   \sa QTRY_VERIFY(), QTRY_VERIFY_WITH_TIMEOUT(), QVERIFY(), QCOMPARE(), QTRY_COMPARE()
-*/
-
-/*! \macro QTRY_VERIFY2(condition, message)
-   \since 5.6
-
-   \relates QTest
-
-   Checks the \a condition by invoking QTRY_VERIFY2_WITH_TIMEOUT() with a timeout
-   of five seconds. If \a condition is then still false, \a message is output.
-   The \a message is a plain C string.
-
-   Example:
-   \code
-   QTRY_VERIFY2_WITH_TIMEOUT(list.size() > 2, QByteArray::number(list.size()).constData());
-   \endcode
-
-   \note This macro can only be used in a test function that is invoked
-   by the test framework.
-
-   \sa QTRY_VERIFY2_WITH_TIMEOUT(), QTRY_VERIFY2(), QVERIFY(), QCOMPARE(), QTRY_COMPARE()
+   \sa QTRY_VERIFY_WITH_TIMEOUT(), QVERIFY(), QCOMPARE(), QTRY_COMPARE()
 */
 
 /*! \macro QTRY_COMPARE_WITH_TIMEOUT(actual, expected, timeout)
@@ -423,7 +336,7 @@ static void stackTrace()
    row of test data, so an unconditional call to QSKIP will produce one skip
    message in the test log for each row of test data.
 
-   If called from a _data function, the QSKIP() macro will stop execution of
+   If called from an _data function, the QSKIP() macro will stop execution of
    the _data function and will prevent execution of the associated test
    function.
 
@@ -648,7 +561,6 @@ static void stackTrace()
     \value Press    The key is pressed.
     \value Release  The key is released.
     \value Click    The key is clicked (pressed and released).
-    \value Shortcut A shortcut is activated. This value has been added in Qt 5.6.
 */
 
 /*! \enum QTest::MouseAction
@@ -1364,7 +1276,7 @@ static void stackTrace()
 */
 
 /*!
-    \fn QTouchEventSequence QTest::touchEvent(QWindow *window, QTouchDevice *device, bool autoCommit)
+    \fn QTouchEventSequence QTest::touchEvent(QWindow *window, QTouchDevice *device, bool autoCommit = true)
     \since 5.0
 
     Creates and returns a QTouchEventSequence for the \a device to
@@ -1381,7 +1293,7 @@ static void stackTrace()
 */
 
 /*!
-    \fn QTouchEventSequence QTest::touchEvent(QWidget *widget, QTouchDevice *device, bool autoCommit)
+    \fn QTouchEventSequence QTest::touchEvent(QWidget *widget, QTouchDevice *device, bool autoCommit = true)
 
     Creates and returns a QTouchEventSequence for the \a device to
     simulate events for \a widget.
@@ -1458,7 +1370,6 @@ namespace QTest
     static int keyDelay = -1;
     static int mouseDelay = -1;
     static int eventDelay = -1;
-    static int timeout = -1;
     static bool noCrashHandler = false;
 
 /*! \internal
@@ -1508,18 +1419,6 @@ int Q_TESTLIB_EXPORT defaultKeyDelay()
             keyDelay = defaultEventDelay();
     }
     return keyDelay;
-}
-
-static int defaultTimeout()
-{
-    if (timeout == -1) {
-        bool ok = false;
-        timeout = qEnvironmentVariableIntValue("QTEST_FUNCTION_TIMEOUT", &ok);
-
-        if (!ok || timeout <= 0)
-            timeout = 5*60*1000;
-    }
-    return timeout;
 }
 
 static bool isValidSlot(const QMetaMethod &sl)
@@ -1581,9 +1480,7 @@ static void qPrintDataTags(FILE *stream)
             member.resize(qstrlen(slot) + qstrlen("_data()") + 1);
             qsnprintf(member.data(), member.size(), "%s_data()", slot);
             invokeMethod(QTest::currentTestObject, member.constData());
-            const int dataCount = table.dataCount();
-            localTags.reserve(dataCount);
-            for (int j = 0; j < dataCount; ++j)
+            for (int j = 0; j < table.dataCount(); ++j)
                 localTags << QLatin1String(table.testData(j)->dataTag());
 
             // Print all tag combinations:
@@ -1683,7 +1580,7 @@ Q_TESTLIB_EXPORT void qtest_qParseArgs(int argc, char *argv[], bool qml)
          " -mousedelay ms      : Set default delay for mouse simulation to ms milliseconds\n"
          " -maxwarnings n      : Sets the maximum amount of messages to output.\n"
          "                       0 means unlimited, default: 2000\n"
-         " -nocrashhandler     : Disables the crash handler. Useful for debugging crashes.\n"
+         " -nocrashhandler     : Disables the crash handler\n"
          "\n"
          " Benchmarking options:\n"
 #ifdef QTESTLIB_USE_VALGRIND
@@ -1986,7 +1883,7 @@ Q_TESTLIB_EXPORT void qtest_qParseArgs(int argc, char *argv[], bool qml)
         QTestLog::addLogger(logFormat, logFilename);
 }
 
-QBenchmarkResult qMedian(const QVector<QBenchmarkResult> &container)
+QBenchmarkResult qMedian(const QList<QBenchmarkResult> &container)
 {
     const int count = container.count();
     if (count == 0)
@@ -1995,7 +1892,7 @@ QBenchmarkResult qMedian(const QVector<QBenchmarkResult> &container)
     if (count == 1)
         return container.front();
 
-    QVector<QBenchmarkResult> containerCopy = container;
+    QList<QBenchmarkResult> containerCopy = container;
     std::sort(containerCopy.begin(), containerCopy.end());
 
     const int middle = count / 2;
@@ -2032,7 +1929,7 @@ static void qInvokeTestMethodDataEntry(char *slot)
     bool isBenchmark = false;
     int i = (QBenchmarkGlobalData::current->measurer->needsWarmupIteration()) ? -1 : 0;
 
-    QVector<QBenchmarkResult> results;
+    QList<QBenchmarkResult> results;
     bool minimumTotalReached = false;
     do {
         QBenchmarkTestMethodData::current->beginDataRun();
@@ -2114,58 +2011,6 @@ static void qInvokeTestMethodDataEntry(char *slot)
     }
 }
 
-class WatchDog : public QThread
-{
-public:
-    WatchDog()
-    {
-        QMutexLocker locker(&mutex);
-        timeout.store(-1);
-        start();
-        waitCondition.wait(&mutex);
-    }
-    ~WatchDog() {
-        {
-            QMutexLocker locker(&mutex);
-            timeout.store(0);
-            waitCondition.wakeAll();
-        }
-        wait();
-    }
-
-    void beginTest() {
-        QMutexLocker locker(&mutex);
-        timeout.store(defaultTimeout());
-        waitCondition.wakeAll();
-    }
-
-    void testFinished() {
-        QMutexLocker locker(&mutex);
-        timeout.store(-1);
-        waitCondition.wakeAll();
-    }
-
-    void run() {
-        QMutexLocker locker(&mutex);
-        waitCondition.wakeAll();
-        while (1) {
-            int t = timeout.load();
-            if (!t)
-                break;
-            if (!waitCondition.wait(&mutex, t)) {
-                stackTrace();
-                qFatal("Test function timed out");
-            }
-        }
-    }
-
-private:
-    QBasicAtomicInt timeout;
-    QMutex mutex;
-    QWaitCondition waitCondition;
-};
-
-
 /*!
     \internal
 
@@ -2175,7 +2020,7 @@ private:
     If the function was successfully called, true is returned, otherwise
     false.
  */
-static bool qInvokeTestMethod(const char *slotName, const char *data, WatchDog *watchDog)
+static bool qInvokeTestMethod(const char *slotName, const char *data=0)
 {
     QTEST_ASSERT(slotName);
 
@@ -2234,11 +2079,7 @@ static bool qInvokeTestMethod(const char *slotName, const char *data, WatchDog *
                     QTestDataSetter s(curDataIndex >= dataCount ? static_cast<QTestData *>(0)
                                                       : table.testData(curDataIndex));
 
-                    if (watchDog)
-                        watchDog->beginTest();
                     qInvokeTestMethodDataEntry(slot);
-                    if (watchDog)
-                        watchDog->testFinished();
 
                     if (data)
                         break;
@@ -2510,37 +2351,6 @@ char *toPrettyUnicode(const ushort *p, int length)
     return buffer.take();
 }
 
-static bool debuggerPresent()
-{
-#if defined(Q_OS_LINUX)
-    int fd = open("/proc/self/status", O_RDONLY);
-    if (fd == -1)
-        return false;
-    char buffer[2048];
-    ssize_t size = read(fd, buffer, sizeof(buffer) - 1);
-    if (size == -1) {
-        close(fd);
-        return false;
-    }
-    buffer[size] = 0;
-    const char tracerPidToken[] = "\nTracerPid:";
-    char *tracerPid = strstr(buffer, tracerPidToken);
-    if (!tracerPid) {
-        close(fd);
-        return false;
-    }
-    tracerPid += sizeof(tracerPidToken);
-    long int pid = strtol(tracerPid, &tracerPid, 10);
-    close(fd);
-    return pid != 0;
-#elif defined(Q_OS_WIN)
-    return IsDebuggerPresent();
-#else
-    // TODO
-    return false;
-#endif
-}
-
 static void qInvokeTestMethods(QObject *testObject)
 {
     const QMetaObject *metaObject = testObject->metaObject();
@@ -2549,15 +2359,6 @@ static void qInvokeTestMethods(QObject *testObject)
     QTestResult::setCurrentTestFunction("initTestCase");
     QTestTable::globalTestTable();
     invokeMethod(testObject, "initTestCase_data()");
-
-    QScopedPointer<WatchDog> watchDog;
-    if (!debuggerPresent()
-#ifdef QTESTLIB_USE_VALGRIND
-        && QBenchmarkGlobalData::current->mode() != QBenchmarkGlobalData::CallgrindChildProcess
-#endif
-       ) {
-        watchDog.reset(new WatchDog);
-    }
 
     if (!QTestResult::skipCurrentTest() && !QTest::currentTestFailed()) {
         invokeMethod(testObject, "initTestCase()");
@@ -2573,7 +2374,7 @@ static void qInvokeTestMethods(QObject *testObject)
             if (QTest::testFuncs) {
                 for (int i = 0; i != QTest::testFuncCount; i++) {
                     if (!qInvokeTestMethod(metaObject->method(QTest::testFuncs[i].function()).methodSignature().constData(),
-                                                              QTest::testFuncs[i].data(), watchDog.data())) {
+                                                              QTest::testFuncs[i].data())) {
                         break;
                     }
                 }
@@ -2586,7 +2387,7 @@ static void qInvokeTestMethods(QObject *testObject)
                 for (int i = 0; i != methodCount; i++) {
                     if (!isValidSlot(testMethods[i]))
                         continue;
-                    if (!qInvokeTestMethod(testMethods[i].methodSignature().constData(), 0, watchDog.data()))
+                    if (!qInvokeTestMethod(testMethods[i].methodSignature().constData()))
                         break;
                 }
                 delete[] testMethods;
@@ -2622,13 +2423,7 @@ private:
 
 void FatalSignalHandler::signal(int signum)
 {
-    const int msecsFunctionTime = qRound(QTestLog::msecsFunctionTime());
-    const int msecsTotalTime = qRound(QTestLog::msecsTotalTime());
-    if (signum != SIGINT)
-        stackTrace();
-    qFatal("Received signal %d\n"
-           "         Function time: %dms Total time: %dms",
-           signum, msecsFunctionTime, msecsTotalTime);
+    qFatal("Received signal %d", signum);
 #if defined(Q_OS_INTEGRITY)
     {
         struct sigaction act;
@@ -2722,141 +2517,13 @@ FatalSignalHandler::~FatalSignalHandler()
 } // namespace
 
 #if defined(Q_OS_WIN) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
-
-// Helper class for resolving symbol names by dynamically loading "dbghelp.dll".
-class DebugSymbolResolver
-{
-    Q_DISABLE_COPY(DebugSymbolResolver)
-public:
-    struct Symbol {
-        Symbol() : name(Q_NULLPTR), address(0) {}
-
-        const char *name; // Must be freed by caller.
-        DWORD64 address;
-    };
-
-    explicit DebugSymbolResolver(HANDLE process);
-    ~DebugSymbolResolver() { cleanup(); }
-
-    bool isValid() const { return m_symFromAddr; }
-
-    Symbol resolveSymbol(DWORD64 address) const;
-
-private:
-    // typedefs from DbgHelp.h/.dll
-    struct DBGHELP_SYMBOL_INFO { // SYMBOL_INFO
-        ULONG       SizeOfStruct;
-        ULONG       TypeIndex;        // Type Index of symbol
-        ULONG64     Reserved[2];
-        ULONG       Index;
-        ULONG       Size;
-        ULONG64     ModBase;          // Base Address of module comtaining this symbol
-        ULONG       Flags;
-        ULONG64     Value;            // Value of symbol, ValuePresent should be 1
-        ULONG64     Address;          // Address of symbol including base address of module
-        ULONG       Register;         // register holding value or pointer to value
-        ULONG       Scope;            // scope of the symbol
-        ULONG       Tag;              // pdb classification
-        ULONG       NameLen;          // Actual length of name
-        ULONG       MaxNameLen;
-        CHAR        Name[1];          // Name of symbol
-    };
-
-    typedef BOOL (__stdcall *SymInitializeType)(HANDLE, PCSTR, BOOL);
-    typedef BOOL (__stdcall *SymFromAddrType)(HANDLE, DWORD64, PDWORD64, DBGHELP_SYMBOL_INFO *);
-
-    void cleanup();
-
-    const HANDLE m_process;
-    HMODULE m_dbgHelpLib;
-    SymFromAddrType m_symFromAddr;
-};
-
-void DebugSymbolResolver::cleanup()
-{
-    if (m_dbgHelpLib)
-        FreeLibrary(m_dbgHelpLib);
-    m_dbgHelpLib = 0;
-    m_symFromAddr = Q_NULLPTR;
-}
-
-DebugSymbolResolver::DebugSymbolResolver(HANDLE process)
-    : m_process(process), m_dbgHelpLib(0), m_symFromAddr(Q_NULLPTR)
-{
-    bool success = false;
-    m_dbgHelpLib = LoadLibraryW(L"dbghelp.dll");
-    if (m_dbgHelpLib) {
-        SymInitializeType symInitialize = (SymInitializeType)(GetProcAddress(m_dbgHelpLib, "SymInitialize"));
-        m_symFromAddr = (SymFromAddrType)(GetProcAddress(m_dbgHelpLib, "SymFromAddr"));
-        success = symInitialize && m_symFromAddr && symInitialize(process, NULL, TRUE);
-    }
-    if (!success)
-        cleanup();
-}
-
-DebugSymbolResolver::Symbol DebugSymbolResolver::resolveSymbol(DWORD64 address) const
-{
-    // reserve additional buffer where SymFromAddr() will store the name
-    struct NamedSymbolInfo : public DBGHELP_SYMBOL_INFO {
-        enum { symbolNameLength = 255 };
-
-        char name[symbolNameLength + 1];
-    };
-
-    Symbol result;
-    if (!isValid())
-        return result;
-    NamedSymbolInfo symbolBuffer;
-    memset(&symbolBuffer, 0, sizeof(NamedSymbolInfo));
-    symbolBuffer.MaxNameLen = NamedSymbolInfo::symbolNameLength;
-    symbolBuffer.SizeOfStruct = sizeof(DBGHELP_SYMBOL_INFO);
-    if (!m_symFromAddr(m_process, address, 0, &symbolBuffer))
-        return result;
-    result.name = qstrdup(symbolBuffer.Name);
-    result.address = symbolBuffer.Address;
-    return result;
-}
-
 static LONG WINAPI windowsFaultHandler(struct _EXCEPTION_POINTERS *exInfo)
 {
-    enum { maxStackFrames = 100 };
     char appName[MAX_PATH];
     if (!GetModuleFileNameA(NULL, appName, MAX_PATH))
         appName[0] = 0;
-    const int msecsFunctionTime = qRound(QTestLog::msecsFunctionTime());
-    const int msecsTotalTime = qRound(QTestLog::msecsTotalTime());
-    const void *exceptionAddress = exInfo->ExceptionRecord->ExceptionAddress;
-    printf("A crash occurred in %s.\n"
-           "Function time: %dms Total time: %dms\n\n"
-           "Exception address: 0x%p\n"
-           "Exception code   : 0x%lx\n",
-           appName, msecsFunctionTime, msecsTotalTime,
-           exceptionAddress, exInfo->ExceptionRecord->ExceptionCode);
-
-    DebugSymbolResolver resolver(GetCurrentProcess());
-    if (resolver.isValid()) {
-        DebugSymbolResolver::Symbol exceptionSymbol = resolver.resolveSymbol(DWORD64(exceptionAddress));
-        if (exceptionSymbol.name) {
-            printf("Nearby symbol    : %s\n", exceptionSymbol.name);
-            delete [] exceptionSymbol.name;
-        }
-        void *stack[maxStackFrames];
-        fputs("\nStack:\n", stdout);
-        const unsigned frameCount = CaptureStackBackTrace(0, DWORD(maxStackFrames), stack, NULL);
-        for (unsigned f = 0; f < frameCount; ++f)     {
-            DebugSymbolResolver::Symbol symbol = resolver.resolveSymbol(DWORD64(stack[f]));
-            if (symbol.name) {
-                printf("#%3u: %s() - 0x%p\n", f + 1, symbol.name, (const void *)symbol.address);
-                delete [] symbol.name;
-            } else {
-                printf("#%3u: Unable to obtain symbol\n", f + 1);
-            }
-        }
-    }
-
-    fputc('\n', stdout);
-    fflush(stdout);
-
+    fprintf(stderr, "A crash occurred in %s (exception code 0x%lx).",
+            appName, exInfo->ExceptionRecord->ExceptionCode);
     return EXCEPTION_EXECUTE_HANDLER;
 }
 #endif // Q_OS_WIN) && !Q_OS_WINCE && !Q_OS_WINRT
@@ -2918,9 +2585,6 @@ int QTest::qExec(QObject *testObject, int argc, char **argv)
 #if defined(Q_OS_MACX)
     bool macNeedsActivate = qApp && (qstrcmp(qApp->metaObject()->className(), "QApplication") == 0);
     IOPMAssertionID powerID;
-
-    // Don't restore saved window state for auto tests.
-    QTestPrivate::disableWindowRestore();
 #endif
 #ifndef QT_NO_EXCEPTIONS
     try {
@@ -3247,7 +2911,7 @@ QString QTest::qFindTestData(const QString& base, const char *file, int line, co
             QString testsPath = QLibraryInfo::location(QLibraryInfo::TestsPath);
             QString candidate = QString::fromLatin1("%1/%2/%3")
                 .arg(testsPath, QFile::decodeName(testObjectName).toLower(), base);
-            if (QFileInfo::exists(candidate)) {
+            if (QFileInfo(candidate).exists()) {
                 found = candidate;
             }
             else if (QTestLog::verboseLevel() >= 2) {
@@ -3272,7 +2936,7 @@ QString QTest::qFindTestData(const QString& base, const char *file, int line, co
         }
 
         QString candidate = QString::fromLatin1("%1/%2").arg(srcdir.canonicalFilePath(), base);
-        if (QFileInfo::exists(candidate)) {
+        if (QFileInfo(candidate).exists()) {
             found = candidate;
         }
         else if (QTestLog::verboseLevel() >= 2) {
@@ -3286,21 +2950,21 @@ QString QTest::qFindTestData(const QString& base, const char *file, int line, co
     // 4. Try resources
     if (found.isEmpty()) {
         QString candidate = QString::fromLatin1(":/%1").arg(base);
-        if (QFileInfo::exists(candidate))
+        if (QFileInfo(candidate).exists())
             found = candidate;
     }
 
     // 5. Try current directory
     if (found.isEmpty()) {
         QString candidate = QString::fromLatin1("%1/%2").arg(QDir::currentPath()).arg(base);
-        if (QFileInfo::exists(candidate))
+        if (QFileInfo(candidate).exists())
             found = candidate;
     }
 
     // 6. Try main source directory
     if (found.isEmpty()) {
         QString candidate = QTest::mainSourcePath % QLatin1Char('/') % base;
-        if (QFileInfo::exists(candidate))
+        if (QFileInfo(candidate).exists())
             found = candidate;
     }
 
@@ -3573,8 +3237,6 @@ TO_STRING_IMPL(quint64, %llu)
 #endif
 TO_STRING_IMPL(bool, %d)
 TO_STRING_IMPL(char, %c)
-TO_STRING_IMPL(signed char, %hhd)
-TO_STRING_IMPL(unsigned char, %hhu)
 TO_STRING_IMPL(float, %g)
 TO_STRING_IMPL(double, %lg)
 
@@ -3709,6 +3371,10 @@ bool QTest::compare_string_helper(const char *t1, const char *t2, const char *ac
 /*! \fn bool QTest::qCompare(quint32 const &t1, quint64 const &t2, const char *actual, const char *expected, const char *file, int line)
     \internal
 */
+
+/*! \fn bool QTest::qCompare(bool const &t1, int const &t2, const char *actual, const char *expected, const char *file, int line)
+  \internal
+ */
 
 /*! \fn bool QTest::qTest(const T& actual, const char *elementName, const char *actualStr, const char *expected, const char *file, int line)
     \internal

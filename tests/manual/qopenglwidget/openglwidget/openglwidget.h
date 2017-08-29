@@ -35,24 +35,21 @@
 #define OPENGLWIDGET_H
 
 #include <QtWidgets/QOpenGLWidget>
-#include <QtGui/QVector3D>
 
 class OpenGLWidgetPrivate;
 class OpenGLWidget : public QOpenGLWidget
 {
     Q_OBJECT
 public:
-    OpenGLWidget(int interval = 30, const QVector3D &rotAxis = QVector3D(0, 1, 0), QWidget *parent = 0);
+    OpenGLWidget(QWidget *parent = 0);
     ~OpenGLWidget();
 
     void initializeGL();
     void resizeGL(int w, int h);
     void paintGL();
 
-    void setClearColor(const float *c);
-
 private:
-    QScopedPointer<OpenGLWidgetPrivate> d;
+    OpenGLWidgetPrivate *d;
 };
 
 #endif // OPENGLWIDGET_H

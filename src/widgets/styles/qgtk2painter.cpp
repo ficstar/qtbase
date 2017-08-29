@@ -93,7 +93,6 @@ namespace QGtk2PainterPrivate {
 
 static void initGtk()
 {
-#ifndef QT_NO_LIBRARY
     static bool initialized = false;
     if (!initialized) {
         // enforce the "0" suffix, so we'll open libgtk-x11-2.0.so.0
@@ -124,7 +123,6 @@ static void initGtk()
 
         initialized = true;
     }
-#endif // !QT_NO_LIBRARY
 }
 
 // To recover alpha we apply the gtk painting function two times to

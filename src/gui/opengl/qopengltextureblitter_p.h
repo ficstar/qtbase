@@ -68,9 +68,7 @@ public:
     bool isCreated() const;
     void destroy();
 
-    bool supportsExternalOESTarget() const;
-
-    void bind(GLenum target = GL_TEXTURE_2D);
+    void bind();
     void release();
 
     void setSwizzleRB(bool swizzle);
@@ -83,8 +81,8 @@ public:
     static QMatrix3x3 sourceTransform(const QRectF &subTexture, const QSize &textureSize, Origin origin);
 
 private:
-    Q_DISABLE_COPY(QOpenGLTextureBlitter)
-    Q_DECLARE_PRIVATE(QOpenGLTextureBlitter)
+    Q_DISABLE_COPY(QOpenGLTextureBlitter);
+    Q_DECLARE_PRIVATE(QOpenGLTextureBlitter);
     QScopedPointer<QOpenGLTextureBlitterPrivate> d_ptr;
 };
 

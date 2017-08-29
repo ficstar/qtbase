@@ -65,13 +65,14 @@ class QGroupBox;
 class QLabel;
 class QLineEdit;
 
-class Q_AUTOTEST_EXPORT QFontDialogPrivate : public QDialogPrivate
+class QFontDialogPrivate : public QDialogPrivate
 {
     Q_DECLARE_PUBLIC(QFontDialog)
 
 public:
-    QFontDialogPrivate();
-    ~QFontDialogPrivate();
+    inline QFontDialogPrivate()
+        : writingSystem(QFontDatabase::Any), options(new QFontDialogOptions)
+    { }
 
     QPlatformFontDialogHelper *platformFontDialogHelper() const
         { return static_cast<QPlatformFontDialogHelper *>(platformHelper()); }

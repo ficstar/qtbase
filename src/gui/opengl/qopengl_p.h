@@ -49,7 +49,7 @@
 #include <private/qopenglcontext_p.h>
 #include <QtCore/qset.h>
 #include <QtCore/qstring.h>
-#include <QtCore/qversionnumber.h>
+#include <private/qversionnumber_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -79,21 +79,19 @@ public:
         bool isValid() const { return deviceId || !glVendor.isEmpty(); }
         bool equals(const Gpu &other) const {
             return vendorId == other.vendorId && deviceId == other.deviceId && driverVersion == other.driverVersion
-                && driverDescription == other.driverDescription && glVendor == other.glVendor;
+                && glVendor == other.glVendor;
         }
 
         uint vendorId;
         uint deviceId;
         QVersionNumber driverVersion;
-        QByteArray driverDescription;
         QByteArray glVendor;
 
-        static Gpu fromDevice(uint vendorId, uint deviceId, QVersionNumber driverVersion, const QByteArray &driverDescription) {
+        static Gpu fromDevice(uint vendorId, uint deviceId, QVersionNumber driverVersion) {
             Gpu gpu;
             gpu.vendorId = vendorId;
             gpu.deviceId = deviceId;
             gpu.driverVersion = driverVersion;
-            gpu.driverDescription = driverDescription;
             return gpu;
         }
 
@@ -107,10 +105,10 @@ public:
     };
 
     static QSet<QString> gpuFeatures(const Gpu &gpu,
-                                     const QString &osName, const QVersionNumber &kernelVersion, const QString &osVersion,
+                                     const QString &osName, const QVersionNumber &kernelVersion,
                                      const QJsonDocument &doc);
     static QSet<QString> gpuFeatures(const Gpu &gpu,
-                                     const QString &osName, const QVersionNumber &kernelVersion, const QString &osVersion,
+                                     const QString &osName, const QVersionNumber &kernelVersion,
                                      const QString &fileName);
     static QSet<QString> gpuFeatures(const Gpu &gpu, const QJsonDocument &doc);
     static QSet<QString> gpuFeatures(const Gpu &gpu, const QString &fileName);

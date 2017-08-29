@@ -97,14 +97,14 @@ public:
 
     QOpenGLDebugMessage();
     QOpenGLDebugMessage(const QOpenGLDebugMessage &debugMessage);
+    ~QOpenGLDebugMessage();
 
     QOpenGLDebugMessage &operator=(const QOpenGLDebugMessage &debugMessage);
 #ifdef Q_COMPILER_RVALUE_REFS
-    QOpenGLDebugMessage &operator=(QOpenGLDebugMessage &&other) Q_DECL_NOTHROW { swap(other); return *this; }
+    inline QOpenGLDebugMessage &operator=(QOpenGLDebugMessage &&debugMessage)
+    { d.swap(debugMessage.d); return *this; }
 #endif
-    ~QOpenGLDebugMessage();
-
-    void swap(QOpenGLDebugMessage &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    inline void swap(QOpenGLDebugMessage &debugMessage) { d.swap(debugMessage.d); }
 
     Source source() const;
     Type type() const;
@@ -156,7 +156,7 @@ public:
     };
     Q_ENUM(LoggingMode)
 
-    explicit QOpenGLDebugLogger(QObject *parent = Q_NULLPTR);
+    explicit QOpenGLDebugLogger(QObject *parent = 0);
     ~QOpenGLDebugLogger();
 
     bool initialize();

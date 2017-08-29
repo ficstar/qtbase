@@ -70,7 +70,7 @@ void tst_QMimeData::clear() const
     mimeData.setData("text/plain", "pirates");
     QVERIFY(mimeData.hasText());
     mimeData.clear();
-    QVERIFY(!mimeData.hasText());
+    QVERIFY(mimeData.hasText() == false);
 
     // repopulate, verify not empty
     mimeData.setData("text/plain", "pirates");
@@ -136,7 +136,7 @@ void tst_QMimeData::hasColor() const
     QMimeData mimeData;
 
     // initial state
-    QVERIFY(!mimeData.hasColor());
+    QVERIFY(mimeData.hasColor() == false);
 
     // set, verify
     mimeData.setColorData(QColor(Qt::red));
@@ -144,11 +144,11 @@ void tst_QMimeData::hasColor() const
 
     // clear, verify
     mimeData.clear();
-    QVERIFY(!mimeData.hasColor());
+    QVERIFY(mimeData.hasColor() == false);
 
     // set something else, verify
     mimeData.setData("text/plain", "pirates");
-    QVERIFY(!mimeData.hasColor());
+    QVERIFY(mimeData.hasColor() == false);
 }
 
 void tst_QMimeData::hasFormat() const
@@ -156,17 +156,17 @@ void tst_QMimeData::hasFormat() const
     QMimeData mimeData;
 
     // initial state
-    QVERIFY(!mimeData.hasFormat("text/plain"));
+    QVERIFY(mimeData.hasFormat("text/plain") == false);
 
     // add, verify
     mimeData.setData("text/plain", "pirates");
     QVERIFY(mimeData.hasFormat("text/plain"));
-    QVERIFY(!mimeData.hasFormat("text/html"));
+    QVERIFY(mimeData.hasFormat("text/html") == false);
 
     // clear, verify
     mimeData.clear();
-    QVERIFY(!mimeData.hasFormat("text/plain"));
-    QVERIFY(!mimeData.hasFormat("text/html"));
+    QVERIFY(mimeData.hasFormat("text/plain") == false);
+    QVERIFY(mimeData.hasFormat("text/html") == false);
 }
 
 void tst_QMimeData::hasHtml() const
@@ -174,11 +174,11 @@ void tst_QMimeData::hasHtml() const
     QMimeData mimeData;
 
     // initial state
-    QVERIFY(!mimeData.hasHtml());
+    QVERIFY(mimeData.hasHtml() == false);
 
     // add plain, verify false
     mimeData.setData("text/plain", "pirates");
-    QVERIFY(!mimeData.hasHtml());
+    QVERIFY(mimeData.hasHtml() == false);
 
     // add html, verify
     mimeData.setData("text/html", "ninjas");
@@ -186,7 +186,7 @@ void tst_QMimeData::hasHtml() const
 
     // clear, verify
     mimeData.clear();
-    QVERIFY(!mimeData.hasHtml());
+    QVERIFY(mimeData.hasHtml() == false);
 
     // readd, verify
     mimeData.setData("text/html", "ninjas");
@@ -198,11 +198,11 @@ void tst_QMimeData::hasImage() const
     QMimeData mimeData;
 
     // initial state
-    QVERIFY(!mimeData.hasImage());
+    QVERIFY(mimeData.hasImage() == false);
 
     // add text, verify false
     mimeData.setData("text/plain", "pirates");
-    QVERIFY(!mimeData.hasImage());
+    QVERIFY(mimeData.hasImage() == false);
 
     // add image
     mimeData.setImageData(QImage());
@@ -210,7 +210,7 @@ void tst_QMimeData::hasImage() const
 
     // clear, verify
     mimeData.clear();
-    QVERIFY(!mimeData.hasImage());
+    QVERIFY(mimeData.hasImage() == false);
 }
 
 void tst_QMimeData::imageData() const
@@ -244,13 +244,13 @@ void tst_QMimeData::removeFormat() const
 
     // remove, verify
     mimeData.removeFormat("text/plain");
-    QVERIFY(!mimeData.hasFormat("text/plain"));
+    QVERIFY(mimeData.hasFormat("text/plain") == false);
     QVERIFY(mimeData.hasFormat("text/html"));
 
     // remove, verify
     mimeData.removeFormat("text/html");
-    QVERIFY(!mimeData.hasFormat("text/plain"));
-    QVERIFY(!mimeData.hasFormat("text/html"));
+    QVERIFY(mimeData.hasFormat("text/plain") == false);
+    QVERIFY(mimeData.hasFormat("text/html") == false);
 }
 
 void tst_QMimeData::setHtml() const
@@ -258,7 +258,7 @@ void tst_QMimeData::setHtml() const
     QMimeData mimeData;
 
     // initial state
-    QVERIFY(!mimeData.hasHtml());
+    QVERIFY(mimeData.hasHtml() == false);
 
     // add html, verify
     mimeData.setHtml("ninjas");
@@ -277,7 +277,7 @@ void tst_QMimeData::setText() const
 
     // verify initial state
     QCOMPARE(mimeData.text(), QLatin1String(""));
-    QVERIFY(!mimeData.hasText());
+    QVERIFY(mimeData.hasText() == false);
 
     // set, verify
     mimeData.setText("pirates");
@@ -294,7 +294,7 @@ void tst_QMimeData::setText() const
     // clear, verify
     mimeData.clear();
     QCOMPARE(mimeData.text(), QLatin1String(""));
-    QVERIFY(!mimeData.hasText());
+    QVERIFY(mimeData.hasText() == false);
 }
 
 // Publish retrieveData for verifying content validity

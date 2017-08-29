@@ -1,3 +1,9 @@
+#-------------------------------------------------
+#
+# Project created by QtCreator 2009-08-05T17:13:23
+#
+#-------------------------------------------------
+
 TARGET = t_cursors
 TEMPLATE = app
 QT = core gui widgets

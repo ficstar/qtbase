@@ -68,7 +68,7 @@ public:
     };
     Q_ENUM(ResizeMode)
 
-    explicit QHeaderView(Qt::Orientation orientation, QWidget *parent = Q_NULLPTR);
+    explicit QHeaderView(Qt::Orientation orientation, QWidget *parent = 0);
     virtual ~QHeaderView();
 
     void setModel(QAbstractItemModel *model) Q_DECL_OVERRIDE;
@@ -202,7 +202,7 @@ protected Q_SLOTS:
     void sectionsAboutToBeRemoved(const QModelIndex &parent, int logicalFirst, int logicalLast);
 
 protected:
-    QHeaderView(QHeaderViewPrivate &dd, Qt::Orientation orientation, QWidget *parent = Q_NULLPTR);
+    QHeaderView(QHeaderViewPrivate &dd, Qt::Orientation orientation, QWidget *parent = 0);
     void initialize();
 
     void initializeSections();

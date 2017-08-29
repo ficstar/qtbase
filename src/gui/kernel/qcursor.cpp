@@ -43,7 +43,6 @@
 
 #include <qpa/qplatformcursor.h>
 #include <private/qguiapplication_p.h>
-#include <private/qhighdpiscaling_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -178,14 +177,9 @@ QT_BEGIN_NAMESPACE
 */
 QPoint QCursor::pos(const QScreen *screen)
 {
-    if (screen) {
-        if (const QPlatformCursor *cursor = screen->handle()->cursor()) {
-            const QPlatformScreen *ps = screen->handle();
-            QPoint nativePos = cursor->pos();
-            ps = ps->screenForPosition(nativePos);
-            return QHighDpi::fromNativePixels(nativePos, ps->screen());
-        }
-    }
+    if (screen)
+        if (const QPlatformCursor *cursor = screen->handle()->cursor())
+            return cursor->pos();
     return QGuiApplicationPrivate::lastCursorPosition.toPoint();
 }
 
@@ -237,12 +231,12 @@ void QCursor::setPos(QScreen *screen, int x, int y)
 {
     if (screen) {
         if (QPlatformCursor *cursor = screen->handle()->cursor()) {
-            const QPoint devicePos = QHighDpi::toNativePixels(QPoint(x, y), screen);
+            const QPoint pos = QPoint(x, y);
             // Need to check, since some X servers generate null mouse move
             // events, causing looping in applications which call setPos() on
             // every mouse move event.
-            if (devicePos != cursor->pos())
-                cursor->setPos(devicePos);
+            if (pos != cursor->pos())
+                cursor->setPos(pos);
         }
     }
 }

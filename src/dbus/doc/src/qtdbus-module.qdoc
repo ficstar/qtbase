@@ -34,7 +34,7 @@
     \ingroup modules
     \qtvariable dbus
 
-    \keyword The QDBus compiler
+    \target The QDBus compiler
 
 
     Applications using the Qt D-Bus module can provide services to

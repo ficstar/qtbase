@@ -100,17 +100,7 @@ QFontListView::QFontListView(QWidget *parent)
 }
 
 static const Qt::WindowFlags DefaultWindowFlags =
-        Qt::Dialog | Qt::WindowSystemMenuHint | Qt::WindowCloseButtonHint;
-
-QFontDialogPrivate::QFontDialogPrivate()
-    : writingSystem(QFontDatabase::Any),
-      options(QSharedPointer<QFontDialogOptions>::create())
-{
-}
-
-QFontDialogPrivate::~QFontDialogPrivate()
-{
-}
+        Qt::Dialog | Qt::WindowSystemMenuHint;
 
 /*!
   \class QFontDialog
@@ -629,7 +619,6 @@ void QFontDialogPrivate::updateSizes()
         int i = 0;
         int current = -1;
         QStringList str_sizes;
-        str_sizes.reserve(sizes.size());
         for(QList<int>::const_iterator it = sizes.constBegin(); it != sizes.constEnd(); ++it) {
             str_sizes.append(QString::number(*it));
             if (current == -1 && *it == size)

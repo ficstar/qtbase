@@ -97,7 +97,7 @@ QJisCodec::QJisCodec() : conv(QJpUnicodeConv::newConverter(QJpUnicodeConv::Defau
 */
 QJisCodec::~QJisCodec()
 {
-    delete (const QJpUnicodeConv*)conv;
+    delete (QJpUnicodeConv*)conv;
     conv = 0;
 }
 

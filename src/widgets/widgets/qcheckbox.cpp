@@ -387,5 +387,3 @@ bool QCheckBox::event(QEvent *e)
 
 
 QT_END_NAMESPACE
-
-#include "moc_qcheckbox.cpp"

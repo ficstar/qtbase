@@ -50,7 +50,7 @@ class Q_CORE_EXPORT QAbstractProxyModel : public QAbstractItemModel
     Q_PROPERTY(QAbstractItemModel* sourceModel READ sourceModel WRITE setSourceModel NOTIFY sourceModelChanged)
 
 public:
-    explicit QAbstractProxyModel(QObject *parent = Q_NULLPTR);
+    explicit QAbstractProxyModel(QObject *parent = 0);
     ~QAbstractProxyModel();
 
     virtual void setSourceModel(QAbstractItemModel *sourceModel);

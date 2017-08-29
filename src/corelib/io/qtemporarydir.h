@@ -52,7 +52,6 @@ public:
     ~QTemporaryDir();
 
     bool isValid() const;
-    QString errorString() const;
 
     bool autoRemove() const;
     void setAutoRemove(bool b);

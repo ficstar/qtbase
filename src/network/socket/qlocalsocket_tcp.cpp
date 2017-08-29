@@ -239,8 +239,8 @@ void QLocalSocket::connectToServer(OpenMode openMode)
                          QLatin1String("QLocalSocket::connectToServer"));
         return;
     }
-    QIODevice::open(openMode);
     d->tcpSocket->connectToHost(QHostAddress::LocalHost, port, openMode);
+    QIODevice::open(openMode);
 }
 
 bool QLocalSocket::setSocketDescriptor(qintptr socketDescriptor,

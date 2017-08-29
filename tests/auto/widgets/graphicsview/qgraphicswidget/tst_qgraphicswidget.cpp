@@ -182,6 +182,14 @@ private slots:
     void QTBUG_45867_send_itemChildAddedChange_to_parent();
 };
 
+
+static void sendMouseMove(QWidget *widget, const QPoint &point, Qt::MouseButton button = Qt::NoButton, Qt::MouseButtons buttons = 0)
+{
+    QTest::mouseMove(widget, point);
+    QMouseEvent event(QEvent::MouseMove, point, button, buttons, 0);
+    QApplication::sendEvent(widget, &event);
+}
+
 // Subclass that exposes the protected functions.
 class SubQGraphicsWidget : public QGraphicsWidget {
 public:
@@ -189,7 +197,7 @@ public:
         : QGraphicsWidget(parent, windowFlags), eventCount(0)
         { }
 
-    void initStyleOption(QStyleOption *option) const
+    void initStyleOption(QStyleOption *option)
         { QGraphicsWidget::initStyleOption(option); }
 
     void call_changeEvent(QEvent* event)
@@ -1102,8 +1110,8 @@ void tst_QGraphicsWidget::initStyleOption()
 {
     QGraphicsScene scene;
     QGraphicsView view(&scene);
-    view.resize(300, 300);
     view.show();
+    QApplication::setActiveWindow(&view);
     QVERIFY(QTest::qWaitForWindowActive(&view));
 
     view.setAlignment(Qt::AlignTop | Qt::AlignLeft);
@@ -1125,8 +1133,10 @@ void tst_QGraphicsWidget::initStyleOption()
     }
     QFETCH(bool, underMouse);
     if (underMouse) {
-        QCursor::setPos(view.viewport()->mapToGlobal(view.mapFromScene(widget->mapToScene(widget->boundingRect().center()))));
-        QTest::qWait(100);
+        view.resize(300, 300);
+        view.show();
+        QVERIFY(QTest::qWaitForWindowActive(&view));
+        sendMouseMove(view.viewport(), view.mapFromScene(widget->mapToScene(widget->boundingRect().center())));
     }
 
     QFETCH(QPalette, palette);

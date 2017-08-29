@@ -265,11 +265,11 @@ void tst_QTcpServer::ipv6Server()
     //### need to enter the event loop for the server to get the connection ?? ( windows)
     QTcpServer server;
     if (!server.listen(QHostAddress::LocalHostIPv6, 8944)) {
-        QCOMPARE(server.serverError(), QAbstractSocket::UnsupportedSocketOperationError);
+        QVERIFY(server.serverError() == QAbstractSocket::UnsupportedSocketOperationError);
         return;
     }
 
-    QCOMPARE(server.serverPort(), quint16(8944));
+    QVERIFY(server.serverPort() == 8944);
     QVERIFY(server.serverAddress() == QHostAddress::LocalHostIPv6);
 
     QTcpSocket client;
@@ -835,17 +835,17 @@ void tst_QTcpServer::qtbug14268_peek()
     client.write("abc\n");
     QTestEventLoop::instance().enterLoop(5);
     QVERIFY(!QTestEventLoop::instance().timeout());
-    QCOMPARE(helper.lastDataPeeked, QByteArray("6162630a"));
+    QVERIFY(helper.lastDataPeeked == QByteArray("6162630a"));
 
     client.write("def\n");
     QTestEventLoop::instance().enterLoop(5);
     QVERIFY(!QTestEventLoop::instance().timeout());
-    QCOMPARE(helper.lastDataPeeked, QByteArray("6162630a6465660a"));
+    QVERIFY(helper.lastDataPeeked == QByteArray("6162630a6465660a"));
 
     client.write("ghi\n");
     QTestEventLoop::instance().enterLoop(5);
     QVERIFY(!QTestEventLoop::instance().timeout());
-    QCOMPARE(helper.lastDataPeeked, QByteArray("6162630a6465660a6768690a"));
+    QVERIFY(helper.lastDataPeeked == QByteArray("6162630a6465660a6768690a"));
 }
 
 void tst_QTcpServer::serverAddress_data()

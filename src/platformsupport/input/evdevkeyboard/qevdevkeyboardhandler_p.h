@@ -51,8 +51,6 @@
 
 QT_BEGIN_NAMESPACE
 
-class QSocketNotifier;
-
 namespace QEvdevKeyboardMap {
     const quint32 FileMagic = 0x514d4150; // 'QMAP'
 
@@ -182,7 +180,6 @@ private:
 
     QString m_device;
     int m_fd;
-    QSocketNotifier *m_notify;
 
     // keymap handling
     quint8 m_modifiers;

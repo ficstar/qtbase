@@ -1,5 +1,8 @@
 TARGET = windowsprintersupport
 MODULE = windowsprintersupport
+PLUGIN_TYPE = printsupport
+PLUGIN_CLASS_NAME = QWindowsPrinterSupportPlugin
+load(qt_plugin)
 
 QT *= core-private
 QT *= gui-private
@@ -19,7 +22,3 @@ HEADERS += \
 OTHER_FILES += windows.json
 
 LIBS += -lwinspool -lcomdlg32 -lgdi32 -luser32
-
-PLUGIN_TYPE = printsupport
-PLUGIN_CLASS_NAME = QWindowsPrinterSupportPlugin
-load(qt_plugin)

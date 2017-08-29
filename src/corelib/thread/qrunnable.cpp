@@ -31,15 +31,6 @@
 **
 ****************************************************************************/
 
-#include "qrunnable.h"
-
-QT_BEGIN_NAMESPACE
-
-QRunnable::~QRunnable()
-{
-    // Must be empty until ### Qt 6
-}
-
 /*!
     \class QRunnable
     \inmodule QtCore
@@ -107,5 +98,3 @@ QRunnable::~QRunnable()
 
     \sa autoDelete(), QThreadPool
 */
-
-QT_END_NAMESPACE

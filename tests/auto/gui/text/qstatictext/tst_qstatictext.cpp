@@ -39,9 +39,7 @@
 #include <qstatictext.h>
 #include <qpaintengine.h>
 
-#ifdef QT_BUILD_INTERNAL
 #include <private/qstatictext_p.h>
-#endif
 
 // #define DEBUG_SAVE_IMAGE
 
@@ -92,10 +90,8 @@ private slots:
 
     void unprintableCharacter_qtbug12614();
 
-#ifdef QT_BUILD_INTERNAL
     void underlinedColor_qtbug20159();
     void textDocumentColor();
-#endif
 
 private:
     bool supportsTransformations() const;
@@ -614,29 +610,6 @@ void tst_QStaticText::plainTextVsRichText()
     QCOMPARE(imagePlainText, imageRichText);
 }
 
-static bool checkPixels(const QImage &image,
-                        Qt::GlobalColor expectedColor1, Qt::GlobalColor expectedColor2,
-                        QByteArray *errorMessage)
-{
-    const QRgb expectedRgb1 = QColor(expectedColor1).rgba();
-    const QRgb expectedRgb2 = QColor(expectedColor2).rgba();
-
-    for (int x = 0, w = image.width(); x < w; ++x) {
-        for (int y = 0, h = image.height(); y < h; ++y) {
-            const QRgb pixel = image.pixel(x, y);
-            if (pixel != expectedRgb1 && pixel != expectedRgb2) {
-                QString message;
-                QDebug(&message) << "Color mismatch in image" << image
-                    << "at" << x << ',' << y << ':' << showbase << hex << pixel
-                    << "(expected: " << expectedRgb1 << ',' << expectedRgb2 << ')';
-                *errorMessage = message.toLocal8Bit();
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 void tst_QStaticText::setPenPlainText_data()
 {
     QTest::addColumn<QImage::Format>("format");
@@ -667,9 +640,13 @@ void tst_QStaticText::setPenPlainText()
         p.drawStaticText(0, 0, staticText);
     }
 
-    QByteArray errorMessage;
-    QVERIFY2(checkPixels(image, Qt::yellow, Qt::white, &errorMessage),
-             errorMessage.constData());
+    for (int x=0; x<image.width(); ++x) {
+        for (int y=0; y<image.height(); ++y) {
+            QRgb pixel = image.pixel(x, y);
+            QVERIFY(pixel == QColor(Qt::white).rgba()
+                    || pixel == QColor(Qt::yellow).rgba());
+        }
+    }
 }
 
 void tst_QStaticText::setPenRichText()
@@ -691,9 +668,14 @@ void tst_QStaticText::setPenRichText()
         p.drawStaticText(0, 0, staticText);
     }
 
-    QByteArray errorMessage;
-    QVERIFY2(checkPixels(image.toImage(), Qt::green, Qt::white, &errorMessage),
-             errorMessage.constData());
+    QImage img = image.toImage();
+    for (int x=0; x<img.width(); ++x) {
+        for (int y=0; y<img.height(); ++y) {
+            QRgb pixel = img.pixel(x, y);
+            QVERIFY(pixel == QColor(Qt::white).rgba()
+                    || pixel == QColor(Qt::green).rgba());
+        }
+    }
 }
 
 void tst_QStaticText::richTextOverridesPen()
@@ -715,9 +697,14 @@ void tst_QStaticText::richTextOverridesPen()
         p.drawStaticText(0, 0, staticText);
     }
 
-    QByteArray errorMessage;
-    QVERIFY2(checkPixels(image.toImage(), Qt::red, Qt::white, &errorMessage),
-             errorMessage.constData());
+    QImage img = image.toImage();
+    for (int x=0; x<img.width(); ++x) {
+        for (int y=0; y<img.height(); ++y) {
+            QRgb pixel = img.pixel(x, y);
+            QVERIFY(pixel == QColor(Qt::white).rgba()
+                    || pixel == QColor(Qt::red).rgba());
+        }
+    }
 }
 
 void tst_QStaticText::drawStruckOutText()
@@ -833,7 +820,6 @@ void tst_QStaticText::unprintableCharacter_qtbug12614()
     QVERIFY(staticText.size().isValid()); // Force layout. Should not crash.
 }
 
-#ifdef QT_BUILD_INTERNAL
 void tst_QStaticText::underlinedColor_qtbug20159()
 {
     QString multiScriptText;
@@ -870,7 +856,6 @@ void tst_QStaticText::textDocumentColor()
 
     QCOMPARE(d->items[1].color, QColor(Qt::red));
 }
-#endif
 
 QTEST_MAIN(tst_QStaticText)
 #include "tst_qstatictext.moc"

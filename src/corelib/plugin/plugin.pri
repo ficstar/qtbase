@@ -13,7 +13,6 @@ HEADERS += \
         plugin/qmachparser_p.h
 
 SOURCES += \
-	plugin/qfactoryinterface.cpp \
 	plugin/qpluginloader.cpp \
 	plugin/qfactoryloader.cpp \
 	plugin/quuid.cpp \
@@ -35,4 +34,4 @@ integrity {
 	SOURCES += plugin/qlibrary_unix.cpp
 }
 
-!no-libdl: LIBS_PRIVATE += $$QMAKE_LIBS_DYNLOAD
+LIBS_PRIVATE += $$QMAKE_LIBS_DYNLOAD

@@ -489,7 +489,7 @@ void QT_FASTCALL comp_func_SourceOut_mips_dsp(uint *dest, const uint *src, int l
 const uint * QT_FASTCALL qt_fetchUntransformed_888_mips_dsp (uint *buffer, const Operator *, const QSpanData *data,
                                              int y, int x, int length)
 {
-    const uchar *line = data->texture.scanLine(y) + x * 3;
+    uchar *line = (uchar *)data->texture.scanLine(y) + x;
     fetchUntransformed_888_asm_mips_dsp(buffer, line, length);
     return buffer;
 }
@@ -497,7 +497,7 @@ const uint * QT_FASTCALL qt_fetchUntransformed_888_mips_dsp (uint *buffer, const
 const uint * QT_FASTCALL qt_fetchUntransformed_444_mips_dsp (uint *buffer, const Operator *, const QSpanData *data,
                                              int y, int x, int length)
 {
-    const uchar *line = data->texture.scanLine(y) + x * 2;
+    uchar *line = (uchar *)data->texture.scanLine(y) + x;
     fetchUntransformed_444_asm_mips_dsp(buffer, line, length);
     return buffer;
 }
@@ -505,7 +505,7 @@ const uint * QT_FASTCALL qt_fetchUntransformed_444_mips_dsp (uint *buffer, const
 const uint * QT_FASTCALL qt_fetchUntransformed_argb8565_premultiplied_mips_dsp (uint *buffer, const Operator *, const QSpanData *data,
                                              int y, int x, int length)
 {
-    const uchar *line = data->texture.scanLine(y) + x * 3;
+    uchar *line = (uchar *)data->texture.scanLine(y) + x;
     fetchUntransformed_argb8565_premultiplied_asm_mips_dsp(buffer, line, length);
     return buffer;
 }

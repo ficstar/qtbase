@@ -50,7 +50,8 @@ private slots:
 void tst_QPdfWriter::basics()
 {
     QTemporaryFile file;
-    QVERIFY2(file.open(), qPrintable(file.errorString()));
+    if (!file.open())
+        QSKIP("Couldn't open temp file!");
     QPdfWriter writer(file.fileName());
 
     QCOMPARE(writer.title(), QString());
@@ -149,7 +150,8 @@ void tst_QPdfWriter::testPageMetrics()
     QSizeF sizeMMf = QSizeF(widthMMf, heightMMf);
 
     QTemporaryFile file;
-    QVERIFY2(file.open(), qPrintable(file.errorString()));
+    if (!file.open())
+        QSKIP("Couldn't open temp file!");
     QPdfWriter writer(file.fileName());
     QCOMPARE(writer.pageLayout().orientation(), QPageLayout::Portrait);
 

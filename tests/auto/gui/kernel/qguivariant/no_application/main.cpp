@@ -56,7 +56,7 @@ void tst_QGuiVariantNoApplication::variantWithoutApplication()
 {
     QVariant v = QString("red");
 
-    QCOMPARE(qvariant_cast<QColor>(v), QColor(Qt::red));
+    QVERIFY(qvariant_cast<QColor>(v) == QColor(Qt::red));
 }
 
 

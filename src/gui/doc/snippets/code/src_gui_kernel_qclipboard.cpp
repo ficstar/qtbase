@@ -39,7 +39,7 @@
 ****************************************************************************/
 
 //! [0]
-QClipboard *clipboard = QGuiApplication::clipboard();
+QClipboard *clipboard = QApplication::clipboard();
 QString originalText = clipboard->text();
 ...
 clipboard->setText(newText);

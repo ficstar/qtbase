@@ -4274,7 +4274,7 @@ void tst_QGraphicsItem::cursor()
 void tst_QGraphicsItem::textControlGetterSetter()
 {
     QGraphicsTextItem *item = new QGraphicsTextItem;
-    QCOMPARE(item->textControl()->parent(), item);
+    QVERIFY(item->textControl()->parent() == item);
     QPointer<QWidgetTextControl> control = item->textControl();
     delete item;
     QVERIFY(!control);
@@ -4285,7 +4285,7 @@ void tst_QGraphicsItem::textControlGetterSetter()
     control = new QWidgetTextControl;
 
     item->setTextControl(control);
-    QCOMPARE(item->textControl(), control);
+    QVERIFY(item->textControl() == control);
     QVERIFY(!control->parent());
     QVERIFY(!oldControl);
 
@@ -5141,19 +5141,19 @@ void tst_QGraphicsItem::paint()
     //nominal case, update call paint
     tester2.update();
     qApp->processEvents();
-    QTRY_COMPARE(tester2.painted, 2);
+    QTRY_VERIFY(tester2.painted == 2);
 
     //we remove the item from the scene, number of updates is still the same
     tester2.update();
     scene2.removeItem(&tester2);
     qApp->processEvents();
-    QTRY_COMPARE(tester2.painted, 2);
+    QTRY_VERIFY(tester2.painted == 2);
 
     //We re-add the item, the number of paint should increase
     scene2.addItem(&tester2);
     tester2.update();
     qApp->processEvents();
-    QTRY_COMPARE(tester2.painted, 3);
+    QTRY_VERIFY(tester2.painted == 3);
 }
 
 class HarakiriItem : public QGraphicsRectItem
@@ -5878,7 +5878,7 @@ void tst_QGraphicsItem::itemContainsChildrenInShape()
     scene.setItemIndexMethod(QGraphicsScene::NoIndex);
     scene.addItem(parent);
 
-    QCOMPARE(parent->boundingRectCalls, childOutsideShape->boundingRectCalls);
+    QVERIFY(parent->boundingRectCalls == childOutsideShape->boundingRectCalls);
 
     int oldParentBoundingRectCalls = parent->boundingRectCalls;
     int oldChildBoundingRectCalls = childOutsideShape->boundingRectCalls;
@@ -5886,10 +5886,10 @@ void tst_QGraphicsItem::itemContainsChildrenInShape()
     // First test that both items are searched if no optimization flags are set
     QGraphicsItem* item = scene.itemAt(25,5);
 
-    QCOMPARE(item, childOutsideShape);
+    QVERIFY(item == childOutsideShape);
     QVERIFY(parent->boundingRectCalls > oldParentBoundingRectCalls);
     QVERIFY(childOutsideShape->boundingRectCalls > oldChildBoundingRectCalls);
-    QCOMPARE(parent->boundingRectCalls, childOutsideShape->boundingRectCalls);
+    QVERIFY(parent->boundingRectCalls == childOutsideShape->boundingRectCalls);
 
     oldParentBoundingRectCalls = parent->boundingRectCalls;
     oldChildBoundingRectCalls = childOutsideShape->boundingRectCalls;
@@ -5897,10 +5897,10 @@ void tst_QGraphicsItem::itemContainsChildrenInShape()
     // Repeat the test to make sure that no caching/indexing is in effect
     item = scene.itemAt(25,5);
 
-    QCOMPARE(item, childOutsideShape);
+    QVERIFY(item == childOutsideShape);
     QVERIFY(parent->boundingRectCalls > oldParentBoundingRectCalls);
     QVERIFY(childOutsideShape->boundingRectCalls > oldChildBoundingRectCalls);
-    QCOMPARE(parent->boundingRectCalls, childOutsideShape->boundingRectCalls);
+    QVERIFY(parent->boundingRectCalls == childOutsideShape->boundingRectCalls);
 
     oldParentBoundingRectCalls = parent->boundingRectCalls;
     oldChildBoundingRectCalls = childOutsideShape->boundingRectCalls;
@@ -5912,7 +5912,7 @@ void tst_QGraphicsItem::itemContainsChildrenInShape()
 
     QVERIFY(!(item));
     QVERIFY(parent->boundingRectCalls > oldParentBoundingRectCalls);
-    QCOMPARE(childOutsideShape->boundingRectCalls, oldChildBoundingRectCalls);
+    QVERIFY(childOutsideShape->boundingRectCalls == oldChildBoundingRectCalls);
     QVERIFY(parent->boundingRectCalls > childOutsideShape->boundingRectCalls);
 }
 
@@ -11205,21 +11205,21 @@ void tst_QGraphicsItem::QTBUG_6738_missingUpdateWithSetParent()
     child2->setVisible(false);
     child2->setParentItem(child);
 
-    QTRY_COMPARE(view.repaints, 1);
+    QTRY_VERIFY(view.repaints == 1);
 
     // test case #2
     view.reset();
     child3->setOpacity(0.0);
     child3->setParentItem(child);
 
-    QTRY_COMPARE(view.repaints, 1);
+    QTRY_VERIFY(view.repaints == 1);
 
     // test case #3
     view.reset();
     child4->setParentItem(child);
     child4->setVisible(false);
 
-    QTRY_COMPARE(view.repaints, 1);
+    QTRY_VERIFY(view.repaints == 1);
 }
 
 void tst_QGraphicsItem::QT_2653_fullUpdateDiscardingOpacityUpdate()
@@ -11469,9 +11469,9 @@ void tst_QGraphicsItem::itemDiesDuringDraggingOperation()
     QGraphicsSceneDragDropEvent event(QEvent::GraphicsSceneDragMove);
     event.setScenePos(item->boundingRect().center());
     QApplication::sendEvent(&scene, &event);
-    QCOMPARE(QGraphicsScenePrivate::get(&scene)->dragDropItem, item);
+    QVERIFY(QGraphicsScenePrivate::get(&scene)->dragDropItem == item);
     delete item;
-    QVERIFY(!QGraphicsScenePrivate::get(&scene)->dragDropItem);
+    QVERIFY(QGraphicsScenePrivate::get(&scene)->dragDropItem == 0);
 }
 
 void tst_QGraphicsItem::QTBUG_12112_focusItem()

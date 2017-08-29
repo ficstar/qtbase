@@ -39,6 +39,8 @@
 #include <QMap>
 #include <QTimer>
 
+#ifndef QT_NO_BEARERMANAGEMENT
+
 QT_BEGIN_NAMESPACE
 
 class QNetworkConfigurationPrivate;
@@ -79,6 +81,8 @@ private:
 };
 
 QT_END_NAMESPACE
+
+#endif // QT_NO_BEARERMANAGEMENT
 
 #endif
 

@@ -42,7 +42,6 @@
 
 QT_BEGIN_NAMESPACE
 
-class QDebug;
 class QMimeData;
 
 class QWindowsMime
@@ -84,19 +83,12 @@ public:
     void registerMime(QWindowsMime *mime);
     void unregisterMime(QWindowsMime *mime) { m_mimes.removeOne(mime); }
 
-    static QString clipboardFormatName(int cf);
-
 private:
     void ensureInitialized() const;
 
     mutable QList<QWindowsMime *> m_mimes;
     mutable int m_internalMimeCount;
 };
-
-#ifndef QT_NO_DEBUG_STREAM
-QDebug operator<<(QDebug, const FORMATETC &);
-QDebug operator<<(QDebug d, IDataObject *);
-#endif
 
 QT_END_NAMESPACE
 

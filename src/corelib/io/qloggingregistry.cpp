@@ -34,7 +34,6 @@
 #include "qloggingregistry_p.h"
 
 #include <QtCore/qfile.h>
-#include <QtCore/qlibraryinfo.h>
 #include <QtCore/qstandardpaths.h>
 #include <QtCore/qtextstream.h>
 #include <QtCore/qdir.h>
@@ -209,7 +208,7 @@ void QLoggingSettingsParser::setContent(QTextStream &stream)
             continue;
         }
 
-        if (_section.toLower() == QLatin1String("rules")) {
+        if (_section == QLatin1String("Rules")) {
             int equalPos = line.indexOf(QLatin1Char('='));
             if (equalPos != -1) {
                 if (line.lastIndexOf(QLatin1Char('=')) == equalPos) {
@@ -248,21 +247,6 @@ static bool qtLoggingDebug()
     return debugEnv;
 }
 
-static QVector<QLoggingRule> loadRulesFromFile(const QString &filePath)
-{
-    QFile file(filePath);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        if (qtLoggingDebug())
-            debugMsg("Loading \"%s\" ...",
-                     QDir::toNativeSeparators(file.fileName()).toUtf8().constData());
-        QTextStream stream(&file);
-        QLoggingSettingsParser parser;
-        parser.setContent(stream);
-        return parser.rules();
-    }
-    return QVector<QLoggingRule>();
-}
-
 /*!
     \internal
     Initializes the rules database by loading
@@ -272,10 +256,19 @@ void QLoggingRegistry::init()
 {
     // get rules from environment
     const QByteArray rulesFilePath = qgetenv("QT_LOGGING_CONF");
-    if (!rulesFilePath.isEmpty())
-        envRules = loadRulesFromFile(QFile::decodeName(rulesFilePath));
-
-    const QByteArray rulesSrc = qgetenv("QT_LOGGING_RULES").replace(';', '\n');
+    if (!rulesFilePath.isEmpty()) {
+        QFile file(QFile::decodeName(rulesFilePath));
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            if (qtLoggingDebug())
+                debugMsg("Loading \"%s\" ...",
+                         QDir::toNativeSeparators(file.fileName()).toUtf8().constData());
+            QTextStream stream(&file);
+            QLoggingSettingsParser parser;
+            parser.setContent(stream);
+            envRules = parser.rules();
+        }
+    }
+    const QByteArray rulesSrc = qgetenv("QT_LOGGING_RULES");
     if (!rulesSrc.isEmpty()) {
          QTextStream stream(rulesSrc);
          QLoggingSettingsParser parser;
@@ -284,22 +277,23 @@ void QLoggingRegistry::init()
          envRules += parser.rules();
     }
 
-    const QString configFileName = QStringLiteral("qtlogging.ini");
+    // get rules from qt configuration
+    QString envPath = QStandardPaths::locate(QStandardPaths::GenericConfigLocation,
+                                             QStringLiteral("QtProject/qtlogging.ini"));
+    if (!envPath.isEmpty()) {
+        QFile file(envPath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            if (qtLoggingDebug())
+                debugMsg("Loading \"%s\" ...",
+                         QDir::toNativeSeparators(envPath).toUtf8().constData());
+            QTextStream stream(&file);
+            QLoggingSettingsParser parser;
+            parser.setContent(stream);
+            configRules = parser.rules();
+        }
+    }
 
-#if !defined(QT_BOOTSTRAPPED)
-    // get rules from Qt data configuration path
-    const QString qtConfigPath
-            = QDir(QLibraryInfo::location(QLibraryInfo::DataPath)).absoluteFilePath(configFileName);
-    qtConfigRules = loadRulesFromFile(qtConfigPath);
-#endif
-
-    // get rules from user's/system configuration
-    const QString envPath = QStandardPaths::locate(QStandardPaths::GenericConfigLocation,
-                                                   QString::fromLatin1("QtProject/") + configFileName);
-    if (!envPath.isEmpty())
-        configRules = loadRulesFromFile(envPath);
-
-    if (!envRules.isEmpty() || !qtConfigRules.isEmpty() || !configRules.isEmpty()) {
+    if (!envRules.isEmpty() || !configRules.isEmpty()) {
         QMutexLocker locker(&registryMutex);
         updateRules();
     }
@@ -359,7 +353,10 @@ void QLoggingRegistry::setApiRules(const QString &content)
 */
 void QLoggingRegistry::updateRules()
 {
-    rules = qtConfigRules + configRules + apiRules + envRules;
+    if (categoryFilter != defaultCategoryFilter)
+        return;
+
+    rules = configRules + apiRules + envRules;
 
     foreach (QLoggingCategory *cat, categories.keys())
         (*categoryFilter)(cat);

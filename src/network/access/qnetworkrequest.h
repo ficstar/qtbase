@@ -81,7 +81,6 @@ public:
         SpdyAllowedAttribute,
         SpdyWasUsedAttribute,
         EmitAllUploadProgressSignalsAttribute,
-        FollowRedirectsAttribute,
 
         User = 1000,
         UserMax = 32767
@@ -106,12 +105,9 @@ public:
     explicit QNetworkRequest(const QUrl &url = QUrl());
     QNetworkRequest(const QNetworkRequest &other);
     ~QNetworkRequest();
-#ifdef Q_COMPILER_RVALUE_REFS
-    QNetworkRequest &operator=(QNetworkRequest &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
     QNetworkRequest &operator=(const QNetworkRequest &other);
 
-    void swap(QNetworkRequest &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    inline void swap(QNetworkRequest &other) { qSwap(d, other.d); }
 
     bool operator==(const QNetworkRequest &other) const;
     inline bool operator!=(const QNetworkRequest &other) const
@@ -144,10 +140,6 @@ public:
 
     Priority priority() const;
     void setPriority(Priority priority);
-
-    // HTTP redirect related
-    int maximumRedirectsAllowed() const;
-    void setMaximumRedirectsAllowed(int maximumRedirectsAllowed);
 
 private:
     QSharedDataPointer<QNetworkRequestPrivate> d;

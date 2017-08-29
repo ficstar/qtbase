@@ -108,6 +108,8 @@ int QRasterWindow::metric(PaintDeviceMetric metric) const
     switch (metric) {
     case PdmDepth:
         return d->backingstore->paintDevice()->depth();
+    case PdmDevicePixelRatio:
+        return d->backingstore->paintDevice()->devicePixelRatio();
     default:
         break;
     }

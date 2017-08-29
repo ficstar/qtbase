@@ -142,8 +142,8 @@ public:
 #endif
     QMdiAreaTabBar *tabBar;
     QList<QMdi::Rearranger *> pendingRearrangements;
-    QVector< QPointer<QMdiSubWindow> > pendingPlacements;
-    QVector< QPointer<QMdiSubWindow> > childWindows;
+    QList< QPointer<QMdiSubWindow> > pendingPlacements;
+    QList< QPointer<QMdiSubWindow> > childWindows;
     QList<int> indicesToActivatedChildren;
     QPointer<QMdiSubWindow> active;
     QPointer<QMdiSubWindow> aboutToBecomeActive;

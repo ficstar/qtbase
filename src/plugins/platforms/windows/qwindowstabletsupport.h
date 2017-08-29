@@ -97,9 +97,7 @@ struct QWindowsTabletDeviceData
     int currentPointerType;
 };
 
-#ifndef QT_NO_DEBUG_STREAM
 QDebug operator<<(QDebug d, const QWindowsTabletDeviceData &t);
-#endif
 
 class QWindowsTabletSupport
 {
@@ -123,7 +121,7 @@ public:
 
 private:
     unsigned options() const;
-    QWindowsTabletDeviceData tabletInit(qint64 uniqueId, UINT cursorType) const;
+    QWindowsTabletDeviceData tabletInit(const quint64 uniqueId, const UINT cursorType) const;
 
     static QWindowsWinTab32DLL m_winTab32DLL;
     const HWND m_window;

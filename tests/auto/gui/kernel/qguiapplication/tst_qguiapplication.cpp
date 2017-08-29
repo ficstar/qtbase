@@ -171,7 +171,7 @@ void tst_QGuiApplication::focusObject()
     int argc = 0;
     QGuiApplication app(argc, 0);
 
-    if (!QGuiApplication::platformName().compare(QLatin1String("wayland"), Qt::CaseInsensitive))
+    if (qApp->platformName().toLower() == QLatin1String("wayland"))
         QSKIP("Wayland: This fails. Figure out why.");
 
     QObject obj1, obj2, obj3;
@@ -342,7 +342,7 @@ void tst_QGuiApplication::changeFocusWindow()
     int argc = 0;
     QGuiApplication app(argc, 0);
 
-    if (!QGuiApplication::platformName().compare(QLatin1String("wayland"), Qt::CaseInsensitive))
+    if (qApp->platformName().toLower() == QLatin1String("wayland"))
         QSKIP("Wayland: This fails. Figure out why.");
 
     const QRect screenGeometry = QGuiApplication::primaryScreen()->availableVirtualGeometry();
@@ -416,11 +416,11 @@ void tst_QGuiApplication::keyboardModifiers()
     QCOMPARE(QGuiApplication::keyboardModifiers(), Qt::ControlModifier);
 
     // shortcut events
-    QTest::keyEvent(QTest::Shortcut, window.data(), Qt::Key_5, Qt::MetaModifier);
+    QWindowSystemInterface::tryHandleShortcutEvent(window.data(), Qt::Key_5, Qt::MetaModifier);
     QCOMPARE(QGuiApplication::keyboardModifiers(), Qt::MetaModifier);
-    QTest::keyEvent(QTest::Shortcut, window.data(), Qt::Key_Period, Qt::NoModifier);
+    QWindowSystemInterface::tryHandleShortcutEvent(window.data(), Qt::Key_Period, Qt::NoModifier);
     QCOMPARE(QGuiApplication::keyboardModifiers(), Qt::NoModifier);
-    QTest::keyEvent(QTest::Shortcut, window.data(), Qt::Key_0, Qt::ControlModifier);
+    QWindowSystemInterface::tryHandleShortcutEvent(window.data(), Qt::Key_0, Qt::ControlModifier);
     QCOMPARE(QGuiApplication::keyboardModifiers(), Qt::ControlModifier);
 
     // key events
@@ -928,7 +928,7 @@ void tst_QGuiApplication::genericPluginsAndWindowSystemEvents()
     QGuiApplication app(argc, argv);
 
     QVERIFY(QGuiApplication::primaryScreen());
-    QCOMPARE(QGuiApplication::primaryScreen()->orientation(), testOrientationToSend);
+    QVERIFY(QGuiApplication::primaryScreen()->orientation() == testOrientationToSend);
 
     QCOMPARE(testReceiver.customEvents, 0);
     QCoreApplication::sendPostedEvents(&testReceiver);

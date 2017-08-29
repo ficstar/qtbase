@@ -85,6 +85,16 @@ QAbstractStatePrivate::QAbstractStatePrivate(StateType type)
 {
 }
 
+QAbstractStatePrivate *QAbstractStatePrivate::get(QAbstractState *q)
+{
+    return q->d_func();
+}
+
+const QAbstractStatePrivate *QAbstractStatePrivate::get(const QAbstractState *q)
+{
+    return q->d_func();
+}
+
 QStateMachine *QAbstractStatePrivate::machine() const
 {
     QObject *par = parent;
@@ -217,7 +227,7 @@ bool QAbstractState::active() const
   \fn QAbstractState::activeChanged(bool active)
   \since 5.4
 
-  This signal is emitted when the active property is changed with \a active as argument.
+  This signal is emitted when the active property is changed.
 
   \sa QAbstractState::active, entered(), exited()
 */

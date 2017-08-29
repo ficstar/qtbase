@@ -91,7 +91,7 @@ class QScopedPointer
 {
     typedef T *QScopedPointer:: *RestrictedBool;
 public:
-    explicit inline QScopedPointer(T *p = Q_NULLPTR) : d(p)
+    explicit inline QScopedPointer(T *p = 0) : d(p)
     {
     }
 
@@ -121,12 +121,12 @@ public:
 #if defined(Q_QDOC)
     inline operator bool() const
     {
-        return isNull() ? Q_NULLPTR : &QScopedPointer::d;
+        return isNull() ? 0 : &QScopedPointer::d;
     }
 #else
     inline operator RestrictedBool() const
     {
-        return isNull() ? Q_NULLPTR : &QScopedPointer::d;
+        return isNull() ? 0 : &QScopedPointer::d;
     }
 #endif
 
@@ -140,7 +140,7 @@ public:
         return !d;
     }
 
-    inline void reset(T *other = Q_NULLPTR)
+    inline void reset(T *other = 0)
     {
         if (d == other)
             return;
@@ -152,7 +152,7 @@ public:
     inline T *take()
     {
         T *oldD = d;
-        d = Q_NULLPTR;
+        d = 0;
         return oldD;
     }
 
@@ -206,10 +206,10 @@ template <typename T, typename Cleanup = QScopedPointerArrayDeleter<T> >
 class QScopedArrayPointer : public QScopedPointer<T, Cleanup>
 {
 public:
-    inline QScopedArrayPointer() : QScopedPointer<T, Cleanup>(Q_NULLPTR) {}
+    inline QScopedArrayPointer() : QScopedPointer<T, Cleanup>(0) {}
 
     template <typename D>
-    explicit inline QScopedArrayPointer(D *p, typename QtPrivate::QScopedArrayEnsureSameType<T,D>::Type = Q_NULLPTR)
+    explicit inline QScopedArrayPointer(D *p, typename QtPrivate::QScopedArrayEnsureSameType<T,D>::Type = 0)
         : QScopedPointer<T, Cleanup>(p)
     {
     }

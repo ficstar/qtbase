@@ -1,7 +1,7 @@
 CONFIG += testcase
 TARGET = tst_noqteventloop
 
-QT += core-private network gui-private testlib
+QT += core-private gui-private testlib
 
 SOURCES  += tst_noqteventloop.cpp
 

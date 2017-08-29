@@ -94,18 +94,18 @@ private slots:
     void creatingQObject();
     void mixTrackingPointerCode();
     void reentrancyWhileDestructing();
-    void map();
-    void hash();
-    void qvariantCast();
-    void sharedFromThis();
 
     void threadStressTest_data();
     void threadStressTest();
+    void map();
+    void hash();
     void validConstructs();
     void invalidConstructs_data();
     void invalidConstructs();
-    // let invalidConstructs be the last test, because it's the slowest;
-    // add new tests above this block
+
+    void qvariantCast();
+    void sharedFromThis();
+
 public slots:
     void cleanup() { safetyCheck(); }
 
@@ -231,14 +231,6 @@ void tst_QSharedPointer::basics()
         QCOMPARE(sizeof(weakref), 2*sizeof(void*));
     }
 
-    {
-        QSharedPointer<const Data> ptr;
-        QWeakPointer<const Data> weakref;
-
-        QCOMPARE(sizeof(ptr), 2*sizeof(void*));
-        QCOMPARE(sizeof(weakref), 2*sizeof(void*));
-    }
-
     QFETCH(bool, isNull);
     Data *aData = 0;
     if (!isNull)
@@ -254,10 +246,8 @@ void tst_QSharedPointer::basics()
 
         QCOMPARE(ptr.data(), aData);
         QCOMPARE(ptr.operator->(), aData);
-        if (!isNull) {
-            Data &dataReference = *ptr;
-            QCOMPARE(&dataReference, aData);
-        }
+        Data &dataReference = *ptr;
+        QCOMPARE(&dataReference, aData);
 
         QVERIFY(ptr == aData);
         QVERIFY(!(ptr != aData));
@@ -2181,16 +2171,6 @@ void tst_QSharedPointer::sharedFromThis()
         QVERIFY(const_scp.isNull());
         QCOMPARE(Data::generationCounter, generations + 1);
         QCOMPARE(Data::destructorCounter, destructions);
-
-        QWeakPointer<SomeClass> wcp = sc.sharedFromThis();
-        QVERIFY(wcp.isNull());
-        QCOMPARE(Data::generationCounter, generations + 1);
-        QCOMPARE(Data::destructorCounter, destructions);
-
-        QWeakPointer<const SomeClass> const_wcp = sc.sharedFromThis();
-        QVERIFY(const_wcp.isNull());
-        QCOMPARE(Data::generationCounter, generations + 1);
-        QCOMPARE(Data::destructorCounter, destructions);
     }
 
     QCOMPARE(Data::generationCounter, generations + 1);
@@ -2200,11 +2180,6 @@ void tst_QSharedPointer::sharedFromThis()
         const SomeClass sc;
         QSharedPointer<const SomeClass> const_scp = sc.sharedFromThis();
         QVERIFY(const_scp.isNull());
-        QCOMPARE(Data::generationCounter, generations + 2);
-        QCOMPARE(Data::destructorCounter, destructions + 1);
-
-        QWeakPointer<const SomeClass> const_wcp = sc.sharedFromThis();
-        QVERIFY(const_wcp.isNull());
         QCOMPARE(Data::generationCounter, generations + 2);
         QCOMPARE(Data::destructorCounter, destructions + 1);
     }
@@ -2398,21 +2373,6 @@ void tst_QSharedPointer::sharedFromThis()
 
     QCOMPARE(Data::generationCounter, generations + 5);
     QCOMPARE(Data::destructorCounter, destructions + 5);
-
-    {
-        QSharedPointer<const SomeClass> scp2(new SomeClass());
-        QVERIFY(!scp2.isNull());
-        QCOMPARE(Data::generationCounter, generations + 6);
-        QCOMPARE(Data::destructorCounter, destructions + 5);
-
-        QWeakPointer<const SomeClass> wcp2(scp2.constCast<SomeClass>());
-        QVERIFY(!wcp2.isNull());
-        QCOMPARE(Data::generationCounter, generations + 6);
-        QCOMPARE(Data::destructorCounter, destructions + 5);
-    }
-
-    QCOMPARE(Data::generationCounter, generations + 6);
-    QCOMPARE(Data::destructorCounter, destructions + 6);
 }
 
 namespace ReentrancyWhileDestructing {

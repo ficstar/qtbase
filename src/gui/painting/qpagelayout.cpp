@@ -943,37 +943,40 @@ QRect QPageLayout::paintRectPixels(int resolution) const
 QDebug operator<<(QDebug dbg, const QPageLayout &layout)
 {
     QDebugStateSaver saver(dbg);
-    dbg.nospace();
-    dbg.noquote();
-    dbg << "QPageLayout(";
     if (layout.isValid()) {
-        const QMarginsF margins = layout.margins();
-        dbg << '"' << layout.pageSize().name() << "\", "
-            << (layout.orientation() == QPageLayout::Portrait ? "Portrait" : "Landscape")
-            << ", l:" << margins.left() << " r:" << margins.right() << " t:"
-            << margins.top() << " b:" << margins.bottom() << ' ';
+        QString output = QStringLiteral("QPageLayout(%1, %2, l:%3 r:%4 t:%5 b:%6 %7)");
+        QString units;
         switch (layout.units()) {
         case QPageLayout::Millimeter:
-            dbg << "mm";
+            units = QStringLiteral("mm");
             break;
         case QPageLayout::Point:
-            dbg << "pt";
+            units = QStringLiteral("pt");
             break;
         case QPageLayout::Inch:
-            dbg << "in";
+            units = QStringLiteral("in");
             break;
         case QPageLayout::Pica:
-            dbg << "pc";
+            units = QStringLiteral("pc");
             break;
         case QPageLayout::Didot:
-            dbg << "DD";
+            units = QStringLiteral("DD");
             break;
         case QPageLayout::Cicero:
-            dbg << "CC";
+            units = QStringLiteral("CC");
             break;
         }
+        output = output.arg(layout.pageSize().name())
+                       .arg(layout.orientation() == QPageLayout::Portrait ? QStringLiteral("Portrait") : QStringLiteral("Landscape"))
+                       .arg(layout.margins().left())
+                       .arg(layout.margins().right())
+                       .arg(layout.margins().top())
+                       .arg(layout.margins().bottom())
+                       .arg(units);
+        dbg.nospace() << output;
+    } else {
+        dbg.nospace() << "QPageLayout()";
     }
-    dbg << ')';
     return dbg;
 }
 #endif

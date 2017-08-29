@@ -104,7 +104,6 @@ private:
         QString value;
         int index;
     };
-    friend class QTypeInfo<XmlRef>;
     QStack<XmlRef> xmlRefStack;
 
     // used for standalone declaration
@@ -167,7 +166,6 @@ private:
         ParseFunction function;
         int state;
     };
-    friend class QTypeInfo<ParseState>;
     QStack<ParseState> *parseStack;
 
     // used in parseProlog()
@@ -296,8 +294,6 @@ private:
     friend class QXmlSimpleReaderLocator;
     friend class QDomHandler;
 };
-Q_DECLARE_TYPEINFO(QXmlSimpleReaderPrivate::ParseState, Q_PRIMITIVE_TYPE);
-Q_DECLARE_TYPEINFO(QXmlSimpleReaderPrivate::XmlRef, Q_MOVABLE_TYPE);
 
 QT_END_NAMESPACE
 

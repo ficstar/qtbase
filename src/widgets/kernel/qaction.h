@@ -153,7 +153,7 @@ public:
 
     enum ActionEvent { Trigger, Hover };
     void activate(ActionEvent event);
-    bool showStatusText(QWidget *widget = Q_NULLPTR);
+    bool showStatusText(QWidget *widget=0);
 
     void setMenuRole(MenuRole menuRole);
     MenuRole menuRole() const;
@@ -202,10 +202,6 @@ private:
     friend void qt_mac_clear_status_text(QAction *action);
 #endif
 };
-
-#ifndef QT_NO_DEBUG_STREAM
-Q_WIDGETS_EXPORT QDebug operator<<(QDebug, const QAction *);
-#endif
 
 QT_BEGIN_INCLUDE_NAMESPACE
 #include <QtWidgets/qactiongroup.h>

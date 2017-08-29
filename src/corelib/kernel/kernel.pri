@@ -88,7 +88,6 @@ wince {
         SOURCES += \
                 kernel/qfunctions_wince.cpp
         HEADERS += \
-                kernel/qfunctions_fake_env_p.h \
                 kernel/qfunctions_wince.h
 }
 
@@ -96,33 +95,26 @@ winrt {
         SOURCES += \
                 kernel/qfunctions_winrt.cpp
         HEADERS += \
-                kernel/qfunctions_fake_env_p.h \
                 kernel/qfunctions_winrt.h
 }
 
 mac {
     HEADERS += \
-        kernel/qcfsocketnotifier_p.h \
-        kernel/qcore_mac_p.h \
-        kernel/qeventdispatcher_cf_p.h
+        kernel/qcore_mac_p.h
 
     SOURCES += \
-        kernel/qcfsocketnotifier.cpp \
         kernel/qcoreapplication_mac.cpp \
         kernel/qcore_mac.cpp
 
     OBJECTIVE_SOURCES += \
-        kernel/qcore_mac_objc.mm \
-        kernel/qeventdispatcher_cf.mm
+        kernel/qcore_mac_objc.mm
 
     LIBS_PRIVATE += -framework Foundation
 
-    osx: LIBS_PRIVATE += -framework CoreServices -framework AppKit
+    osx: LIBS_PRIVATE += -framework CoreServices
 
-    ios {
-        # We need UIKit for UIDevice
-        LIBS_PRIVATE += -framework UIKit
-    }
+    # We need UIKit for UIDevice
+    ios: LIBS_PRIVATE += -framework UIKit
 }
 
 nacl {

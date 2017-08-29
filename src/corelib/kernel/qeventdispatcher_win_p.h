@@ -103,7 +103,6 @@ public:
 protected:
     QEventDispatcherWin32(QEventDispatcherWin32Private &dd, QObject *parent = 0);
     virtual void sendPostedEvents();
-    void doUnregisterSocketNotifier(QSocketNotifier *notifier);
 
 private:
     friend LRESULT QT_WIN_CALLBACK qt_internal_proc(HWND hwnd, UINT message, WPARAM wp, LPARAM lp);
@@ -179,10 +178,6 @@ public:
     QSNDict sn_write;
     QSNDict sn_except;
     QSFDict active_fd;
-#ifndef Q_OS_WINCE
-    bool activateNotifiersPosted;
-    void postActivateSocketNotifiers();
-#endif
     void doWsaAsyncSelect(int socket, long event);
 
     QList<QWinEventNotifier *> winEventNotifierList;

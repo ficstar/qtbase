@@ -61,19 +61,6 @@
 
 QT_BEGIN_NAMESPACE
 
-class QMovableTabWidget : public QWidget
-{
-public:
-    explicit QMovableTabWidget(QWidget *parent = Q_NULLPTR);
-    void setPixmap(const QPixmap &pixmap);
-
-protected:
-    void paintEvent(QPaintEvent *e) Q_DECL_OVERRIDE;
-
-private:
-    QPixmap m_pixmap;
-};
-
 class QTabBarPrivate  : public QWidgetPrivate
 {
     Q_DECLARE_PUBLIC(QTabBar)
@@ -159,7 +146,6 @@ public:
 #endif //QT_NO_ANIMATION
     };
     QList<Tab> tabList;
-    mutable QHash<QString, QSize> textSizes;
 
     int calculateNewPosition(int from, int to, int index) const;
     void slide(int from, int to);
@@ -193,8 +179,6 @@ public:
     void setupMovableTab();
     void autoHideTabs();
 
-    void initBasicStyleOption(QStyleOptionTab *option, int tabIndex) const;
-
     void makeVisible(int index);
     QSize iconSize;
     Qt::TextElideMode elideMode;
@@ -217,12 +201,12 @@ public:
     int switchTabCurrentIndex;
     int switchTabTimerId;
 
-    QMovableTabWidget *movingTab;
+    QWidget *movingTab;
 #ifdef Q_DEAD_CODE_FROM_QT4_MAC
     int previousPressedIndex;
 #endif
     // shared by tabwidget and qtabbar
-    static void initStyleBaseOption(QStyleOptionTabBarBase *optTabBase, QTabBar *tabbar, QSize size)
+    static void initStyleBaseOption(QStyleOptionTabBarBaseV2 *optTabBase, QTabBar *tabbar, QSize size)
     {
         QStyleOptionTab tabOverlap;
         tabOverlap.shape = tabbar->shape();

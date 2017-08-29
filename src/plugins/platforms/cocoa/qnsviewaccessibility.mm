@@ -44,8 +44,6 @@
 
 #import <AppKit/NSAccessibility.h>
 
-#ifndef QT_NO_ACCESSIBILITY
-
 @implementation QNSView (QNSViewAccessibility)
 
 - (id)childAccessibleElement {
@@ -82,5 +80,3 @@
 }
 
 @end
-
-#endif // QT_NO_ACCESSIBILITY

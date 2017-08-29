@@ -41,10 +41,11 @@
 
 #include <stddef.h>
 
+#define QT_VERSION_STR   "5.5.1"
 /*
    QT_VERSION is (major << 16) + (minor << 8) + patch.
 */
-#define QT_VERSION      QT_VERSION_CHECK(QT_VERSION_MAJOR, QT_VERSION_MINOR, QT_VERSION_PATCH)
+#define QT_VERSION 0x050501
 /*
    can be used like #if (QT_VERSION >= QT_VERSION_CHECK(4, 4, 0))
 */
@@ -54,10 +55,6 @@
 #include <QtCore/qconfig.h>
 #include <QtCore/qfeatures.h>
 #endif
-
-// The QT_SUPPORTS macro is deprecated. Don't use it in new code.
-// Instead, use #ifdef/ndef QT_NO_feature.
-// ### Qt6: remove macro
 #ifdef _MSC_VER
 #  define QT_SUPPORTS(FEATURE) (!defined QT_NO_##FEATURE)
 #else
@@ -196,6 +193,18 @@ typedef unsigned long long quint64; /* 64 bit unsigned */
 typedef qint64 qlonglong;
 typedef quint64 qulonglong;
 
+#ifndef QT_POINTER_SIZE
+#  if defined(Q_OS_WIN64) || (defined(Q_OS_WINRT) && defined(_M_X64))
+#   define QT_POINTER_SIZE 8
+#  elif defined(Q_OS_WIN32) || defined(Q_OS_WINCE) || defined(Q_OS_WINRT)
+#   define QT_POINTER_SIZE 4
+#  elif defined(Q_OS_ANDROID)
+#   define QT_POINTER_SIZE 4 // ### Add auto-detection to Windows configure
+#  elif !defined(QT_BOOTSTRAPPED)
+#   error could not determine QT_POINTER_SIZE
+#  endif
+#endif
+
 /*
    Useful type definitions for Qt
 */
@@ -311,15 +320,6 @@ typedef double qreal;
 #  define Q_WIDGETS_EXPORT
 #  define Q_NETWORK_EXPORT
 #endif
-
-/*
-   Some classes do not permit copies to be made of an object. These
-   classes contains a private copy constructor and assignment
-   operator to disable copying (the compiler gives an error message).
-*/
-#define Q_DISABLE_COPY(Class) \
-    Class(const Class &) Q_DECL_EQ_DELETE;\
-    Class &operator=(const Class &) Q_DECL_EQ_DELETE;
 
 /*
    No, this is not an evil backdoor. QT_BUILD_INTERNAL just exports more symbols
@@ -439,9 +439,6 @@ template <>    struct QIntegerForSize<1> { typedef quint8  Unsigned; typedef qin
 template <>    struct QIntegerForSize<2> { typedef quint16 Unsigned; typedef qint16 Signed; };
 template <>    struct QIntegerForSize<4> { typedef quint32 Unsigned; typedef qint32 Signed; };
 template <>    struct QIntegerForSize<8> { typedef quint64 Unsigned; typedef qint64 Signed; };
-#if defined(Q_CC_GNU) && defined(__SIZEOF_INT128__)
-template <>    struct QIntegerForSize<16> { __extension__ typedef unsigned __int128 Unsigned; __extension__ typedef __int128 Signed; };
-#endif
 template <class T> struct QIntegerForSizeof: QIntegerForSize<sizeof(T)> { };
 typedef QIntegerForSize<Q_PROCESSOR_WORDSIZE>::Signed qregisterint;
 typedef QIntegerForSize<Q_PROCESSOR_WORDSIZE>::Unsigned qregisteruint;
@@ -490,13 +487,10 @@ typedef qptrdiff qintptr;
 
 #ifdef Q_CC_MSVC
 #  define Q_NEVER_INLINE __declspec(noinline)
-#  define Q_ALWAYS_INLINE __forceinline
 #elif defined(Q_CC_GNU)
 #  define Q_NEVER_INLINE __attribute__((noinline))
-#  define Q_ALWAYS_INLINE inline __attribute__((always_inline))
 #else
 #  define Q_NEVER_INLINE
-#  define Q_ALWAYS_INLINE inline
 #endif
 
 //defines the type for the WNDPROC on windows
@@ -549,21 +543,7 @@ template <typename T>
 Q_DECL_CONSTEXPR inline const T &qBound(const T &min, const T &val, const T &max)
 { return qMax(min, qMin(max, val)); }
 
-#ifndef Q_FORWARD_DECLARE_OBJC_CLASS
-#  ifdef __OBJC__
-#    define Q_FORWARD_DECLARE_OBJC_CLASS(classname) @class classname
-#  else
-#    define Q_FORWARD_DECLARE_OBJC_CLASS(classname) typedef struct objc_object classname
-#  endif
-#endif
-#ifndef Q_FORWARD_DECLARE_CF_TYPE
-#  define Q_FORWARD_DECLARE_CF_TYPE(type) typedef const struct __ ## type * type ## Ref
-#endif
-#ifndef Q_FORWARD_DECLARE_MUTABLE_CF_TYPE
-#  define Q_FORWARD_DECLARE_MUTABLE_CF_TYPE(type) typedef struct __ ## type * type ## Ref
-#endif
-
-#ifdef Q_OS_MAC
+#ifdef Q_OS_DARWIN
 #  define QT_MAC_PLATFORM_SDK_EQUAL_OR_ABOVE(osx, ios) \
     ((defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && osx != __MAC_NA && __MAC_OS_X_VERSION_MAX_ALLOWED >= osx) || \
      (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && ios != __IPHONE_NA && __IPHONE_OS_VERSION_MAX_ALLOWED >= ios))
@@ -581,19 +561,7 @@ Q_DECL_CONSTEXPR inline const T &qBound(const T &min, const T &val, const T &max
       QT_MAC_DEPLOYMENT_TARGET_BELOW(__MAC_NA, ios)
 #  define QT_OSX_DEPLOYMENT_TARGET_BELOW(osx) \
       QT_MAC_DEPLOYMENT_TARGET_BELOW(osx, __IPHONE_NA)
-
-// Implemented in qcore_mac_objc.mm
-class Q_CORE_EXPORT QMacAutoReleasePool
-{
-public:
-    QMacAutoReleasePool();
-    ~QMacAutoReleasePool();
-private:
-    Q_DISABLE_COPY(QMacAutoReleasePool)
-    void *pool;
-};
-
-#endif // Q_OS_MAC
+#endif
 
 /*
    Data stream functions are provided by many classes (defined in qdatastream.h)
@@ -610,6 +578,7 @@ class QDataStream;
 
 #if defined(Q_OS_WINRT)
 #  define QT_NO_FILESYSTEMWATCHER
+#  define QT_NO_GETADDRINFO
 #  define QT_NO_NETWORKPROXY
 #  define QT_NO_PROCESS
 #  define QT_NO_SOCKETNOTIFIER
@@ -758,7 +727,7 @@ inline T *q_check_ptr(T *p) { Q_CHECK_PTR(p); return p; }
 typedef void (*QFunctionPointer)();
 
 #if !defined(Q_UNIMPLEMENTED)
-#  define Q_UNIMPLEMENTED() qWarning("Unimplemented code.")
+#  define Q_UNIMPLEMENTED() qWarning("%s:%d: %s: Unimplemented code.", __FILE__, __LINE__, Q_FUNC_INFO)
 #endif
 
 Q_DECL_CONSTEXPR static inline bool qFuzzyCompare(double p1, double p2) Q_REQUIRED_RESULT Q_DECL_UNUSED;
@@ -1049,6 +1018,8 @@ Q_CORE_EXPORT QString qtTrId(const char *id, int n = -1);
 
 #endif // QT_NO_TRANSLATION
 
+#define QDOC_PROPERTY(text)
+
 /*
    When RTTI is not available, define this macro to force any uses of
    dynamic_cast to cause a compile failure.
@@ -1062,6 +1033,15 @@ Q_CORE_EXPORT QString qtTrId(const char *id, int n = -1);
   { return T::dynamic_cast_will_always_fail_because_rtti_is_disabled; }
 #endif
 
+/*
+   Some classes do not permit copies to be made of an object. These
+   classes contains a private copy constructor and assignment
+   operator to disable copying (the compiler gives an error message).
+*/
+#define Q_DISABLE_COPY(Class) \
+    Class(const Class &) Q_DECL_EQ_DELETE;\
+    Class &operator=(const Class &) Q_DECL_EQ_DELETE;
+
 class QByteArray;
 Q_CORE_EXPORT QByteArray qgetenv(const char *varName);
 Q_CORE_EXPORT bool qputenv(const char *varName, const QByteArray& value);
@@ -1069,7 +1049,7 @@ Q_CORE_EXPORT bool qunsetenv(const char *varName);
 
 Q_CORE_EXPORT bool qEnvironmentVariableIsEmpty(const char *varName) Q_DECL_NOEXCEPT;
 Q_CORE_EXPORT bool qEnvironmentVariableIsSet(const char *varName) Q_DECL_NOEXCEPT;
-Q_CORE_EXPORT int  qEnvironmentVariableIntValue(const char *varName, bool *ok=Q_NULLPTR) Q_DECL_NOEXCEPT;
+Q_CORE_EXPORT int  qEnvironmentVariableIntValue(const char *varName, bool *ok=0) Q_DECL_NOEXCEPT;
 
 inline int qIntCast(double f) { return int(f); }
 inline int qIntCast(float f) { return int(f); }
@@ -1097,6 +1077,20 @@ template <bool B, typename T, typename F> struct QConditional { typedef T Type; 
 template <typename T, typename F> struct QConditional<false, T, F> { typedef F Type; };
 }
 
+#ifndef Q_FORWARD_DECLARE_OBJC_CLASS
+#  ifdef __OBJC__
+#    define Q_FORWARD_DECLARE_OBJC_CLASS(classname) @class classname
+#  else
+#    define Q_FORWARD_DECLARE_OBJC_CLASS(classname) typedef struct objc_object classname
+#  endif
+#endif
+#ifndef Q_FORWARD_DECLARE_CF_TYPE
+#  define Q_FORWARD_DECLARE_CF_TYPE(type) typedef const struct __ ## type * type ## Ref
+#endif
+#ifndef Q_FORWARD_DECLARE_MUTABLE_CF_TYPE
+#  define Q_FORWARD_DECLARE_MUTABLE_CF_TYPE(type) typedef struct __ ## type * type ## Ref
+#endif
+
 QT_END_NAMESPACE
 
 // We need to keep QTypeInfo, QSysInfo, QFlags, qDebug & family in qglobal.h for compatibility with Qt 4.
@@ -1110,7 +1104,6 @@ QT_END_NAMESPACE
 #include <QtCore/qatomic.h>
 #include <QtCore/qglobalstatic.h>
 #include <QtCore/qnumeric.h>
-#include <QtCore/qversiontagging.h>
 
 #endif /* __cplusplus */
 

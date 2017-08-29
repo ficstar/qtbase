@@ -54,6 +54,7 @@
 #include <QMap>
 #include <QVariant>
 
+#ifndef QT_NO_BEARERMANAGEMENT
 #ifndef QT_NO_DBUS
 
 QT_BEGIN_NAMESPACE
@@ -93,11 +94,18 @@ private Q_SLOTS:
     void interfacePropertiesChanged(const QMap<QString, QVariant> &properties);
     void activeConnectionPropertiesChanged(const QMap<QString, QVariant> &properties);
 
+    void deviceAdded(const QDBusObjectPath &path);
+    void deviceRemoved(const QDBusObjectPath &path);
+
     void newConnection(const QDBusObjectPath &path, QNetworkManagerSettings *settings = 0);
     void removeConnection(const QString &path);
     void updateConnection();
     void activationFinished(QDBusPendingCallWatcher *watcher);
     void deviceConnectionsChanged(const QStringList &activeConnectionsList);
+
+    void newAccessPoint(const QString &path);
+    void removeAccessPoint(const QString &path);
+    void scanFinished();
 
     void wiredCarrierChanged(bool);
 
@@ -142,6 +150,7 @@ private:
 QT_END_NAMESPACE
 
 #endif // QT_NO_DBUS
+#endif // QT_NO_BEARERMANAGEMENT
 
 #endif
 

@@ -6,7 +6,6 @@ HEADERS += $$PWD/qstatemachine.h \
 	   $$PWD/qstate.h \
 	   $$PWD/qstate_p.h \
 	   $$PWD/qfinalstate.h \
-	   $$PWD/qfinalstate_p.h \
 	   $$PWD/qhistorystate.h \
 	   $$PWD/qhistorystate_p.h \
 	   $$PWD/qabstracttransition.h \

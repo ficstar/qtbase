@@ -2,9 +2,11 @@ TEMPLATE = subdirs
 
 android:!android-no-sdk: SUBDIRS += android
 
-!android: SUBDIRS += minimal
+SUBDIRS += minimal
 
-!android:if(!win32|contains(QT_CONFIG, freetype)): SUBDIRS += offscreen
+!win32:!winrt: SUBDIRS += phantom
+
+!win32|contains(QT_CONFIG, freetype):SUBDIRS += offscreen
 
 contains(QT_CONFIG, xcb) {
     SUBDIRS += xcb
@@ -40,5 +42,3 @@ contains(QT_CONFIG, linuxfb): SUBDIRS += linuxfb
 haiku {
     SUBDIRS += haiku
 }
-
-contains(QT_CONFIG, mirclient): SUBDIRS += mirclient

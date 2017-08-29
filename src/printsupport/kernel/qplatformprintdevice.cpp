@@ -53,9 +53,6 @@ QPlatformPrintDevice::QPlatformPrintDevice()
       m_haveOutputBins(false),
       m_haveDuplexModes(false),
       m_haveColorModes(false)
-#ifndef QT_NO_MIMETYPES
-    , m_haveMimeTypes(false)
-#endif
 {
 }
 
@@ -71,9 +68,6 @@ QPlatformPrintDevice::QPlatformPrintDevice(const QString &id)
       m_haveOutputBins(false),
       m_haveDuplexModes(false),
       m_haveColorModes(false)
-#ifndef QT_NO_MIMETYPES
-    , m_haveMimeTypes(false)
-#endif
 {
 }
 

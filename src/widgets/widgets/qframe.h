@@ -54,7 +54,7 @@ class Q_WIDGETS_EXPORT QFrame : public QWidget
     Q_PROPERTY(QRect frameRect READ frameRect WRITE setFrameRect DESIGNABLE false)
 
 public:
-    explicit QFrame(QWidget* parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
+    explicit QFrame(QWidget* parent = 0, Qt::WindowFlags f = 0);
     ~QFrame();
 
     int frameStyle() const;
@@ -108,7 +108,7 @@ protected:
 
 
 protected:
-    QFrame(QFramePrivate &dd, QWidget* parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
+    QFrame(QFramePrivate &dd, QWidget* parent = 0, Qt::WindowFlags f = 0);
     void initStyleOption(QStyleOptionFrame *option) const;
 
 private:

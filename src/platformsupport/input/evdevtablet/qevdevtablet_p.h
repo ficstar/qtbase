@@ -48,7 +48,6 @@
 #include <QObject>
 #include <QString>
 #include <QThread>
-#include <QtCore/private/qthread_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -69,7 +68,7 @@ private:
     QEvdevTabletData *d;
 };
 
-class QEvdevTabletHandlerThread : public QDaemonThread
+class QEvdevTabletHandlerThread : public QThread
 {
 public:
     explicit QEvdevTabletHandlerThread(const QString &spec, QObject *parent = 0);

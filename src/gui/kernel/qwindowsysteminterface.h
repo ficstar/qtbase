@@ -78,39 +78,45 @@ public:
                                            Qt::KeyboardModifiers mods = Qt::NoModifier,
                                            Qt::MouseEventSource source = Qt::MouseEventNotSynthesized);
 
-    static bool handleShortcutEvent(QWindow *w, ulong timestamp, int k, Qt::KeyboardModifiers mods, quint32 nativeScanCode,
-                                      quint32 nativeVirtualKey, quint32 nativeModifiers, const QString & text = QString(), bool autorep = false, ushort count = 1);
+    static bool tryHandleShortcutOverrideEvent(QWindow *w, QKeyEvent *ev);
 
-    static bool handleKeyEvent(QWindow *w, QEvent::Type t, int k, Qt::KeyboardModifiers mods, const QString & text = QString(), bool autorep = false, ushort count = 1);
-    static bool handleKeyEvent(QWindow *w, ulong timestamp, QEvent::Type t, int k, Qt::KeyboardModifiers mods, const QString & text = QString(), bool autorep = false, ushort count = 1);
+    static bool tryHandleShortcutEvent(QWindow *w, int k, Qt::KeyboardModifiers mods,
+                                                  const QString & text = QString(), bool autorep = false, ushort count = 1);
+    static bool tryHandleShortcutEvent(QWindow *w, ulong timestamp, int k, Qt::KeyboardModifiers mods,
+                                                  const QString & text = QString(), bool autorep = false, ushort count = 1);
 
-    static bool handleExtendedKeyEvent(QWindow *w, QEvent::Type type, int key, Qt::KeyboardModifiers modifiers,
+    static bool tryHandleShortcutEventToObject(QObject *o, ulong timestamp, int k, Qt::KeyboardModifiers mods,
+                                       const QString & text = QString(), bool autorep = false, ushort count = 1);
+
+    static bool tryHandleExtendedShortcutEvent(QWindow *w, int k, Qt::KeyboardModifiers mods,
+                                                          quint32 nativeScanCode, quint32 nativeVirtualKey, quint32 nativeModifiers,
+                                                          const QString & text = QString(), bool autorep = false, ushort count = 1);
+    static bool tryHandleExtendedShortcutEvent(QWindow *w, ulong timestamp, int k, Qt::KeyboardModifiers mods,
+                                                          quint32 nativeScanCode, quint32 nativeVirtualKey, quint32 nativeModifiers,
+                                                          const QString & text = QString(), bool autorep = false, ushort count = 1);
+
+    static void handleKeyEvent(QWindow *w, QEvent::Type t, int k, Qt::KeyboardModifiers mods, const QString & text = QString(), bool autorep = false, ushort count = 1);
+    static void handleKeyEvent(QWindow *w, ulong timestamp, QEvent::Type t, int k, Qt::KeyboardModifiers mods, const QString & text = QString(), bool autorep = false, ushort count = 1);
+
+    static void handleExtendedKeyEvent(QWindow *w, QEvent::Type type, int key, Qt::KeyboardModifiers modifiers,
+                                       quint32 nativeScanCode, quint32 nativeVirtualKey,
+                                       quint32 nativeModifiers,
+                                       const QString& text = QString(), bool autorep = false,
+                                       ushort count = 1);
+    static void handleExtendedKeyEvent(QWindow *w, ulong timestamp, QEvent::Type type, int key, Qt::KeyboardModifiers modifiers,
                                        quint32 nativeScanCode, quint32 nativeVirtualKey,
                                        quint32 nativeModifiers,
                                        const QString& text = QString(), bool autorep = false,
                                        ushort count = 1, bool tryShortcutOverride = true);
-    static bool handleExtendedKeyEvent(QWindow *w, ulong timestamp, QEvent::Type type, int key, Qt::KeyboardModifiers modifiers,
-                                       quint32 nativeScanCode, quint32 nativeVirtualKey,
-                                       quint32 nativeModifiers,
-                                       const QString& text = QString(), bool autorep = false,
-                                       ushort count = 1, bool tryShortcutOverride = true);
-    static void handleWheelEvent(QWindow *w, const QPointF & local, const QPointF & global,
-                                 QPoint pixelDelta, QPoint angleDelta,
-                                 Qt::KeyboardModifiers mods = Qt::NoModifier,
-                                 Qt::ScrollPhase phase = Qt::NoScrollPhase,
-                                 Qt::MouseEventSource source = Qt::MouseEventNotSynthesized);
-    static void handleWheelEvent(QWindow *w, ulong timestamp, const QPointF & local, const QPointF & global,
-                                 QPoint pixelDelta, QPoint angleDelta,
-                                 Qt::KeyboardModifiers mods = Qt::NoModifier,
-                                 Qt::ScrollPhase phase = Qt::NoScrollPhase,
-                                 Qt::MouseEventSource source = Qt::MouseEventNotSynthesized);
+    static void handleWheelEvent(QWindow *w, const QPointF & local, const QPointF & global, QPoint pixelDelta, QPoint angleDelta, Qt::KeyboardModifiers mods = Qt::NoModifier, Qt::ScrollPhase phase = Qt::ScrollUpdate, Qt::MouseEventSource source = Qt::MouseEventNotSynthesized);
+    static void handleWheelEvent(QWindow *w, ulong timestamp, const QPointF & local, const QPointF & global, QPoint pixelDelta, QPoint angleDelta, Qt::KeyboardModifiers mods = Qt::NoModifier, Qt::ScrollPhase phase = Qt::ScrollUpdate, Qt::MouseEventSource source = Qt::MouseEventNotSynthesized);
 
     // Wheel event compatibility functions. Will be removed: do not use.
     static void handleWheelEvent(QWindow *w, const QPointF & local, const QPointF & global, int d, Qt::Orientation o, Qt::KeyboardModifiers mods = Qt::NoModifier);
     static void handleWheelEvent(QWindow *w, ulong timestamp, const QPointF & local, const QPointF & global, int d, Qt::Orientation o, Qt::KeyboardModifiers mods = Qt::NoModifier);
 
     struct TouchPoint {
-        TouchPoint() : id(0), pressure(0), state(Qt::TouchPointStationary) { }
+        TouchPoint() : id(0), pressure(0), state(Qt::TouchPointStationary), flags(0) { }
         int id;                 // for application use
         QPointF normalPosition; // touch device coordinates, (0 to 1, 0 to 1)
         QRectF area;            // the touched area, centered at position in screen coordinates
@@ -121,9 +127,7 @@ public:
         QVector<QPointF> rawPositions; // in screen coordinates
     };
 
-    static void registerTouchDevice(const QTouchDevice *device);
-    static void unregisterTouchDevice(const QTouchDevice *device);
-    static bool isTouchDeviceRegistered(const QTouchDevice *device);
+    static void registerTouchDevice(QTouchDevice *device);
     static void handleTouchEvent(QWindow *w, QTouchDevice *device,
                                  const QList<struct TouchPoint> &points, Qt::KeyboardModifiers mods = Qt::NoModifier);
     static void handleTouchEvent(QWindow *w, ulong timestamp, QTouchDevice *device,
@@ -133,7 +137,7 @@ public:
 
     // rect is relative to parent
     static void handleGeometryChange(QWindow *w, const QRect &newRect, const QRect &oldRect = QRect());
-    static void handleCloseEvent(QWindow *w, bool *accepted = Q_NULLPTR);
+    static void handleCloseEvent(QWindow *w, bool *accepted = 0);
     static void handleEnterEvent(QWindow *w, const QPointF &local = QPointF(), const QPointF& global = QPointF());
     static void handleLeaveEvent(QWindow *w);
     static void handleEnterLeaveEvent(QWindow *enter, QWindow *leave, const QPointF &local = QPointF(), const QPointF& global = QPointF());
@@ -208,8 +212,8 @@ public:
 
     // For event dispatcher implementations
     static bool sendWindowSystemEvents(QEventLoop::ProcessEventsFlags flags);
-    static void setSynchronousWindowSystemEvents(bool enable);
-    static bool flushWindowSystemEvents(QEventLoop::ProcessEventsFlags flags = QEventLoop::AllEvents);
+    static void setSynchronousWindowsSystemEvents(bool enable);
+    static void flushWindowSystemEvents(QEventLoop::ProcessEventsFlags flags = QEventLoop::AllEvents);
     static void deferredFlushWindowSystemEvents(QEventLoop::ProcessEventsFlags flags);
     static int windowSystemEventsQueued();
 };

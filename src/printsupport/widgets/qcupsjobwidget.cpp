@@ -48,7 +48,7 @@
 
 QT_BEGIN_NAMESPACE
 
-#if !defined(QT_NO_PRINTER) && !defined(QT_NO_CUPS)
+#ifndef QT_NO_PRINTER
 
 /*!
     \internal
@@ -206,6 +206,6 @@ QCUPSSupport::BannerPage QCupsJobWidget::endBannerPage() const
     return m_ui.endBannerPageCombo->itemData(m_ui.endBannerPageCombo->currentIndex()).value<QCUPSSupport::BannerPage>();
 }
 
-#endif // QT_NO_PRINTER / QT_NO_CUPS
+#endif // QT_NO_PRINTER
 
 QT_END_NAMESPACE

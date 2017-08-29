@@ -197,7 +197,7 @@ bool QAlphaWidget::eventFilter(QObject *o, QEvent *e)
         break;
     case QEvent::KeyPress: {
        QKeyEvent *ke = (QKeyEvent*)e;
-       if (ke->matches(QKeySequence::Cancel)) {
+       if (ke->key() == Qt::Key_Escape) {
            showWidget = false;
        } else {
            duration = 0;

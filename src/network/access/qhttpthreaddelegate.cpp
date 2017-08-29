@@ -122,7 +122,7 @@ static QByteArray makeCacheKey(QUrl &url, QNetworkProxy *proxy)
 {
     QString result;
     QUrl copy = url;
-    QString scheme = copy.scheme();
+    QString scheme = copy.scheme().toLower();
     bool isEncrypted = scheme == QLatin1String("https");
     copy.setPort(copy.port(isEncrypted ? 443 : 80));
     if (scheme == QLatin1String("preconnect-http")) {
@@ -396,7 +396,6 @@ void QHttpThreadDelegate::abortRequest()
     qDebug() << "QHttpThreadDelegate::abortRequest() thread=" << QThread::currentThreadId() << "sync=" << synchronous;
 #endif
     if (httpReply) {
-        httpReply->abort();
         delete httpReply;
         httpReply = 0;
     }
@@ -492,13 +491,10 @@ void QHttpThreadDelegate::finishedSlot()
     if (httpReply->statusCode() >= 400) {
             // it's an error reply
             QString msg = QLatin1String(QT_TRANSLATE_NOOP("QNetworkReply",
-                                                          "Error transferring %1 - server replied: %2"));
+                                                          "Error downloading %1 - server replied: %2"));
             msg = msg.arg(httpRequest.url().toString(), httpReply->reasonPhrase());
             emit error(statusCodeFromHttp(httpReply->statusCode(), httpRequest.url()), msg);
         }
-
-    if (httpRequest.isFollowRedirects() && httpReply->isRedirecting())
-        emit redirected(httpReply->redirectUrl(), httpReply->statusCode(), httpReply->request().redirectCount() - 1);
 
     emit downloadFinished();
 
@@ -518,7 +514,7 @@ void QHttpThreadDelegate::synchronousFinishedSlot()
     if (httpReply->statusCode() >= 400) {
             // it's an error reply
             QString msg = QLatin1String(QT_TRANSLATE_NOOP("QNetworkReply",
-                                                          "Error transferring %1 - server replied: %2"));
+                                                          "Error downloading %1 - server replied: %2"));
             incomingErrorDetail = msg.arg(httpRequest.url().toString(), httpReply->reasonPhrase());
             incomingErrorCode = statusCodeFromHttp(httpReply->statusCode(), httpRequest.url());
     }

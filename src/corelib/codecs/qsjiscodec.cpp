@@ -73,7 +73,7 @@ QSjisCodec::QSjisCodec() : conv(QJpUnicodeConv::newConverter(QJpUnicodeConv::Def
 */
 QSjisCodec::~QSjisCodec()
 {
-    delete (const QJpUnicodeConv*)conv;
+    delete (QJpUnicodeConv*)conv;
     conv = 0;
 }
 

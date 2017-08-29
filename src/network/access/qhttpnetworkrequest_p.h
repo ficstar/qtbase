@@ -118,12 +118,6 @@ public:
     bool isPreConnect() const;
     void setPreConnect(bool preConnect);
 
-    bool isFollowRedirects() const;
-    void setFollowRedirects(bool followRedirect);
-
-    int redirectCount() const;
-    void setRedirectCount(int count);
-
     void setUploadByteDevice(QNonContiguousByteDevice *bd);
     QNonContiguousByteDevice* uploadByteDevice() const;
 
@@ -160,8 +154,6 @@ public:
     bool withCredentials;
     bool ssl;
     bool preConnect;
-    bool followRedirect;
-    int redirectCount;
 };
 
 

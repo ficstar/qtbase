@@ -223,12 +223,12 @@ void tst_qdiriterator::fsiterator()
         int c = 0;
 
         dump && printf("\n\n\n\n");
-        QDirIteratorTest::QFileSystemIterator dir(dirpath,
+        QFileSystemIterator dir(dirpath,
             //QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot,
             //QDir::AllEntries | QDir::Hidden,
             //QDir::Files | QDir::NoDotAndDotDot,
             QDir::Files,
-            QDirIteratorTest::QFileSystemIterator::Subdirectories);
+            QFileSystemIterator::Subdirectories);
 
         for (; !dir.atEnd(); dir.next()) {
             dump && printf("%d %s\n",

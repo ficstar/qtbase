@@ -164,8 +164,6 @@ public:
         SmallFont,
         MiniFont,
         FixedFont,
-        GroupBoxTitleFont,
-        TabButtonFont,
         NFonts
     };
 

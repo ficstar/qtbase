@@ -44,12 +44,10 @@ class PropertyWatcher : public QWidget
     Q_OBJECT
 
 public:
-    explicit PropertyWatcher(QObject* subject = Q_NULLPTR, QString annotation = QString(), QWidget *parent = Q_NULLPTR);
-
-    QFormLayout *formLayout() { return m_formLayout; }
-
-    QObject *subject() const { return m_subject; }
-    void setSubject(QObject *s, const QString &annotation = QString());
+    PropertyWatcher(QObject* subject, QString annotation = QString(), QWidget *parent = 0);
+    ~PropertyWatcher();
+    QFormLayout *layout() { return m_layout; }
+    QObject* subject() { return m_subject; }
 
 public slots:
     void updateAllFields();
@@ -58,9 +56,9 @@ public slots:
 signals:
     void updatedAllFields(PropertyWatcher* sender);
 
-private:
+protected:
     QObject* m_subject;
-    QFormLayout * m_formLayout;
+    QFormLayout * m_layout;
 };
 
 #endif // PROPERTY_WATCHER_H

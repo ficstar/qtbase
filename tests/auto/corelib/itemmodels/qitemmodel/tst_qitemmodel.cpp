@@ -49,9 +49,6 @@ class tst_QItemModel : public QObject
 {
     Q_OBJECT
 
-public:
-    tst_QItemModel();
-
 public slots:
     void init();
     void cleanup();
@@ -126,11 +123,6 @@ private:
     // insert() recursive
     bool insertRecursively;
 };
-
-tst_QItemModel::tst_QItemModel()
-{
-    qRegisterMetaType<QAbstractItemModel::LayoutChangeHint>();
-}
 
 void tst_QItemModel::init()
 {

@@ -200,13 +200,13 @@ void tst_QGLFunctions::multitexture()
 
     GLint active = 0;
     funcs.glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
-    QCOMPARE(active, GL_TEXTURE1);
+    QVERIFY(active == GL_TEXTURE1);
 
     funcs.glActiveTexture(GL_TEXTURE0);
 
     active = 0;
     funcs.glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
-    QCOMPARE(active, GL_TEXTURE0);
+    QVERIFY(active == GL_TEXTURE0);
 }
 
 // Verify that the glBlendColor() function appears to resolve and work.

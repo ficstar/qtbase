@@ -108,6 +108,11 @@ QSignalTransitionPrivate::QSignalTransitionPrivate()
     signalIndex = -1;
 }
 
+QSignalTransitionPrivate *QSignalTransitionPrivate::get(QSignalTransition *q)
+{
+    return q->d_func();
+}
+
 void QSignalTransitionPrivate::unregister()
 {
     Q_Q(QSignalTransition);

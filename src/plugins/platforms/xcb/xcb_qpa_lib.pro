@@ -1,6 +1,15 @@
 TARGET     = QtXcbQpa
 CONFIG += no_module_headers internal_module
 
+MODULE_INCLUDES = \
+    \$\$QT_MODULE_INCLUDE_BASE \
+    \$\$QT_MODULE_INCLUDE_BASE/QtQGui
+MODULE_PRIVATE_INCLUDES = \
+    \$\$QT_MODULE_INCLUDE_BASE/QtGui/$$QT.gui.VERSION \
+    \$\$QT_MODULE_INCLUDE_BASE/QtGui/$$QT.gui.VERSION/QtGui
+
+load(qt_module)
+
 QT += core-private gui-private platformsupport-private
 
 SOURCES = \
@@ -38,7 +47,7 @@ HEADERS = \
         qxcbxsettings.h \
         qxcbsystemtraytracker.h
 
-load(qt_build_paths)
+LIBS += $$QMAKE_LIBS_DYNLOAD
 
 DEFINES += QT_BUILD_XCB_PLUGIN
 # needed by Xcursor ...
@@ -90,9 +99,9 @@ contains(QT_CONFIG, xcb-qt) {
     DEFINES += XCB_USE_RENDER
     XCB_DIR = ../../../3rdparty/xcb
     INCLUDEPATH += $$XCB_DIR/include $$XCB_DIR/sysinclude
-    LIBS += -lxcb -L$$MODULE_BASE_OUTDIR/lib -lxcb-static$$qtPlatformTargetSuffix()
+    LIBS += -lxcb -L$$OUT_PWD/xcb-static -lxcb-static
 } else {
-    LIBS += -lxcb -lxcb-image -lxcb-icccm -lxcb-sync -lxcb-xfixes -lxcb-shm -lxcb-randr -lxcb-shape -lxcb-keysyms -lxcb-xinerama
+    LIBS += -lxcb -lxcb-image -lxcb-icccm -lxcb-sync -lxcb-xfixes -lxcb-shm -lxcb-randr -lxcb-shape -lxcb-keysyms
     !contains(DEFINES, QT_NO_XKB):LIBS += -lxcb-xkb
 }
 
@@ -105,4 +114,3 @@ contains(QT_CONFIG, xkbcommon-qt) {
     QMAKE_CXXFLAGS += $$QMAKE_CFLAGS_XKBCOMMON
 }
 
-load(qt_module)

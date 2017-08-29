@@ -41,8 +41,6 @@
 #include <Clipboard.h>
 
 QHaikuClipboard::QHaikuClipboard()
-    : m_systemMimeData(Q_NULLPTR)
-    , m_userMimeData(Q_NULLPTR)
 {
     if (be_clipboard)
         be_clipboard->StartWatching(BMessenger(this));
@@ -52,26 +50,17 @@ QHaikuClipboard::~QHaikuClipboard()
 {
     if (be_clipboard)
         be_clipboard->StopWatching(BMessenger(this));
-
-    delete m_userMimeData;
-    delete m_systemMimeData;
 }
 
 QMimeData *QHaikuClipboard::mimeData(QClipboard::Mode mode)
 {
-    if (mode != QClipboard::Clipboard)
-        return 0;
+    QMimeData *mimeData = new QMimeData();
 
-    if (m_userMimeData)
-        return m_userMimeData;
+    if (mode != QClipboard::Clipboard)
+        return mimeData;
 
     if (!be_clipboard->Lock())
-        return 0;
-
-    if (!m_systemMimeData)
-        m_systemMimeData = new QMimeData();
-    else
-        m_systemMimeData->clear();
+        return mimeData;
 
     const BMessage *clipboard = be_clipboard->Data();
     if (clipboard) {
@@ -86,12 +75,12 @@ QMimeData *QHaikuClipboard::mimeData(QClipboard::Mode mode)
             const status_t status = clipboard->FindData(name, B_MIME_TYPE, &data, &dataLen);
             if (dataLen && (status == B_OK)) {
                 const QString format = QString::fromLatin1(name);
-                if (format == QLatin1String("text/plain")) {
-                    m_systemMimeData->setText(QString::fromLocal8Bit(reinterpret_cast<const char*>(data), dataLen));
-                } else if (format == QLatin1String("text/html")) {
-                    m_systemMimeData->setHtml(QString::fromLocal8Bit(reinterpret_cast<const char*>(data), dataLen));
+                if (format == QStringLiteral("text/plain")) {
+                    mimeData->setText(QString::fromLocal8Bit(reinterpret_cast<const char*>(data), dataLen));
+                } else if (format == QStringLiteral("text/html")) {
+                    mimeData->setHtml(QString::fromLocal8Bit(reinterpret_cast<const char*>(data), dataLen));
                 } else {
-                    m_systemMimeData->setData(format, QByteArray(reinterpret_cast<const char*>(data), dataLen));
+                    mimeData->setData(format, QByteArray(reinterpret_cast<const char*>(data), dataLen));
                 }
             }
         }
@@ -99,21 +88,13 @@ QMimeData *QHaikuClipboard::mimeData(QClipboard::Mode mode)
 
     be_clipboard->Unlock();
 
-    return m_systemMimeData;
+    return mimeData;
 }
 
 void QHaikuClipboard::setMimeData(QMimeData *mimeData, QClipboard::Mode mode)
 {
     if (mode != QClipboard::Clipboard)
         return;
-
-    if (mimeData) {
-        if (m_systemMimeData == mimeData)
-            return;
-
-        if (m_userMimeData == mimeData)
-            return;
-    }
 
     if (!be_clipboard->Lock())
         return;
@@ -134,10 +115,6 @@ void QHaikuClipboard::setMimeData(QMimeData *mimeData, QClipboard::Mode mode)
         qWarning("Unable to store mime data on clipboard");
 
     be_clipboard->Unlock();
-
-    m_userMimeData = mimeData;
-
-    emitChanged(QClipboard::Clipboard);
 }
 
 bool QHaikuClipboard::supportsMode(QClipboard::Mode mode) const
@@ -154,12 +131,8 @@ bool QHaikuClipboard::ownsMode(QClipboard::Mode mode) const
 
 void QHaikuClipboard::MessageReceived(BMessage* message)
 {
-    if (message->what == B_CLIPBOARD_CHANGED) {
-        delete m_userMimeData;
-        m_userMimeData = Q_NULLPTR;
-
+    if (message->what == B_CLIPBOARD_CHANGED)
         emitChanged(QClipboard::Clipboard);
-    }
 
     BHandler::MessageReceived(message);
 }

@@ -1,4 +1,7 @@
 TARGET = qhaiku
+PLUGIN_TYPE = platforms
+PLUGIN_CLASS_NAME = QHaikuIntegrationPlugin
+load(qt_plugin)
 
 QT += platformsupport-private core-private gui-private
 
@@ -37,7 +40,3 @@ LIBS += -lbe
 OTHER_FILES += haiku.json
 
 include (../../../platformsupport/fontdatabases/fontdatabases.pri)
-
-PLUGIN_TYPE = platforms
-PLUGIN_CLASS_NAME = QHaikuIntegrationPlugin
-load(qt_plugin)

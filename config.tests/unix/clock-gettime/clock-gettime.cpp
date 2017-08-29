@@ -36,7 +36,7 @@
 
 int main(int, char **)
 {
-#if (defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)) || defined(__OpenBSD__)
+#if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
     timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
 #else

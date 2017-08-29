@@ -105,7 +105,6 @@ private slots:
     void drawBitmap();
     void isNull();
     void task_246446();
-    void task_51271();
 
     void convertFromImageNoDetach();
     void convertFromImageDetach();
@@ -448,7 +447,7 @@ void tst_QPixmap::scroll()
 
     QString fileName = QString(":/images/%1.png").arg(QTest::currentDataTag());
     QPixmap output(fileName);
-    QCOMPARE(input.isNull(), output.isNull());
+    QVERIFY(input.isNull() == output.isNull());
     QVERIFY(lenientCompare(pixmap, output));
     QCOMPARE(exp, exposed);
 }
@@ -714,11 +713,11 @@ void tst_QPixmap::cacheKey()
     QVERIFY(pixmap1.cacheKey() != pixmap2.cacheKey());
 
     pixmap2 = pixmap1;
-    QCOMPARE(pixmap2.cacheKey(), pixmap1.cacheKey());
+    QVERIFY(pixmap2.cacheKey() == pixmap1.cacheKey());
 
     pixmap2.detach();
     QVERIFY(pixmap2.cacheKey() != pixmap1.cacheKey());
-    QCOMPARE(pixmap1.cacheKey(), pixmap1_key);
+    QVERIFY(pixmap1.cacheKey() == pixmap1_key);
 }
 
 // Test drawing a bitmap on a pixmap.
@@ -744,7 +743,7 @@ void tst_QPixmap::isNull()
 {
     {
         QPixmap pixmap(1,1);
-        QVERIFY(!pixmap.isNull());
+        QVERIFY(pixmap.isNull() == false);
     }
     {
         QPixmap pixmap(0,0);
@@ -784,11 +783,11 @@ void tst_QPixmap::convertFromImageNoDetach()
     QPixmap pix = QPixmap::fromImage(orig);
     QImage copy = pix.toImage();
 
-    QCOMPARE(copy.format(), screenFormat);
+    QVERIFY(copy.format() == screenFormat);
 
     const QImage constOrig = orig;
     const QImage constCopy = copy;
-    QCOMPARE(constOrig.bits(), constCopy.bits());
+    QVERIFY(constOrig.bits() == constCopy.bits());
 }
 
 void tst_QPixmap::convertFromImageDetach()
@@ -822,7 +821,7 @@ void tst_QPixmap::convertFromImageCacheKey()
     QPixmap pix = QPixmap::fromImage(orig);
     QImage copy = pix.toImage();
 
-    QCOMPARE(copy.format(), screenFormat);
+    QVERIFY(copy.format() == screenFormat);
 
     QCOMPARE(orig.cacheKey(), pix.cacheKey());
     QCOMPARE(copy.cacheKey(), pix.cacheKey());
@@ -1136,9 +1135,9 @@ void tst_QPixmap::copy()
 void tst_QPixmap::depthOfNullObjects()
 {
     QBitmap b1;
-    QCOMPARE(b1.depth(), 0);
+    QVERIFY(b1.depth() == 0);
     QPixmap p4;
-    QCOMPARE(p4.depth(), 0);
+    QVERIFY(p4.depth() == 0);
 }
 
 void tst_QPixmap::transformed()
@@ -1438,16 +1437,8 @@ void tst_QPixmap::task_246446()
     {
         QPixmap pm2(pm);
     }
-    QCOMPARE(pm.width(), 10);
+    QVERIFY(pm.width() == 10);
     QVERIFY(pm.mask().isNull());
-}
-
-void tst_QPixmap::task_51271()
-{
-    QPixmap pm;
-    QBitmap bm;
-    QVERIFY(!pm.isQBitmap()); // Should not crash !
-    QVERIFY(bm.isQBitmap());
 }
 
 void tst_QPixmap::preserveDepth()
@@ -1499,14 +1490,14 @@ void tst_QPixmap::loadAsBitmapOrPixmap()
     // The do the same check for bitmaps..
     QBitmap bitmap("temp_image.png");
     QVERIFY(!bitmap.isNull());
-    QCOMPARE(bitmap.depth(), 1);
+    QVERIFY(bitmap.depth() == 1);
     QVERIFY(bitmap.isQBitmap());
 
     bitmap = QBitmap();
     ok = bitmap.load("temp_image.png");
     QVERIFY(ok);
     QVERIFY(!bitmap.isNull());
-    QCOMPARE(bitmap.depth(), 1);
+    QVERIFY(bitmap.depth() == 1);
     QVERIFY(bitmap.isQBitmap());
 }
 

@@ -61,7 +61,7 @@ Q_GUI_EXPORT bool qt_sendShortcutOverrideEvent(QObject *o, ulong timestamp, int 
 
 namespace QTest
 {
-    enum KeyAction { Press, Release, Click, Shortcut };
+    enum KeyAction { Press, Release, Click };
 
     static void simulateEvent(QWindow *window, bool press, int code,
                               Qt::KeyboardModifiers modifier, QString text, bool repeat, int delay=-1)
@@ -69,7 +69,11 @@ namespace QTest
         QEvent::Type type;
         type = press ? QEvent::KeyPress : QEvent::KeyRelease;
         qt_handleKeyEvent(window, type, code, modifier, text, repeat, delay);
+#ifdef QT_MAC_USE_COCOA
+        QTest::qWait(20);
+#else
         qApp->processEvents();
+#endif
     }
 
     static void sendKeyEvent(KeyAction action, QWindow *window, Qt::Key code,
@@ -91,15 +95,9 @@ namespace QTest
 
         bool repeat = false;
 
-        if (action == Shortcut) {
-            int timestamp = 0;
-            qt_sendShortcutOverrideEvent(window, timestamp, code, modifier, text, repeat);
-            return;
-        }
-
         if (action == Press) {
             if (modifier & Qt::ShiftModifier)
-                simulateEvent(window, true, Qt::Key_Shift, Qt::KeyboardModifiers(), QString(), false, delay);
+                simulateEvent(window, true, Qt::Key_Shift, 0, QString(), false, delay);
 
             if (modifier & Qt::ControlModifier)
                 simulateEvent(window, true, Qt::Key_Control, modifier & Qt::ShiftModifier, QString(), false, delay);
@@ -222,7 +220,7 @@ namespace QTest
 
         if (action == Press) {
             if (modifier & Qt::ShiftModifier)
-                simulateEvent(widget, true, Qt::Key_Shift, Qt::KeyboardModifiers(), QString(), false, delay);
+                simulateEvent(widget, true, Qt::Key_Shift, 0, QString(), false, delay);
 
             if (modifier & Qt::ControlModifier)
                 simulateEvent(widget, true, Qt::Key_Control, modifier & Qt::ShiftModifier, QString(), false, delay);

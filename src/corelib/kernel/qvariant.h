@@ -278,14 +278,14 @@ class Q_CORE_EXPORT QVariant
     void detach();
     inline bool isDetached() const;
 
-    int toInt(bool *ok = Q_NULLPTR) const;
-    uint toUInt(bool *ok = Q_NULLPTR) const;
-    qlonglong toLongLong(bool *ok = Q_NULLPTR) const;
-    qulonglong toULongLong(bool *ok = Q_NULLPTR) const;
+    int toInt(bool *ok = 0) const;
+    uint toUInt(bool *ok = 0) const;
+    qlonglong toLongLong(bool *ok = 0) const;
+    qulonglong toULongLong(bool *ok = 0) const;
     bool toBool() const;
-    double toDouble(bool *ok = Q_NULLPTR) const;
-    float toFloat(bool *ok = Q_NULLPTR) const;
-    qreal toReal(bool *ok = Q_NULLPTR) const;
+    double toDouble(bool *ok = 0) const;
+    float toFloat(bool *ok = 0) const;
+    qreal toReal(bool *ok = 0) const;
     QByteArray toByteArray() const;
     QBitArray toBitArray() const;
     QString toString() const;
@@ -364,7 +364,7 @@ class Q_CORE_EXPORT QVariant
     struct Private
     {
         inline Private() Q_DECL_NOTHROW : type(Invalid), is_shared(false), is_null(true)
-        { data.ptr = Q_NULLPTR; }
+        { data.ptr = 0; }
 
         // Internal constructor for initialized variants.
         explicit inline Private(uint variantType) Q_DECL_NOTHROW
@@ -607,11 +607,7 @@ public:
 
     friend struct const_iterator;
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     explicit QSequentialIterable(QtMetaTypePrivate::QSequentialIterableImpl impl);
-#else
-    explicit QSequentialIterable(const QtMetaTypePrivate::QSequentialIterableImpl &impl);
-#endif
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -664,11 +660,7 @@ public:
 
     friend struct const_iterator;
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     explicit QAssociativeIterable(QtMetaTypePrivate::QAssociativeIterableImpl impl);
-#else
-    explicit QAssociativeIterable(const QtMetaTypePrivate::QAssociativeIterableImpl &impl);
-#endif
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -750,7 +742,7 @@ namespace QtPrivate {
         static QVariantList invoke(const QVariant &v)
         {
             const int typeId = v.userType();
-            if (typeId == qMetaTypeId<QStringList>() || typeId == qMetaTypeId<QByteArrayList>() || QMetaType::hasRegisteredConverterFunction(typeId, qMetaTypeId<QtMetaTypePrivate::QSequentialIterableImpl>())) {
+            if (QtMetaTypePrivate::isBuiltinSequentialType(typeId) || QMetaType::hasRegisteredConverterFunction(typeId, qMetaTypeId<QtMetaTypePrivate::QSequentialIterableImpl>())) {
                 QSequentialIterable iter = QVariantValueHelperInterface<QSequentialIterable>::invoke(v);
                 QVariantList l;
                 l.reserve(iter.size());
@@ -767,12 +759,12 @@ namespace QtPrivate {
         static QVariantHash invoke(const QVariant &v)
         {
             const int typeId = v.userType();
-            if (typeId == qMetaTypeId<QVariantMap>() || QMetaType::hasRegisteredConverterFunction(typeId, qMetaTypeId<QtMetaTypePrivate::QAssociativeIterableImpl>())) {
+            if (QtMetaTypePrivate::isBuiltinAssociativeType(typeId) || QMetaType::hasRegisteredConverterFunction(typeId, qMetaTypeId<QtMetaTypePrivate::QAssociativeIterableImpl>())) {
                 QAssociativeIterable iter = QVariantValueHelperInterface<QAssociativeIterable>::invoke(v);
                 QVariantHash l;
                 l.reserve(iter.size());
                 for (QAssociativeIterable::const_iterator it = iter.begin(), end = iter.end(); it != end; ++it)
-                    l.insertMulti(it.key().toString(), it.value());
+                    l.insert(it.key().toString(), it.value());
                 return l;
             }
             return QVariantValueHelper<QVariantHash>::invoke(v);
@@ -784,11 +776,11 @@ namespace QtPrivate {
         static QVariantMap invoke(const QVariant &v)
         {
             const int typeId = v.userType();
-            if (typeId == qMetaTypeId<QVariantHash>() || QMetaType::hasRegisteredConverterFunction(typeId, qMetaTypeId<QtMetaTypePrivate::QAssociativeIterableImpl>())) {
+            if (QtMetaTypePrivate::isBuiltinAssociativeType(typeId) || QMetaType::hasRegisteredConverterFunction(typeId, qMetaTypeId<QtMetaTypePrivate::QAssociativeIterableImpl>())) {
                 QAssociativeIterable iter = QVariantValueHelperInterface<QAssociativeIterable>::invoke(v);
                 QVariantMap l;
                 for (QAssociativeIterable::const_iterator it = iter.begin(), end = iter.end(); it != end; ++it)
-                    l.insertMulti(it.key().toString(), it.value());
+                    l.insert(it.key().toString(), it.value());
                 return l;
             }
             return QVariantValueHelper<QVariantMap>::invoke(v);

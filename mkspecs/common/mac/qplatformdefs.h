@@ -62,7 +62,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#define __APPLE_USE_RFC_3542
 #include <netinet/in.h>
 #ifndef QT_NO_IPV6IFNAME
 #include <net/if.h>

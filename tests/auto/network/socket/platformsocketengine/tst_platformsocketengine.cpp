@@ -130,19 +130,18 @@ void tst_PlatformSocketEngine::construction()
     // Initialize device
     QVERIFY(socketDevice.initialize(QAbstractSocket::TcpSocket, QAbstractSocket::IPv4Protocol));
     QVERIFY(socketDevice.isValid());
-    QCOMPARE(socketDevice.protocol(), QAbstractSocket::IPv4Protocol);
-    QCOMPARE(socketDevice.socketType(), QAbstractSocket::TcpSocket);
-    QCOMPARE(socketDevice.state(), QAbstractSocket::UnconnectedState);
+    QVERIFY(socketDevice.protocol() == QAbstractSocket::IPv4Protocol);
+    QVERIFY(socketDevice.socketType() == QAbstractSocket::TcpSocket);
+    QVERIFY(socketDevice.state() == QAbstractSocket::UnconnectedState);
     QVERIFY(socketDevice.socketDescriptor() != -1);
-    QCOMPARE(socketDevice.localAddress(), QHostAddress());
-    QCOMPARE(socketDevice.localPort(), quint16(0));
-    QCOMPARE(socketDevice.peerAddress(), QHostAddress());
-    QCOMPARE(socketDevice.peerPort(), quint16(0));
-    QCOMPARE(socketDevice.error(), QAbstractSocket::UnknownSocketError);
-    QCOMPARE(socketDevice.option(QNativeSocketEngine::NonBlockingSocketOption), -1);
+    QVERIFY(socketDevice.localAddress() == QHostAddress());
+    QVERIFY(socketDevice.localPort() == 0);
+    QVERIFY(socketDevice.peerAddress() == QHostAddress());
+    QVERIFY(socketDevice.peerPort() == 0);
+    QVERIFY(socketDevice.error() == QAbstractSocket::UnknownSocketError);
 
     QTest::ignoreMessage(QtWarningMsg, PLATFORMSOCKETENGINESTRING "::bytesAvailable() was called in QAbstractSocket::UnconnectedState");
-    QCOMPARE(socketDevice.bytesAvailable(), -1);
+    QVERIFY(socketDevice.bytesAvailable() == -1);
 
     QTest::ignoreMessage(QtWarningMsg, PLATFORMSOCKETENGINESTRING "::hasPendingDatagrams() was called in QAbstractSocket::UnconnectedState");
     QVERIFY(!socketDevice.hasPendingDatagrams());
@@ -155,16 +154,16 @@ void tst_PlatformSocketEngine::simpleConnectToIMAP()
 
     // Initialize device
     QVERIFY(socketDevice.initialize(QAbstractSocket::TcpSocket, QAbstractSocket::IPv4Protocol));
-    QCOMPARE(socketDevice.state(), QAbstractSocket::UnconnectedState);
+    QVERIFY(socketDevice.state() == QAbstractSocket::UnconnectedState);
 
     const bool isConnected = socketDevice.connectToHost(QtNetworkSettings::serverIP(), 143);
     if (!isConnected) {
-        QCOMPARE(socketDevice.state(), QAbstractSocket::ConnectingState);
+        QVERIFY(socketDevice.state() == QAbstractSocket::ConnectingState);
         QVERIFY(socketDevice.waitForWrite());
-        QCOMPARE(socketDevice.state(), QAbstractSocket::ConnectedState);
+        QVERIFY(socketDevice.state() == QAbstractSocket::ConnectedState);
     }
-    QCOMPARE(socketDevice.state(), QAbstractSocket::ConnectedState);
-    QCOMPARE(socketDevice.peerAddress(), QtNetworkSettings::serverIP());
+    QVERIFY(socketDevice.state() == QAbstractSocket::ConnectedState);
+    QVERIFY(socketDevice.peerAddress() == QtNetworkSettings::serverIP());
 
     // Wait for the greeting
     QVERIFY(socketDevice.waitForRead());
@@ -201,8 +200,8 @@ void tst_PlatformSocketEngine::simpleConnectToIMAP()
     QVERIFY(socketDevice.waitForRead());
     char c;
     QVERIFY(socketDevice.read(&c, sizeof(c)) == -1);
-    QCOMPARE(socketDevice.error(), QAbstractSocket::RemoteHostClosedError);
-    QCOMPARE(socketDevice.state(), QAbstractSocket::UnconnectedState);
+    QVERIFY(socketDevice.error() == QAbstractSocket::RemoteHostClosedError);
+    QVERIFY(socketDevice.state() == QAbstractSocket::UnconnectedState);
 }
 
 //---------------------------------------------------------------------------
@@ -214,13 +213,13 @@ void tst_PlatformSocketEngine::udpLoopbackTest()
     QVERIFY(udpSocket.initialize(QAbstractSocket::UdpSocket));
     QVERIFY(udpSocket.isValid());
     QVERIFY(udpSocket.socketDescriptor() != -1);
-    QCOMPARE(udpSocket.protocol(), QAbstractSocket::IPv4Protocol);
-    QCOMPARE(udpSocket.socketType(), QAbstractSocket::UdpSocket);
-    QCOMPARE(udpSocket.state(), QAbstractSocket::UnconnectedState);
+    QVERIFY(udpSocket.protocol() == QAbstractSocket::IPv4Protocol);
+    QVERIFY(udpSocket.socketType() == QAbstractSocket::UdpSocket);
+    QVERIFY(udpSocket.state() == QAbstractSocket::UnconnectedState);
 
     // Bind #1 to localhost
     QVERIFY(udpSocket.bind(QHostAddress("127.0.0.1"), 0));
-    QCOMPARE(udpSocket.state(), QAbstractSocket::BoundState);
+    QVERIFY(udpSocket.state() == QAbstractSocket::BoundState);
     quint16 port = udpSocket.localPort();
     QVERIFY(port != 0);
 
@@ -230,7 +229,7 @@ void tst_PlatformSocketEngine::udpLoopbackTest()
 
     // Connect device #2 to #1
     QVERIFY(udpSocket2.connectToHost(QHostAddress("127.0.0.1"), port));
-    QCOMPARE(udpSocket2.state(), QAbstractSocket::ConnectedState);
+    QVERIFY(udpSocket2.state() == QAbstractSocket::ConnectedState);
 
     // Write a message to #1
     QByteArray message1 = "hei der";
@@ -244,13 +243,13 @@ void tst_PlatformSocketEngine::udpLoopbackTest()
     QVERIFY(available > 0);
     QByteArray answer;
     answer.resize(available);
-    QIpPacketHeader header;
-    QCOMPARE(udpSocket.readDatagram(answer.data(), answer.size(),
-                                    &header, QAbstractSocketEngine::WantDatagramSender),
-             qint64(message1.size()));
-    QVERIFY(header.senderAddress == QHostAddress("127.0.0.1"));
-    QCOMPARE(header.senderAddress, QHostAddress("127.0.0.1"));
-    QVERIFY(header.senderPort != 0);
+    QHostAddress senderAddress;
+    quint16 senderPort = 0;
+    QVERIFY(udpSocket.readDatagram(answer.data(), answer.size(),
+                                  &senderAddress,
+                                  &senderPort) == message1.size());
+    QVERIFY(senderAddress == QHostAddress("127.0.0.1"));
+    QVERIFY(senderPort != 0);
 }
 
 //---------------------------------------------------------------------------
@@ -262,13 +261,13 @@ void tst_PlatformSocketEngine::udpIPv6LoopbackTest()
     bool init = udpSocket.initialize(QAbstractSocket::UdpSocket, QAbstractSocket::IPv6Protocol);
 
     if (!init) {
-        QCOMPARE(udpSocket.error(), QAbstractSocket::UnsupportedSocketOperationError);
+        QVERIFY(udpSocket.error() == QAbstractSocket::UnsupportedSocketOperationError);
     } else {
-        QCOMPARE(udpSocket.protocol(), QAbstractSocket::IPv6Protocol);
+        QVERIFY(udpSocket.protocol() == QAbstractSocket::IPv6Protocol);
 
         // Bind #1 to localhost
         QVERIFY(udpSocket.bind(QHostAddress("::1"), 0));
-        QCOMPARE(udpSocket.state(), QAbstractSocket::BoundState);
+        QVERIFY(udpSocket.state() == QAbstractSocket::BoundState);
         quint16 port = udpSocket.localPort();
         QVERIFY(port != 0);
 
@@ -278,7 +277,7 @@ void tst_PlatformSocketEngine::udpIPv6LoopbackTest()
 
         // Connect device #2 to #1
         QVERIFY(udpSocket2.connectToHost(QHostAddress("::1"), port));
-        QCOMPARE(udpSocket2.state(), QAbstractSocket::ConnectedState);
+        QVERIFY(udpSocket2.state() == QAbstractSocket::ConnectedState);
 
         // Write a message to #1
         QByteArray message1 = "hei der";
@@ -292,13 +291,13 @@ void tst_PlatformSocketEngine::udpIPv6LoopbackTest()
         QVERIFY(available > 0);
         QByteArray answer;
         answer.resize(available);
-        QIpPacketHeader header;
-        QCOMPARE(udpSocket.readDatagram(answer.data(), answer.size(),
-                                        &header, QAbstractSocketEngine::WantDatagramSender),
-                 qint64(message1.size()));
-        QVERIFY(header.senderAddress == QHostAddress("::1"));
-        QCOMPARE(header.senderAddress, QHostAddress("::1"));
-        QVERIFY(header.senderPort != 0);
+        QHostAddress senderAddress;
+        quint16 senderPort = 0;
+        QVERIFY(udpSocket.readDatagram(answer.data(), answer.size(),
+                                      &senderAddress,
+                                      &senderPort) == message1.size());
+        QVERIFY(senderAddress == QHostAddress("::1"));
+        QVERIFY(senderPort != 0);
     }
 }
 
@@ -315,7 +314,7 @@ void tst_PlatformSocketEngine::broadcastTest()
 
     // Bind to any port on all interfaces
     QVERIFY(broadcastSocket.bind(QHostAddress::Any, 0));
-    QCOMPARE(broadcastSocket.state(), QAbstractSocket::BoundState);
+    QVERIFY(broadcastSocket.state() == QAbstractSocket::BoundState);
     quint16 port = broadcastSocket.localPort();
     QVERIFY(port > 0);
 
@@ -324,9 +323,9 @@ void tst_PlatformSocketEngine::broadcastTest()
         = "MOOT wtf is a MOOT? talk english not your sutpiD ENGLISH.";
     qint64 written = broadcastSocket.writeDatagram(trollMessage.data(),
                                          trollMessage.size(),
-                                         QIpPacketHeader(QHostAddress::Broadcast, port));
+                                         QHostAddress::Broadcast,
+                                         port);
 
-    QVERIFY2(written != -1, qt_error_string().toLocal8Bit());
     QCOMPARE((int)written, trollMessage.size());
 
     // Wait until we receive it ourselves
@@ -355,20 +354,20 @@ void tst_PlatformSocketEngine::serverTest()
 
     // Bind to any port on all interfaces
     QVERIFY(server.bind(QHostAddress("0.0.0.0"), 0));
-    QCOMPARE(server.state(), QAbstractSocket::BoundState);
+    QVERIFY(server.state() == QAbstractSocket::BoundState);
     quint16 port = server.localPort();
 
     // Listen for incoming connections
     QVERIFY(server.listen());
-    QCOMPARE(server.state(), QAbstractSocket::ListeningState);
+    QVERIFY(server.state() == QAbstractSocket::ListeningState);
 
     // Initialize a Tcp socket
     PLATFORMSOCKETENGINE client;
     QVERIFY(client.initialize(QAbstractSocket::TcpSocket));
     if (!client.connectToHost(QHostAddress("127.0.0.1"), port)) {
-        QCOMPARE(client.state(), QAbstractSocket::ConnectingState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectingState);
         QVERIFY(client.waitForWrite());
-        QCOMPARE(client.state(), QAbstractSocket::ConnectedState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectedState);
     }
 
     // The server accepts the connection
@@ -379,7 +378,7 @@ void tst_PlatformSocketEngine::serverTest()
     // socket descriptor from accept(). It's pre-connected.
     PLATFORMSOCKETENGINE serverSocket;
     QVERIFY(serverSocket.initialize(socketDescriptor));
-    QCOMPARE(serverSocket.state(), QAbstractSocket::ConnectedState);
+    QVERIFY(serverSocket.state() == QAbstractSocket::ConnectedState);
 
     // The server socket sends a greeting to the clietn
     QByteArray greeting = "Greetings!";
@@ -408,13 +407,13 @@ void tst_PlatformSocketEngine::udpLoopbackPerformance()
     QVERIFY(udpSocket.initialize(QAbstractSocket::UdpSocket));
     QVERIFY(udpSocket.isValid());
     QVERIFY(udpSocket.socketDescriptor() != -1);
-    QCOMPARE(udpSocket.protocol(), QAbstractSocket::IPv4Protocol);
-    QCOMPARE(udpSocket.socketType(), QAbstractSocket::UdpSocket);
-    QCOMPARE(udpSocket.state(), QAbstractSocket::UnconnectedState);
+    QVERIFY(udpSocket.protocol() == QAbstractSocket::IPv4Protocol);
+    QVERIFY(udpSocket.socketType() == QAbstractSocket::UdpSocket);
+    QVERIFY(udpSocket.state() == QAbstractSocket::UnconnectedState);
 
     // Bind #1 to localhost
     QVERIFY(udpSocket.bind(QHostAddress("127.0.0.1"), 0));
-    QCOMPARE(udpSocket.state(), QAbstractSocket::BoundState);
+    QVERIFY(udpSocket.state() == QAbstractSocket::BoundState);
     quint16 port = udpSocket.localPort();
     QVERIFY(port != 0);
 
@@ -424,7 +423,7 @@ void tst_PlatformSocketEngine::udpLoopbackPerformance()
 
     // Connect device #2 to #1
     QVERIFY(udpSocket2.connectToHost(QHostAddress("127.0.0.1"), port));
-    QCOMPARE(udpSocket2.state(), QAbstractSocket::ConnectedState);
+    QVERIFY(udpSocket2.state() == QAbstractSocket::ConnectedState);
 
     const int messageSize = 8192;
     QByteArray message1(messageSize, '@');
@@ -460,12 +459,12 @@ void tst_PlatformSocketEngine::tcpLoopbackPerformance()
 
     // Bind to any port on all interfaces
     QVERIFY(server.bind(QHostAddress("0.0.0.0"), 0));
-    QCOMPARE(server.state(), QAbstractSocket::BoundState);
+    QVERIFY(server.state() == QAbstractSocket::BoundState);
     quint16 port = server.localPort();
 
     // Listen for incoming connections
     QVERIFY(server.listen());
-    QCOMPARE(server.state(), QAbstractSocket::ListeningState);
+    QVERIFY(server.state() == QAbstractSocket::ListeningState);
 
     // Initialize a Tcp socket
     PLATFORMSOCKETENGINE client;
@@ -473,9 +472,9 @@ void tst_PlatformSocketEngine::tcpLoopbackPerformance()
 
     // Connect to our server
     if (!client.connectToHost(QHostAddress("127.0.0.1"), port)) {
-        QCOMPARE(client.state(), QAbstractSocket::ConnectingState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectingState);
         QVERIFY(client.waitForWrite());
-        QCOMPARE(client.state(), QAbstractSocket::ConnectedState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectedState);
     }
 
     // The server accepts the connection
@@ -486,7 +485,7 @@ void tst_PlatformSocketEngine::tcpLoopbackPerformance()
     // socket descriptor from accept(). It's pre-connected.
     PLATFORMSOCKETENGINE serverSocket;
     QVERIFY(serverSocket.initialize(socketDescriptor));
-    QCOMPARE(serverSocket.state(), QAbstractSocket::ConnectedState);
+    QVERIFY(serverSocket.state() == QAbstractSocket::ConnectedState);
 
     const int messageSize = 1024 * 256;
     QByteArray message1(messageSize, '@');
@@ -563,7 +562,7 @@ void tst_PlatformSocketEngine::bind()
     PLATFORMSOCKETENGINE binder;
     QVERIFY(binder.initialize(QAbstractSocket::TcpSocket, QAbstractSocket::IPv4Protocol));
     QVERIFY(!binder.bind(QHostAddress::AnyIPv4, 82));
-    QCOMPARE(binder.error(), QAbstractSocket::SocketAccessError);
+    QVERIFY(binder.error() == QAbstractSocket::SocketAccessError);
 #endif
 
     PLATFORMSOCKETENGINE binder2;
@@ -573,7 +572,7 @@ void tst_PlatformSocketEngine::bind()
     PLATFORMSOCKETENGINE binder3;
     QVERIFY(binder3.initialize(QAbstractSocket::TcpSocket, QAbstractSocket::IPv4Protocol));
     QVERIFY(!binder3.bind(QHostAddress::AnyIPv4, 31180));
-    QCOMPARE(binder3.error(), QAbstractSocket::AddressInUseError);
+    QVERIFY(binder3.error() == QAbstractSocket::AddressInUseError);
 
     if (QtNetworkSettings::hasIPv6()) {
         PLATFORMSOCKETENGINE binder4;
@@ -583,7 +582,7 @@ void tst_PlatformSocketEngine::bind()
         PLATFORMSOCKETENGINE binder5;
         QVERIFY(binder5.initialize(QAbstractSocket::TcpSocket, QAbstractSocket::IPv6Protocol));
         QVERIFY(!binder5.bind(QHostAddress::AnyIPv6, 31180));
-        QCOMPARE(binder5.error(), QAbstractSocket::AddressInUseError);
+        QVERIFY(binder5.error() == QAbstractSocket::AddressInUseError);
     }
 
     PLATFORMSOCKETENGINE binder6;
@@ -600,11 +599,11 @@ void tst_PlatformSocketEngine::networkError()
 
     const bool isConnected = client.connectToHost(QtNetworkSettings::serverIP(), 143);
     if (!isConnected) {
-        QCOMPARE(client.state(), QAbstractSocket::ConnectingState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectingState);
         QVERIFY(client.waitForWrite());
-        QCOMPARE(client.state(), QAbstractSocket::ConnectedState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectedState);
     }
-    QCOMPARE(client.state(), QAbstractSocket::ConnectedState);
+    QVERIFY(client.state() == QAbstractSocket::ConnectedState);
 
     // An unexpected network error!
 #ifdef Q_OS_WINRT
@@ -637,7 +636,7 @@ void tst_PlatformSocketEngine::invalidSend()
 
     QTest::ignoreMessage(QtWarningMsg, PLATFORMSOCKETENGINESTRING "::writeDatagram() was"
                                " called by a socket other than QAbstractSocket::UdpSocket");
-    QCOMPARE(socket.writeDatagram("hei", 3, QIpPacketHeader(QHostAddress::LocalHost, 143)),
+    QCOMPARE(socket.writeDatagram("hei", 3, QHostAddress::LocalHost, 143),
             (qlonglong) -1);
 }
 
@@ -651,19 +650,19 @@ void tst_PlatformSocketEngine::receiveUrgentData()
 
     // Bind to any port on all interfaces
     QVERIFY(server.bind(QHostAddress("0.0.0.0"), 0));
-    QCOMPARE(server.state(), QAbstractSocket::BoundState);
+    QVERIFY(server.state() == QAbstractSocket::BoundState);
     quint16 port = server.localPort();
 
     QVERIFY(server.listen());
-    QCOMPARE(server.state(), QAbstractSocket::ListeningState);
+    QVERIFY(server.state() == QAbstractSocket::ListeningState);
 
     PLATFORMSOCKETENGINE client;
     QVERIFY(client.initialize(QAbstractSocket::TcpSocket));
 
     if (!client.connectToHost(QHostAddress("127.0.0.1"), port)) {
-        QCOMPARE(client.state(), QAbstractSocket::ConnectingState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectingState);
         QVERIFY(client.waitForWrite());
-        QCOMPARE(client.state(), QAbstractSocket::ConnectedState);
+        QVERIFY(client.state() == QAbstractSocket::ConnectedState);
     }
 
     int socketDescriptor = server.accept();
@@ -671,7 +670,7 @@ void tst_PlatformSocketEngine::receiveUrgentData()
 
     PLATFORMSOCKETENGINE serverSocket;
     QVERIFY(serverSocket.initialize(socketDescriptor));
-    QCOMPARE(serverSocket.state(), QAbstractSocket::ConnectedState);
+    QVERIFY(serverSocket.state() == QAbstractSocket::ConnectedState);
 
     char msg;
     int available;

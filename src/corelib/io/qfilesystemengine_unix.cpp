@@ -51,38 +51,26 @@
 # include <CoreFoundation/CFBundle.h>
 #endif
 
-#ifdef Q_OS_OSX
-#include <CoreServices/CoreServices.h>
-#endif
-
-#ifdef Q_OS_IOS
-#include <MobileCoreServices/MobileCoreServices.h>
-#endif
-
 QT_BEGIN_NAMESPACE
 
-#if defined(Q_OS_DARWIN)
-static inline bool hasResourcePropertyFlag(const QFileSystemMetaData &data,
-                                           const QFileSystemEntry &entry,
-                                           CFStringRef key)
+#if defined(Q_OS_MACX)
+static inline bool _q_isMacHidden(const char *nativePath)
 {
-    QCFString path = CFStringCreateWithFileSystemRepresentation(0,
-        entry.nativeFilePath().constData());
-    if (!path)
+    OSErr err;
+
+    FSRef fsRef;
+    err = FSPathMakeRefWithOptions(reinterpret_cast<const UInt8 *>(nativePath),
+            kFSPathMakeRefDoNotFollowLeafSymlink, &fsRef, 0);
+    if (err != noErr)
         return false;
 
-    QCFType<CFURLRef> url = CFURLCreateWithFileSystemPath(0, path, kCFURLPOSIXPathStyle,
-        data.hasFlags(QFileSystemMetaData::DirectoryType));
-    if (!url)
+    FSCatalogInfo catInfo;
+    err = FSGetCatalogInfo(&fsRef, kFSCatInfoFinderInfo, &catInfo, NULL, NULL, NULL);
+    if (err != noErr)
         return false;
 
-    CFBooleanRef value;
-    if (CFURLCopyResourcePropertyForKey(url, key, &value, NULL)) {
-        if (value == kCFBooleanTrue)
-            return true;
-    }
-
-    return false;
+    FileInfo * const fileInfo = reinterpret_cast<FileInfo*>(&catInfo.finderInfo);
+    return (fileInfo->finderFlags & kIsInvisible);
 }
 
 static bool isPackage(const QFileSystemMetaData &data, const QFileSystemEntry &entry)
@@ -109,7 +97,6 @@ static bool isPackage(const QFileSystemMetaData &data, const QFileSystemEntry &e
         if (CFBundleGetPackageInfoInDirectory(url, &type, &creator))
             return true;
 
-#ifdef Q_OS_OSX
         // Find if an application other than Finder claims to know how to handle the package
         QCFType<CFURLRef> application;
         LSGetApplicationForURL(url,
@@ -124,11 +111,30 @@ static bool isPackage(const QFileSystemMetaData &data, const QFileSystemEntry &e
             if (applicationId != QLatin1String("com.apple.finder"))
                 return true;
         }
-#endif
     }
 
     // Third step: check if the directory has the package bit set
-    return hasResourcePropertyFlag(data, entry, kCFURLIsPackageKey);
+    FSRef packageRef;
+    FSPathMakeRef((UInt8 *)entry.nativeFilePath().constData(), &packageRef, NULL);
+
+    FSCatalogInfo catalogInfo;
+    FSGetCatalogInfo(&packageRef,
+                     kFSCatInfoFinderInfo,
+                     &catalogInfo,
+                     NULL,
+                     NULL,
+                     NULL);
+
+    FolderInfo *folderInfo = reinterpret_cast<FolderInfo *>(catalogInfo.finderInfo);
+    return folderInfo->finderFlags & kHasBundle;
+}
+
+#else
+static inline bool _q_isMacHidden(const char *nativePath)
+{
+    Q_UNUSED(nativePath);
+    // no-op
+    return false;
 }
 #endif
 
@@ -188,34 +194,21 @@ QFileSystemEntry QFileSystemEngine::getLinkTarget(const QFileSystemEntry &link, 
             ret.chop(1);
         return QFileSystemEntry(ret);
     }
-#if defined(Q_OS_DARWIN)
+#if defined(Q_OS_MACX)
     {
-        QCFString path = CFStringCreateWithFileSystemRepresentation(0,
-            QFile::encodeName(QDir::cleanPath(link.filePath())).data());
-        if (!path)
-            return QFileSystemEntry();
-
-        QCFType<CFURLRef> url = CFURLCreateWithFileSystemPath(0, path, kCFURLPOSIXPathStyle,
-            data.hasFlags(QFileSystemMetaData::DirectoryType));
-        if (!url)
-            return QFileSystemEntry();
-
-        QCFType<CFDataRef> bookmarkData = CFURLCreateBookmarkDataFromFile(0, url, NULL);
-        if (!bookmarkData)
-            return QFileSystemEntry();
-
-        QCFType<CFURLRef> resolvedUrl = CFURLCreateByResolvingBookmarkData(0,
-            bookmarkData,
-            (CFURLBookmarkResolutionOptions)(kCFBookmarkResolutionWithoutUIMask
-                | kCFBookmarkResolutionWithoutMountingMask), NULL, NULL, NULL, NULL);
-        if (!resolvedUrl)
-            return QFileSystemEntry();
-
-        QCFString cfstr(CFURLCopyFileSystemPath(resolvedUrl, kCFURLPOSIXPathStyle));
-        if (!cfstr)
-            return QFileSystemEntry();
-
-        return QFileSystemEntry(QCFString::toQString(cfstr));
+        FSRef fref;
+        if (FSPathMakeRef((const UInt8 *)QFile::encodeName(QDir::cleanPath(link.filePath())).data(), &fref, 0) == noErr) {
+            // TODO get the meta data info from the QFileSystemMetaData object
+            Boolean isAlias, isFolder;
+            if (FSResolveAliasFile(&fref, true, &isFolder, &isAlias) == noErr && isAlias) {
+                AliasHandle alias;
+                if (FSNewAlias(0, &fref, &alias) == noErr && alias) {
+                    QCFString cfstr;
+                    if (FSCopyAliasInfo(alias, 0, 0, &cfstr, 0, 0) == noErr)
+                        return QFileSystemEntry(QCFString::toQString(cfstr));
+                }
+            }
+        }
     }
 #endif
     return QFileSystemEntry();
@@ -233,14 +226,31 @@ QFileSystemEntry QFileSystemEngine::canonicalName(const QFileSystemEntry &entry,
     return QFileSystemEntry(slowCanonicalized(absoluteName(entry).filePath()));
 #else
     char *ret = 0;
-# if defined(Q_OS_DARWIN)
-    ret = (char*)malloc(PATH_MAX + 1);
-    if (ret && realpath(entry.nativeFilePath().constData(), (char*)ret) == 0) {
-        const int savedErrno = errno; // errno is checked below, and free() might change it
-        free(ret);
-        errno = savedErrno;
-        ret = 0;
+# if defined(Q_OS_MACX)
+    // When using -mmacosx-version-min=10.4, we get the legacy realpath implementation,
+    // which does not work properly with the realpath(X,0) form. See QTBUG-28282.
+    if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_6) {
+        ret = (char*)malloc(PATH_MAX + 1);
+        if (ret && realpath(entry.nativeFilePath().constData(), (char*)ret) == 0) {
+            const int savedErrno = errno; // errno is checked below, and free() might change it
+            free(ret);
+            errno = savedErrno;
+            ret = 0;
+        }
+    } else {
+        // on 10.5 we can use FSRef to resolve the file path.
+        QString path = QDir::cleanPath(entry.filePath());
+        FSRef fsref;
+        if (FSPathMakeRef((const UInt8 *)path.toUtf8().data(), &fsref, 0) == noErr) {
+            CFURLRef urlref = CFURLCreateFromFSRef(NULL, &fsref);
+            CFStringRef canonicalPath = CFURLCopyFileSystemPath(urlref, kCFURLPOSIXPathStyle);
+            QString ret = QCFString::toQString(canonicalPath);
+            CFRelease(canonicalPath);
+            CFRelease(urlref);
+            return QFileSystemEntry(ret);
+        }
     }
+
 # elif defined(Q_OS_ANDROID)
     // On some Android versions, realpath() will return a path even if it does not exist
     // To work around this, we check existence in advance.
@@ -396,7 +406,7 @@ QString QFileSystemEngine::resolveGroupName(uint groupId)
     return QString();
 }
 
-#if defined(Q_OS_DARWIN)
+#if defined(Q_OS_MACX)
 //static
 QString QFileSystemEngine::bundleName(const QFileSystemEntry &entry)
 {
@@ -416,7 +426,7 @@ QString QFileSystemEngine::bundleName(const QFileSystemEntry &entry)
 bool QFileSystemEngine::fillMetaData(const QFileSystemEntry &entry, QFileSystemMetaData &data,
         QFileSystemMetaData::MetaDataFlags what)
 {
-#if defined(Q_OS_DARWIN)
+#if defined(Q_OS_MACX)
     if (what & QFileSystemMetaData::BundleType) {
         if (!data.hasFlags(QFileSystemMetaData::DirectoryType))
             what |= QFileSystemMetaData::DirectoryType;
@@ -425,7 +435,7 @@ bool QFileSystemEngine::fillMetaData(const QFileSystemEntry &entry, QFileSystemM
         // OS X >= 10.5: st_flags & UF_HIDDEN
         what |= QFileSystemMetaData::PosixStatFlags;
     }
-#endif // defined(Q_OS_DARWIN)
+#endif // defined(Q_OS_MACX)
 
     if (what & QFileSystemMetaData::PosixStatFlags)
         what |= QFileSystemMetaData::PosixStatFlags;
@@ -486,11 +496,19 @@ bool QFileSystemEngine::fillMetaData(const QFileSystemEntry &entry, QFileSystemM
             | QFileSystemMetaData::ExistsAttribute;
     }
 
-#if defined(Q_OS_DARWIN)
+#if defined(Q_OS_MACX)
     if (what & QFileSystemMetaData::AliasType)
     {
-        if (entryExists && hasResourcePropertyFlag(data, entry, kCFURLIsAliasFileKey))
-            data.entryFlags |= QFileSystemMetaData::AliasType;
+        if (entryExists) {
+            FSRef fref;
+            if (FSPathMakeRef((const UInt8 *)nativeFilePath, &fref, NULL) == noErr) {
+                Boolean isAlias, isFolder;
+                if (FSIsAliasFile(&fref, &isAlias, &isFolder) == noErr) {
+                    if (isAlias)
+                        data.entryFlags |= QFileSystemMetaData::AliasType;
+                }
+            }
+        }
         data.knownFlagsMask |= QFileSystemMetaData::AliasType;
     }
 #endif
@@ -519,15 +537,12 @@ bool QFileSystemEngine::fillMetaData(const QFileSystemEntry &entry, QFileSystemM
             && !data.isHidden()) {
         QString fileName = entry.fileName();
         if ((fileName.size() > 0 && fileName.at(0) == QLatin1Char('.'))
-#if defined(Q_OS_DARWIN)
-                || (entryExists && hasResourcePropertyFlag(data, entry, kCFURLIsHiddenKey))
-#endif
-                )
+                || (entryExists && _q_isMacHidden(nativeFilePath)))
             data.entryFlags |= QFileSystemMetaData::HiddenAttribute;
         data.knownFlagsMask |= QFileSystemMetaData::HiddenAttribute;
     }
 
-#if defined(Q_OS_DARWIN)
+#if defined(Q_OS_MACX)
     if (what & QFileSystemMetaData::BundleType) {
         if (entryExists && isPackage(data, entry))
             data.entryFlags |= QFileSystemMetaData::BundleType;

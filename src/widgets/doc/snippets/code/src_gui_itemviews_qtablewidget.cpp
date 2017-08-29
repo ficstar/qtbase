@@ -39,7 +39,7 @@
 ****************************************************************************/
 
 //! [0]
-setCellWidget(row, column, new QLineEdit);
+setCellWidget(index, new QLineEdit);
 ...
-setCellWidget(row, column, new QTextEdit);
+setCellWidget(index, new QTextEdit);
 //! [0]

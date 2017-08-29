@@ -36,7 +36,6 @@
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 #include <qpa/qwindowsysteminterface.h>
-#include <private/qhighdpiscaling_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -82,8 +81,7 @@ void QLibInputPointer::processMotion(libinput_event_pointer *e)
 {
     const double dx = libinput_event_pointer_get_dx(e);
     const double dy = libinput_event_pointer_get_dy(e);
-    QScreen * const primaryScreen = QGuiApplication::primaryScreen();
-    const QRect g = QHighDpi::toNativePixels(primaryScreen->virtualGeometry(), primaryScreen);
+    const QRect g = QGuiApplication::primaryScreen()->virtualGeometry();
 
     m_pos.setX(qBound(g.left(), qRound(m_pos.x() + dx), g.right()));
     m_pos.setY(qBound(g.top(), qRound(m_pos.y() + dy), g.bottom()));
@@ -112,9 +110,7 @@ void QLibInputPointer::processAxis(libinput_event_pointer *e)
 
 void QLibInputPointer::setPos(const QPoint &pos)
 {
-    QScreen * const primaryScreen = QGuiApplication::primaryScreen();
-    const QRect g = QHighDpi::toNativePixels(primaryScreen->virtualGeometry(), primaryScreen);
-
+    const QRect g = QGuiApplication::primaryScreen()->virtualGeometry();
     m_pos.setX(qBound(g.left(), pos.x(), g.right()));
     m_pos.setY(qBound(g.top(), pos.y(), g.bottom()));
 }

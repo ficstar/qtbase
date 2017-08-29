@@ -165,7 +165,6 @@ private slots:
 #endif // QT_BUILD_INTERNAL
 #endif
     void rejectModalDialogs();
-    void QTBUG49600_nativeIconProviderCrash();
 
 private:
     void cleanupSettingsFile();
@@ -484,11 +483,11 @@ void tst_QFiledialog::completer()
 
     if (startPath.isEmpty()) {
         tempDir.reset(new QTemporaryDir);
-        QVERIFY2(tempDir->isValid(), qPrintable(tempDir->errorString()));
+        QVERIFY(tempDir->isValid());
         startPath = tempDir->path();
         for (int i = 0; i < 10; ++i) {
             TemporaryFilePtr file(new QTemporaryFile(startPath + QStringLiteral("/rXXXXXX")));
-            QVERIFY2(file->open(), qPrintable(file->errorString()));
+            QVERIFY(file->open());
             files.append(file);
         }
     }
@@ -568,22 +567,6 @@ void tst_QFiledialog::completer()
         foreach (const QString &expectedFile, expectedFiles) {
             if (expectedFile.startsWith(input, caseSensitivity))
                 ++expected;
-        }
-        // The temporary dir may create a node in QFileSystemModel
-        // which will bypass filters. If the path to the temporary
-        // dir contains an element which should be a subdirectory
-        // of x dir, but which is not listed, then take it into
-        // accont.
-        if (!tempDir.isNull()) {
-            QString xPath = x.absolutePath();
-            if (!xPath.endsWith(QLatin1Char('/')))
-                xPath.append(QLatin1Char('/'));
-            QString tmpPath = tempDir->path();
-            if (tmpPath.startsWith(xPath)) {
-                QString bypassedDirName = tmpPath.mid(xPath.size()).section(QLatin1Char('/'), 0, 0);
-                if (!expectedFiles.contains(bypassedDirName))
-                    ++expected;
-            }
         }
     }
 
@@ -694,7 +677,7 @@ void tst_QFiledialog::filters()
 
     // effects
     QList<QComboBox*> views = fd.findChildren<QComboBox*>("fileTypeCombo");
-    QCOMPARE(views.count(), 1);
+    QVERIFY(views.count() == 1);
     QCOMPARE(views.at(0)->isVisible(), false);
 
     QStringList filters;
@@ -906,7 +889,7 @@ void tst_QFiledialog::selectFile()
     QScopedPointer<QTemporaryFile> tempFile;
     if (file == QLatin1String("temp")) {
         tempFile.reset(new QTemporaryFile(QDir::tempPath() + QStringLiteral("/aXXXXXX")));
-        QVERIFY2(tempFile->open(), qPrintable(tempFile->errorString()));
+        QVERIFY(tempFile->open());
         file = tempFile->fileName();
     }
 
@@ -944,7 +927,7 @@ void tst_QFiledialog::selectFileWrongCaseSaveAs()
 void tst_QFiledialog::selectFiles()
 {
     QTemporaryDir tempDir;
-    QVERIFY2(tempDir.isValid(), qPrintable(tempDir.errorString()));
+    QVERIFY(tempDir.isValid());
     const QString tempPath = tempDir.path();
     {
     QNonNativeFileDialog fd;
@@ -1313,7 +1296,7 @@ void tst_QFiledialog::clearLineEdit()
 
     QLineEdit *lineEdit = fd.findChild<QLineEdit*>("fileNameEdit");
     QVERIFY(lineEdit);
-    QCOMPARE(lineEdit->text(), QLatin1String("foo"));
+    QVERIFY(lineEdit->text() == "foo");
     fd.setDirectory(QDir::home());
 
     QListView* list = fd.findChild<QListView*>("listView");
@@ -1410,12 +1393,12 @@ void tst_QFiledialog::trailingDotsAndSpaces()
     QTest::keyClick(lineEdit, Qt::Key_Space);
     QTest::keyClick(lineEdit, Qt::Key_Period);
     QTest::qWait(1000);
-    QCOMPARE(currentChildrenCount, list->model()->rowCount(list->rootIndex()));
+    QVERIFY(currentChildrenCount == list->model()->rowCount(list->rootIndex()));
     lineEdit->clear();
     QTest::keyClick(lineEdit, Qt::Key_Period);
     QTest::keyClick(lineEdit, Qt::Key_Space);
     QTest::qWait(1000);
-    QCOMPARE(currentChildrenCount, list->model()->rowCount(list->rootIndex()));
+    QVERIFY(currentChildrenCount == list->model()->rowCount(list->rootIndex()));
 }
 
 #ifdef Q_OS_UNIX
@@ -1502,14 +1485,6 @@ void tst_QFiledialog::rejectModalDialogs()
     file = QFileDialog::getSaveFileName(0, QStringLiteral("getSaveFileName"),
                                              QString(), QString(), Q_NULLPTR, options);
     QVERIFY(file.isEmpty());
-}
-
-void tst_QFiledialog::QTBUG49600_nativeIconProviderCrash()
-{
-    if (!QGuiApplicationPrivate::platformTheme()->usePlatformNativeDialog(QPlatformTheme::FileDialog))
-        QSKIP("This platform always uses widgets to realize its QFileDialog, instead of the native file dialog.");
-    QFileDialog fd;
-    fd.iconProvider();
 }
 
 QTEST_MAIN(tst_QFiledialog)

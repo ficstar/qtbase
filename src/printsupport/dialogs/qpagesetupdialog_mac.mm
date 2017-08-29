@@ -201,9 +201,10 @@ int QPageSetupDialog::exec()
 
     QDialog::setVisible(true);
 
-    QMacAutoReleasePool pool;
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     static_cast <QMacPageSetupDialogPrivate*>(d)->openCocoaPageLayout(Qt::ApplicationModal);
     static_cast <QMacPageSetupDialogPrivate*>(d)->closeCocoaPageLayout();
+    [pool release];
 
     QDialog::setVisible(false);
 

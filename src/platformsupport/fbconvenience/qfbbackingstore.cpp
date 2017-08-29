@@ -37,7 +37,6 @@
 
 #include <qpa/qplatformwindow.h>
 #include <QtGui/qscreen.h>
-#include <QtGui/qpainter.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -85,17 +84,9 @@ void QFbBackingStore::unlock()
     mImageMutex.unlock();
 }
 
-void QFbBackingStore::beginPaint(const QRegion &region)
+void QFbBackingStore::beginPaint(const QRegion &)
 {
     lock();
-
-    if (mImage.hasAlphaChannel()) {
-        QPainter p(&mImage);
-        p.setCompositionMode(QPainter::CompositionMode_Source);
-        const QVector<QRect> rects = region.rects();
-        for (QVector<QRect>::const_iterator it = rects.begin(); it != rects.end(); ++it)
-            p.fillRect(*it, Qt::transparent);
-    }
 }
 
 void QFbBackingStore::endPaint()

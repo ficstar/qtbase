@@ -41,11 +41,6 @@
 #include <QtCore/qstringlist.h>
 #include <QtCore/qthread.h>
 #include <QtCore/private/qcoreapplication_p.h>
-#include <QtCore/private/qthread_p.h>
-
-#include <QtCore/qbytearray.h>
-#include <QtCore/qglobal.h>
-
 
 #ifndef QT_NO_BEARERMANAGEMENT
 
@@ -66,7 +61,7 @@ QNetworkConfigurationManagerPrivate::QNetworkConfigurationManagerPrivate()
 void QNetworkConfigurationManagerPrivate::initialize()
 {
     //Two stage construction, because we only want to do this heavyweight work for the winner of the Q_GLOBAL_STATIC race.
-    bearerThread = new QDaemonThread();
+    bearerThread = new QThread();
     bearerThread->setObjectName(QStringLiteral("Qt bearer thread"));
 
     bearerThread->moveToThread(QCoreApplicationPrivate::mainThread()); // because cleanup() is called in main thread context.
@@ -379,8 +374,6 @@ void QNetworkConfigurationManagerPrivate::updateConfigurations()
         updating = false;
 
 #ifndef QT_NO_LIBRARY
-        bool envOK  = false;
-        const int skipGeneric = qgetenv("QT_EXCLUDE_GENERIC_BEARER").toInt(&envOK);
         QBearerEngine *generic = 0;
         QFactoryLoader *l = loader();
         const PluginKeyMap keyMap = l->keyMap();
@@ -415,12 +408,8 @@ void QNetworkConfigurationManagerPrivate::updateConfigurations()
             }
         }
 
-        if (generic) {
-            if (!envOK || skipGeneric <= 0)
-                sessionEngines.append(generic);
-            else
-                delete generic;
-        }
+        if (generic)
+            sessionEngines.append(generic);
 #endif // QT_NO_LIBRARY
     }
 

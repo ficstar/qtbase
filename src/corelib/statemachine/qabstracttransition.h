@@ -67,7 +67,7 @@ public:
     };
     Q_ENUM(TransitionType)
 
-    QAbstractTransition(QState *sourceState = Q_NULLPTR);
+    QAbstractTransition(QState *sourceState = 0);
     virtual ~QAbstractTransition();
 
     QState *sourceState() const;

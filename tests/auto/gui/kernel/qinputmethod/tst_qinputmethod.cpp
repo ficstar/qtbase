@@ -191,7 +191,7 @@ void tst_qinputmethod::cursorRectangle()
 {
     QCOMPARE(qApp->inputMethod()->cursorRectangle(), QRectF());
 
-    if (!QGuiApplication::platformName().compare(QLatin1String("wayland"), Qt::CaseInsensitive))
+    if (qApp->platformName().toLower() == QLatin1String("wayland"))
         QSKIP("Wayland: This fails. Figure out why.");
 
     DummyWindow window;
@@ -289,11 +289,8 @@ void tst_qinputmethod::inputDirection()
 
 void tst_qinputmethod::inputMethodAccepted()
 {
-    if (!QGuiApplication::platformName().compare(QLatin1String("wayland"), Qt::CaseInsensitive))
+    if (qApp->platformName().toLower() == QLatin1String("wayland"))
         QSKIP("Wayland: This fails. Figure out why.");
-
-    if (!QGuiApplication::platformName().compare(QLatin1String("xcb"), Qt::CaseInsensitive))
-        QSKIP("XCB: depends on dedicated platform context.");
 
     InputItem disabledItem;
     disabledItem.setEnabled(false);

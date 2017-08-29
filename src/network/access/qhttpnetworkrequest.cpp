@@ -42,7 +42,7 @@ QHttpNetworkRequestPrivate::QHttpNetworkRequestPrivate(QHttpNetworkRequest::Oper
         QHttpNetworkRequest::Priority pri, const QUrl &newUrl)
     : QHttpNetworkHeaderPrivate(newUrl), operation(op), priority(pri), uploadByteDevice(0),
       autoDecompress(false), pipeliningAllowed(false), spdyAllowed(false),
-      withCredentials(true), preConnect(false), followRedirect(false), redirectCount(0)
+      withCredentials(true), preConnect(false)
 {
 }
 
@@ -59,8 +59,6 @@ QHttpNetworkRequestPrivate::QHttpNetworkRequestPrivate(const QHttpNetworkRequest
     withCredentials = other.withCredentials;
     ssl = other.ssl;
     preConnect = other.preConnect;
-    followRedirect = other.followRedirect;
-    redirectCount = other.redirectCount;
 }
 
 QHttpNetworkRequestPrivate::~QHttpNetworkRequestPrivate()
@@ -143,31 +141,6 @@ QByteArray QHttpNetworkRequestPrivate::header(const QHttpNetworkRequest &request
     ba += QByteArray::number(request.minorVersion());
     ba += "\r\n";
 
-    // Reorder HTTP headers
-    QStringList headerOrder;
-    headerOrder << "Host" << "User-Agent" << "Accept" << "Accept-Language" << "Accept-Encoding" << "Referer" << "Cookie" << "Connection";
-
-    for (int i = 0; i < headerOrder.size(); i++)
-    {
-    	for (int j = 0; j < fields.count(); j++)
-    	{
-    		QPair<QByteArray, QByteArray> t_header = fields.at(j);
-    		if (t_header.first == headerOrder.at(i))
-    		{
-    			ba += t_header.first;
-    			ba += ": ";
-    			//not sure if this check is really needed
-    			if (t_header.first == "Accept" && request.d->url.toString().contains("_Incapsula_Resource"))
-    				ba += "*/*";
-    			else
-    				ba += t_header.second;
-    			ba += "\r\n";
-    			fields.removeAt(j);
-    			break;
-    		}
-    	}
-    }
-
     QList<QPair<QByteArray, QByteArray> >::const_iterator it = fields.constBegin();
     QList<QPair<QByteArray, QByteArray> >::const_iterator endIt = fields.constEnd();
     for (; it != endIt; ++it) {
@@ -242,26 +215,6 @@ bool QHttpNetworkRequest::isPreConnect() const
 void QHttpNetworkRequest::setPreConnect(bool preConnect)
 {
     d->preConnect = preConnect;
-}
-
-bool QHttpNetworkRequest::isFollowRedirects() const
-{
-    return d->followRedirect;
-}
-
-void QHttpNetworkRequest::setFollowRedirects(bool followRedirect)
-{
-    d->followRedirect = followRedirect;
-}
-
-int QHttpNetworkRequest::redirectCount() const
-{
-    return d->redirectCount;
-}
-
-void QHttpNetworkRequest::setRedirectCount(int count)
-{
-    d->redirectCount = count;
 }
 
 qint64 QHttpNetworkRequest::contentLength() const

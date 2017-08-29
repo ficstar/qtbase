@@ -37,12 +37,8 @@
 #include <qevent.h>
 #include <QDBusArgument>
 #include <QTextCharFormat>
-#include <QLoggingCategory>
 
 QT_BEGIN_NAMESPACE
-
-Q_DECLARE_LOGGING_CATEGORY(qtQpaInputMethods)
-Q_DECLARE_LOGGING_CATEGORY(qtQpaInputMethodsSerialize)
 
 class QIBusSerializable
 {
@@ -104,31 +100,6 @@ public:
     QIBusAttributeList attributes;
 };
 
-class QIBusEngineDesc : public QIBusSerializable
-{
-public:
-    QIBusEngineDesc();
-    ~QIBusEngineDesc();
-
-    QString engine_name;
-    QString longname;
-    QString description;
-    QString language;
-    QString license;
-    QString author;
-    QString icon;
-    QString layout;
-    unsigned int rank;
-    QString hotkeys;
-    QString symbol;
-    QString setup;
-    QString layout_variant;
-    QString layout_option;
-    QString version;
-    QString textdomain;
-    QString iconpropkey;
-};
-
 QDBusArgument &operator<<(QDBusArgument &argument, const QIBusSerializable &object);
 const QDBusArgument &operator>>(const QDBusArgument &argument, QIBusSerializable &object);
 
@@ -141,15 +112,11 @@ const QDBusArgument &operator>>(const QDBusArgument &arg, QIBusAttributeList &at
 QDBusArgument &operator<<(QDBusArgument &argument, const QIBusText &text);
 const QDBusArgument &operator>>(const QDBusArgument &argument, QIBusText &text);
 
-QDBusArgument &operator<<(QDBusArgument &argument, const QIBusEngineDesc &desc);
-const QDBusArgument &operator>>(const QDBusArgument &argument, QIBusEngineDesc &desc);
-
 QT_END_NAMESPACE
 
 Q_DECLARE_METATYPE(QIBusSerializable)
 Q_DECLARE_METATYPE(QIBusAttribute)
 Q_DECLARE_METATYPE(QIBusAttributeList)
 Q_DECLARE_METATYPE(QIBusText)
-Q_DECLARE_METATYPE(QIBusEngineDesc)
 
 #endif

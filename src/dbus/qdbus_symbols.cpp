@@ -36,6 +36,7 @@
 #include <QtCore/qlibrary.h>
 #endif
 #include <QtCore/qmutex.h>
+#include <private/qmutexpool_p.h>
 
 #ifndef QT_NO_DBUS
 
@@ -47,7 +48,7 @@ void (*qdbus_resolve_me(const char *name))();
 
 #if !defined QT_LINKED_LIBDBUS
 
-#ifndef QT_NO_LIBRARY
+#ifndef QT_BOOTSTRAPPED
 static QLibrary *qdbus_libdbus = 0;
 
 void qdbus_unloadLibDBus()
@@ -64,7 +65,7 @@ void qdbus_unloadLibDBus()
 
 bool qdbus_loadLibDBus()
 {
-#ifndef QT_NO_LIBRARY
+#ifndef QT_BOOTSTRAPPED
 #ifdef QT_BUILD_INTERNAL
     // this is to simulate a library load failure for our autotest suite.
     if (!qEnvironmentVariableIsEmpty("QT_SIMULATE_DBUS_LIBFAIL"))
@@ -73,10 +74,8 @@ bool qdbus_loadLibDBus()
 
     static bool triedToLoadLibrary = false;
 #ifndef QT_NO_THREAD
-    static QBasicMutex mutex;
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(QMutexPool::globalInstanceGet((void *)&qdbus_resolve_me));
 #endif
-
     QLibrary *&lib = qdbus_libdbus;
     if (triedToLoadLibrary)
         return lib && lib->isLoaded();
@@ -119,7 +118,7 @@ bool qdbus_loadLibDBus()
 #endif
 }
 
-#ifndef QT_NO_LIBRARY
+#ifndef QT_BOOTSTRAPPED
 void (*qdbus_resolve_conditionally(const char *name))()
 {
     if (qdbus_loadLibDBus())
@@ -130,7 +129,7 @@ void (*qdbus_resolve_conditionally(const char *name))()
 
 void (*qdbus_resolve_me(const char *name))()
 {
-#ifndef QT_NO_LIBRARY
+#ifndef QT_BOOTSTRAPPED
     if (!qdbus_loadLibDBus())
         qFatal("Cannot find libdbus-1 in your system to resolve symbol '%s'.", name);
 
@@ -145,7 +144,7 @@ void (*qdbus_resolve_me(const char *name))()
 #endif
 }
 
-#else
+#else  // QT_LINKED_LIBDBUS
 static void qdbus_unloadLibDBus()
 {
     if (qEnvironmentVariableIsSet("QDBUS_FORCE_SHUTDOWN"))
@@ -154,7 +153,7 @@ static void qdbus_unloadLibDBus()
 
 #endif // !QT_LINKED_LIBDBUS
 
-#if defined(QT_LINKED_LIBDBUS) || !defined(QT_NO_LIBRARY)
+#ifndef QT_BOOTSTRAPPED
 Q_DESTRUCTOR_FUNCTION(qdbus_unloadLibDBus)
 #endif
 

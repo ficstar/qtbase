@@ -35,6 +35,7 @@
 #include "platformdefs.h"
 
 #include <QtCore/qmutex.h>
+#include <QtCore/private/qmutexpool_p.h>
 #include <QtCore/qlibrary.h>
 
 #include <QtNetwork/private/qbearerplugin_p.h>
@@ -45,32 +46,42 @@
 
 QT_BEGIN_NAMESPACE
 
-static bool resolveLibraryInternal()
+static void resolveLibrary()
 {
-    QLibrary wlanapiLib(QLatin1String("wlanapi"));
-    local_WlanOpenHandle = (WlanOpenHandleProto)
-                           wlanapiLib.resolve("WlanOpenHandle");
-    local_WlanRegisterNotification = (WlanRegisterNotificationProto)
-                                     wlanapiLib.resolve("WlanRegisterNotification");
-    local_WlanEnumInterfaces = (WlanEnumInterfacesProto)
-                               wlanapiLib.resolve("WlanEnumInterfaces");
-    local_WlanGetAvailableNetworkList = (WlanGetAvailableNetworkListProto)
-                                        wlanapiLib.resolve("WlanGetAvailableNetworkList");
-    local_WlanQueryInterface = (WlanQueryInterfaceProto)
-                               wlanapiLib.resolve("WlanQueryInterface");
-    local_WlanConnect = (WlanConnectProto)
-                        wlanapiLib.resolve("WlanConnect");
-    local_WlanDisconnect = (WlanDisconnectProto)
-                           wlanapiLib.resolve("WlanDisconnect");
-    local_WlanScan = (WlanScanProto)
-                     wlanapiLib.resolve("WlanScan");
-    local_WlanFreeMemory = (WlanFreeMemoryProto)
-                           wlanapiLib.resolve("WlanFreeMemory");
-    local_WlanCloseHandle = (WlanCloseHandleProto)
-                            wlanapiLib.resolve("WlanCloseHandle");
-    return true;
+    static QBasicAtomicInt triedResolve = Q_BASIC_ATOMIC_INITIALIZER(false);
+
+    if (!triedResolve.loadAcquire()) {
+#ifndef QT_NO_THREAD
+        QMutexLocker locker(QMutexPool::globalInstanceGet(&local_WlanOpenHandle));
+#endif
+
+        if (!triedResolve.load()) {
+            QLibrary wlanapiLib(QLatin1String("wlanapi"));
+            local_WlanOpenHandle = (WlanOpenHandleProto)
+                wlanapiLib.resolve("WlanOpenHandle");
+            local_WlanRegisterNotification = (WlanRegisterNotificationProto)
+                wlanapiLib.resolve("WlanRegisterNotification");
+            local_WlanEnumInterfaces = (WlanEnumInterfacesProto)
+                wlanapiLib.resolve("WlanEnumInterfaces");
+            local_WlanGetAvailableNetworkList = (WlanGetAvailableNetworkListProto)
+                wlanapiLib.resolve("WlanGetAvailableNetworkList");
+            local_WlanQueryInterface = (WlanQueryInterfaceProto)
+                wlanapiLib.resolve("WlanQueryInterface");
+            local_WlanConnect = (WlanConnectProto)
+                wlanapiLib.resolve("WlanConnect");
+            local_WlanDisconnect = (WlanDisconnectProto)
+                wlanapiLib.resolve("WlanDisconnect");
+            local_WlanScan = (WlanScanProto)
+                wlanapiLib.resolve("WlanScan");
+            local_WlanFreeMemory = (WlanFreeMemoryProto)
+                wlanapiLib.resolve("WlanFreeMemory");
+            local_WlanCloseHandle = (WlanCloseHandleProto)
+                wlanapiLib.resolve("WlanCloseHandle");
+
+            triedResolve.storeRelease(true);
+        }
+    }
 }
-Q_GLOBAL_STATIC_WITH_ARGS(bool, resolveLibrary, (resolveLibraryInternal()))
 
 class QNativeWifiEnginePlugin : public QBearerEnginePlugin
 {

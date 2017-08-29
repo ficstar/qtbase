@@ -63,9 +63,6 @@ QPlatformTheme *QPlatformThemeFactory::create(const QString& key, const QString 
     }
     if (QPlatformTheme *ret = qLoadPlugin1<QPlatformTheme, QPlatformThemePlugin>(loader(), platform, paramList))
            return ret;
-#else
-    Q_UNUSED(key);
-    Q_UNUSED(platformPluginPath);
 #endif
     return 0;
 }
@@ -96,7 +93,6 @@ QStringList QPlatformThemeFactory::keys(const QString &platformPluginPath)
     list += loader()->keyMap().values();
     return list;
 #else
-    Q_UNUSED(platformPluginPath);
     return QStringList();
 #endif
 }

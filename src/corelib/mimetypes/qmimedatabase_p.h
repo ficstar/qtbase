@@ -53,6 +53,7 @@
 #include "qmimetype_p.h"
 #include "qmimeglobpattern_p.h"
 
+#include <QtCore/qhash.h>
 #include <QtCore/qmutex.h>
 
 QT_BEGIN_NAMESPACE

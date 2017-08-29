@@ -52,9 +52,8 @@ class Q_PRINTSUPPORT_EXPORT QPrintPreviewDialog : public QDialog
     Q_DECLARE_PRIVATE(QPrintPreviewDialog)
 
 public:
-    explicit QPrintPreviewDialog(QWidget *parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags());
-    explicit QPrintPreviewDialog(QPrinter *printer, QWidget *parent = Q_NULLPTR,
-                                 Qt::WindowFlags flags = Qt::WindowFlags());
+    explicit QPrintPreviewDialog(QWidget *parent = 0, Qt::WindowFlags flags = 0);
+    explicit QPrintPreviewDialog(QPrinter *printer, QWidget *parent = 0, Qt::WindowFlags flags = 0);
     ~QPrintPreviewDialog();
 
     using QDialog::open;

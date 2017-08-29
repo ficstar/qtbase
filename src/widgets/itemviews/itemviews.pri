@@ -4,7 +4,6 @@ HEADERS += \
 	itemviews/qabstractitemview.h \
     itemviews/qabstractitemview_p.h \
 	itemviews/qheaderview.h \
-	itemviews/qheaderview_p.h \
 	itemviews/qlistview.h \
 	itemviews/qlistview_p.h \
 	itemviews/qbsptree_p.h \

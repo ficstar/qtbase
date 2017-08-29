@@ -45,8 +45,6 @@
 // We mean it.
 //
 
-#include "qabstractbutton.h"
-
 #include "QtCore/qbasictimer.h"
 #include "private/qwidget_p.h"
 

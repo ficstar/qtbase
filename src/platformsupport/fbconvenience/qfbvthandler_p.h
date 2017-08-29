@@ -59,22 +59,23 @@ public:
     QFbVtHandler(QObject *parent = 0);
     ~QFbVtHandler();
 
+    void suspend();
+
 signals:
     void interrupted();
-    void aboutToSuspend();
+    void suspendRequested();
     void resumed();
 
 private slots:
     void handleSignal();
 
 private:
-    void setKeyboardEnabled(bool enable);
+    void restoreKeyboard();
     void handleInt();
-    static void signalHandler(int sigNo);
 
     int m_tty;
     int m_oldKbdMode;
-    int m_sigFd[2];
+    int m_signalFd;
     QSocketNotifier *m_signalNotifier;
 };
 

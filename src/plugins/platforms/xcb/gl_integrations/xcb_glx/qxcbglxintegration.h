@@ -54,7 +54,6 @@ public:
     QPlatformOffscreenSurface *createPlatformOffscreenSurface(QOffscreenSurface *surface) const Q_DECL_OVERRIDE;
 
     virtual bool supportsThreadedOpenGL() const Q_DECL_OVERRIDE;
-    virtual bool supportsSwitchableWidgetComposition() const Q_DECL_OVERRIDE;
 
 private:
     QXcbConnection *m_connection;

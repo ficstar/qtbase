@@ -654,6 +654,7 @@ public:
     int dateEditAcceptDelay() const;
     void setDateEditAcceptDelay(int delay);
 
+    QDate date() const;
     void setDate(const QDate &date);
 
     bool eventFilter(QObject *o, QEvent *e) Q_DECL_OVERRIDE;
@@ -687,6 +688,11 @@ QWidget *QCalendarTextNavigator::widget() const
 void QCalendarTextNavigator::setWidget(QWidget *widget)
 {
     m_widget = widget;
+}
+
+QDate QCalendarTextNavigator::date() const
+{
+    return m_date;
 }
 
 void QCalendarTextNavigator::setDate(const QDate &date)
@@ -770,7 +776,7 @@ bool QCalendarTextNavigator::eventFilter(QObject *o, QEvent *e)
                     applyDate();
                     emit editingFinished();
                     removeDateLabel();
-                } else if (ke->matches(QKeySequence::Cancel)) {
+                } else if (ke->key() == Qt::Key_Escape) {
                     removeDateLabel();
                 } else if (e->type() == QEvent::KeyPress) {
                     createDateLabel();
@@ -3072,7 +3078,8 @@ void QCalendarWidget::resizeEvent(QResizeEvent * event)
 void QCalendarWidget::keyPressEvent(QKeyEvent * event)
 {
     Q_D(QCalendarWidget);
-    if (d->yearEdit->isVisible()&& event->matches(QKeySequence::Cancel)) {
+    if(d->yearEdit->isVisible()&& event->key() == Qt::Key_Escape)
+    {
         d->yearEdit->setValue(yearShown());
         d->_q_yearEditingFinished();
         return;

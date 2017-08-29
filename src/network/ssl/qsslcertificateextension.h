@@ -51,13 +51,11 @@ class Q_NETWORK_EXPORT QSslCertificateExtension
 public:
     QSslCertificateExtension();
     QSslCertificateExtension(const QSslCertificateExtension &other);
-#ifdef Q_COMPILER_RVALUE_REFS
-    QSslCertificateExtension &operator=(QSslCertificateExtension &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
-    QSslCertificateExtension &operator=(const QSslCertificateExtension &other);
     ~QSslCertificateExtension();
 
-    void swap(QSslCertificateExtension &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    QSslCertificateExtension &operator=(const QSslCertificateExtension &other);
+
+    void swap(QSslCertificateExtension &other) { qSwap(d, other.d); }
 
     QString oid() const;
     QString name() const;

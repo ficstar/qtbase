@@ -46,8 +46,8 @@ int main(int argv, char **args)
 
 //![0]
     QList<QUrl> urls;
-    urls << QUrl::fromLocalFile("/Users/foo/Code/qt5")
-         << QUrl::fromLocalFile(QStandardPaths::standardLocations(QStandardPaths::MusicLocation).first());
+    urls << QUrl::fromLocalFile("/home/gvatteka/dev/qt-45")
+         << QUrl::fromLocalFile(QDesktopServices::storageLocation(QDesktopServices::MusicLocation));
 
     QFileDialog dialog;
     dialog.setSidebarUrls(urls);

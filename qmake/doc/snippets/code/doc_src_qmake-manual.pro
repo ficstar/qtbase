@@ -186,6 +186,21 @@ DEFINES += USE_MY_STUFF
 #! [27]
 
 
+#! [28]
+myFiles.files = path\*.png
+DEPLOYMENT += myFiles
+#! [28]
+
+
+#! [29]
+myFiles.files = path\file1.ext1 path2\file2.ext1 path3\*
+myFiles.path = \some\path\on\device
+someother.files = C:\additional\files\*
+someother.path = \myFiles\path2
+DEPLOYMENT += myFiles someother
+#! [29]
+
+
 #! [30]
 DESTDIR = ../../lib
 #! [30]
@@ -411,7 +426,7 @@ This is a test.
 
 
 #! [71]
-system("ls /bin"): HAS_BIN = TRUE
+system(ls /bin):HAS_BIN=FALSE
 #! [71]
 
 
@@ -974,12 +989,8 @@ VERSION_PE_HEADER = 1.2
 #! [185]
 
 #! [186]
-RC_DEFINES += USE_MY_STUFF
-#! [186]
-
-#! [187]
 win32-g++:contains(QMAKE_HOST.arch, x86_64):{
     message("Host is 64bit")
     ...
 }
-#! [187]
+#! [186]

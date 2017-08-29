@@ -49,9 +49,6 @@ QT_BEGIN_NAMESPACE
 class QRegularExpressionMatch;
 class QRegularExpressionMatchIterator;
 struct QRegularExpressionPrivate;
-class QRegularExpression;
-
-Q_CORE_EXPORT uint qHash(const QRegularExpression &key, uint seed = 0) Q_DECL_NOTHROW;
 
 class Q_CORE_EXPORT QRegularExpression
 {
@@ -142,7 +139,6 @@ private:
     friend class QRegularExpressionMatch;
     friend struct QRegularExpressionMatchPrivate;
     friend class QRegularExpressionMatchIterator;
-    friend Q_CORE_EXPORT uint qHash(const QRegularExpression &key, uint seed) Q_DECL_NOTHROW;
 
     QRegularExpression(QRegularExpressionPrivate &dd);
     QExplicitlySharedDataPointer<QRegularExpressionPrivate> d;

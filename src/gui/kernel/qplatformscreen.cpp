@@ -40,7 +40,6 @@
 #include <qpa/qplatformintegration.h>
 #include <QtGui/qscreen.h>
 #include <QtGui/qwindow.h>
-#include <private/qhighdpiscaling_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -56,7 +55,7 @@ QPlatformScreen::~QPlatformScreen()
     Q_D(QPlatformScreen);
     if (d->screen) {
         qWarning("Manually deleting a QPlatformScreen. Call QPlatformIntegration::destroyScreen instead.");
-        QGuiApplicationPrivate::platformIntegration()->removeScreen(d->screen);
+        QGuiApplicationPrivate::screen_list.removeOne(d->screen);
         delete d->screen;
     }
 }
@@ -90,29 +89,12 @@ QWindow *QPlatformScreen::topLevelAt(const QPoint & pos) const
     QWindowList list = QGuiApplication::topLevelWindows();
     for (int i = list.size()-1; i >= 0; --i) {
         QWindow *w = list[i];
-        if (w->isVisible() && QHighDpi::toNativePixels(w->geometry(), w).contains(pos))
+        if (w->isVisible() && w->geometry().contains(pos))
             return w;
     }
 
     return 0;
 }
-
-/*!
-  Find the sibling screen corresponding to \a globalPos.
-
-  Returns this screen if no suitable screen is found at the position.
- */
-const QPlatformScreen *QPlatformScreen::screenForPosition(const QPoint &point) const
-{
-    if (!geometry().contains(point)) {
-        Q_FOREACH (const QPlatformScreen* screen, virtualSiblings()) {
-            if (screen->geometry().contains(point))
-                return screen;
-        }
-    }
-    return this;
-}
-
 
 /*!
     Returns a list of all the platform screens that are part of the same
@@ -174,33 +156,13 @@ QDpi QPlatformScreen::logicalDpi() const
 }
 
 /*!
-    Reimplement this function in subclass to return the device pixel ratio
-    for the screen. This is the ratio between physical pixels and the
-    device-independent pixels of the windowing system. The default
-    implementation returns 1.0.
+    Reimplement this function in subclass to return the device pixel
+    ratio for the screen. This is the ratio between physical pixels
+    and device-independent pixels.
 
-    \sa QPlatformWindow::devicePixelRatio()
-    \sa QPlatformScreen::pixelDensity()
+    \sa QPlatformWindow::devicePixelRatio();
 */
 qreal QPlatformScreen::devicePixelRatio() const
-{
-    return 1.0;
-}
-
-/*!
-    Reimplement this function in subclass to return the pixel density of the
-    screen. This is the scale factor needed to make a low-dpi application
-    usable on this screen. The default implementation returns 1.0.
-
-    Returning something else than 1.0 from this function causes Qt to
-    apply the scale factor to the application's coordinate system.
-    This is different from devicePixelRatio, which reports a scale
-    factor already applied by the windowing system. A platform plugin
-    typically implements one (or none) of these two functions.
-
-    \sa QPlatformWindow::devicePixelRatio()
-*/
-qreal QPlatformScreen::pixelDensity()  const
 {
     return 1.0;
 }
@@ -328,8 +290,8 @@ void QPlatformScreen::resizeMaximizedWindows()
     // 'screen()' still has the old geometry info while 'this' has the new geometry info
     const QRect oldGeometry = screen()->geometry();
     const QRect oldAvailableGeometry = screen()->availableGeometry();
-    const QRect newGeometry = deviceIndependentGeometry();
-    const QRect newAvailableGeometry = QHighDpi::fromNative(availableGeometry(), QHighDpiScaling::factor(this), newGeometry.topLeft());
+    const QRect newGeometry = geometry();
+    const QRect newAvailableGeometry = availableGeometry();
 
     // make sure maximized and fullscreen windows are updated
     for (int i = 0; i < windows.size(); ++i) {
@@ -362,7 +324,7 @@ static int log2(uint i)
 int QPlatformScreen::angleBetween(Qt::ScreenOrientation a, Qt::ScreenOrientation b)
 {
     if (a == Qt::PrimaryOrientation || b == Qt::PrimaryOrientation) {
-        qWarning("Use QScreen version of %sBetween() when passing Qt::PrimaryOrientation", "angle");
+        qWarning() << "Use QScreen version of" << __FUNCTION__ << "when passing Qt::PrimaryOrientation";
         return 0;
     }
 
@@ -384,7 +346,7 @@ int QPlatformScreen::angleBetween(Qt::ScreenOrientation a, Qt::ScreenOrientation
 QTransform QPlatformScreen::transformBetween(Qt::ScreenOrientation a, Qt::ScreenOrientation b, const QRect &target)
 {
     if (a == Qt::PrimaryOrientation || b == Qt::PrimaryOrientation) {
-        qWarning("Use QScreen version of %sBetween() when passing Qt::PrimaryOrientation", "transform");
+        qWarning() << "Use QScreen version of" << __FUNCTION__ << "when passing Qt::PrimaryOrientation";
         return QTransform();
     }
 
@@ -415,7 +377,7 @@ QTransform QPlatformScreen::transformBetween(Qt::ScreenOrientation a, Qt::Screen
 QRect QPlatformScreen::mapBetween(Qt::ScreenOrientation a, Qt::ScreenOrientation b, const QRect &rect)
 {
     if (a == Qt::PrimaryOrientation || b == Qt::PrimaryOrientation) {
-        qWarning("Use QScreen version of %sBetween() when passing Qt::PrimaryOrientation", "map");
+        qWarning() << "Use QScreen version of" << __FUNCTION__ << "when passing Qt::PrimaryOrientation";
         return rect;
     }
 
@@ -429,13 +391,6 @@ QRect QPlatformScreen::mapBetween(Qt::ScreenOrientation a, Qt::ScreenOrientation
     }
 
     return rect;
-}
-
-QRect QPlatformScreen::deviceIndependentGeometry() const
-{
-    qreal scaleFactor = QHighDpiScaling::factor(this);
-    QRect nativeGeometry = geometry();
-    return QRect(nativeGeometry.topLeft(), QHighDpi::fromNative(nativeGeometry.size(), scaleFactor));
 }
 
 /*!
@@ -463,24 +418,6 @@ QPlatformScreen::SubpixelAntialiasingType QPlatformScreen::subpixelAntialiasingT
     }
 
     return static_cast<QPlatformScreen::SubpixelAntialiasingType>(type);
-}
-
-/*!
-  Returns the current power state.
-
-  The default implementation always returns PowerStateOn.
-*/
-QPlatformScreen::PowerState QPlatformScreen::powerState() const
-{
-    return PowerStateOn;
-}
-
-/*!
-  Sets the power state for this screen.
-*/
-void QPlatformScreen::setPowerState(PowerState state)
-{
-    Q_UNUSED(state);
 }
 
 QT_END_NAMESPACE

@@ -507,15 +507,11 @@ void QTableModel::sort(int column, Qt::SortOrder order)
     QVector<QTableWidgetItem*> sorted_table(tableItems.count());
     QModelIndexList from;
     QModelIndexList to;
-    const int numRows = rowCount();
-    const int numColumns = columnCount();
-    from.reserve(numRows * numColumns);
-    to.reserve(numRows * numColumns);
-    for (int i = 0; i < numRows; ++i) {
+    for (int i = 0; i < rowCount(); ++i) {
         int r = (i < sortable.count()
                  ? sortable.at(i).second
                  : unsortable.at(i - sortable.count()));
-        for (int c = 0; c < numColumns; ++c) {
+        for (int c = 0; c < columnCount(); ++c) {
             sorted_table[tableIndex(i, c)] = item(r, c);
             from.append(createIndex(r, c));
             to.append(createIndex(i, c));
@@ -555,7 +551,9 @@ void QTableModel::ensureSorted(int column, Qt::SortOrder order,
 
     LessThan compare = (order == Qt::AscendingOrder ? &itemLessThan : &itemGreaterThan);
     std::stable_sort(sorting.begin(), sorting.end(), compare);
-    QModelIndexList oldPersistentIndexes, newPersistentIndexes;
+
+    QModelIndexList oldPersistentIndexes = persistentIndexList();
+    QModelIndexList newPersistentIndexes = oldPersistentIndexes;
     QVector<QTableWidgetItem*> newTable = tableItems;
     QVector<QTableWidgetItem*> newVertical = verticalHeaderItems;
     QVector<QTableWidgetItem*> colItems = columnItems(column);
@@ -571,12 +569,7 @@ void QTableModel::ensureSorted(int column, Qt::SortOrder order,
             newRow = oldRow;
         vit = colItems.insert(vit, item);
         if (newRow != oldRow) {
-            if (!changed) {
-                emit layoutAboutToBeChanged();
-                oldPersistentIndexes = persistentIndexList();
-                newPersistentIndexes = oldPersistentIndexes;
-                changed = true;
-            }
+            changed = true;
             // move the items @ oldRow to newRow
             int cc = columnCount();
             QVector<QTableWidgetItem*> rowItems(cc);
@@ -603,6 +596,7 @@ void QTableModel::ensureSorted(int column, Qt::SortOrder order,
     }
 
     if (changed) {
+        emit layoutAboutToBeChanged();
         tableItems = newTable;
         verticalHeaderItems = newVertical;
         changePersistentIndexList(oldPersistentIndexes,
@@ -818,9 +812,7 @@ QMimeData *QTableModel::internalMimeData()  const
 QMimeData *QTableModel::mimeData(const QModelIndexList &indexes) const
 {
     QList<QTableWidgetItem*> items;
-    const int indexesCount = indexes.count();
-    items.reserve(indexesCount);
-    for (int i = 0; i < indexesCount; ++i)
+    for (int i = 0; i < indexes.count(); ++i)
         items << item(indexes.at(i));
     const QTableWidget *view = qobject_cast<const QTableWidget*>(QObject::parent());
 
@@ -2029,8 +2021,6 @@ QTableWidgetItem *QTableWidget::horizontalHeaderItem(int column) const
 
 /*!
   Sets the horizontal header item for column \a column to \a item.
-  If necessary, the column count is increased to fit the item.
-  The previous header item (if there was one) is deleted.
 */
 void QTableWidget::setHorizontalHeaderItem(int column, QTableWidgetItem *item)
 {
@@ -2336,9 +2326,7 @@ QList<QTableWidgetSelectionRange> QTableWidget::selectedRanges() const
 {
     const QList<QItemSelectionRange> ranges = selectionModel()->selection();
     QList<QTableWidgetSelectionRange> result;
-    const int rangesCount = ranges.count();
-    result.reserve(rangesCount);
-    for (int i = 0; i < rangesCount; ++i)
+    for (int i = 0; i < ranges.count(); ++i)
         result.append(QTableWidgetSelectionRange(ranges.at(i).top(),
                                                  ranges.at(i).left(),
                                                  ranges.at(i).bottom(),
@@ -2384,9 +2372,7 @@ QList<QTableWidgetItem*> QTableWidget::findItems(const QString &text, Qt::MatchF
         indexes += d->model->match(model()->index(0, column, QModelIndex()),
                                      Qt::DisplayRole, text, -1, flags);
     QList<QTableWidgetItem*> items;
-    const int indexCount = indexes.size();
-    items.reserve(indexCount);
-    for (int i = 0; i < indexCount; ++i)
+    for (int i = 0; i < indexes.size(); ++i)
         items.append(d->tableModel()->item(indexes.at(i)));
     return items;
 }
@@ -2579,7 +2565,6 @@ QMimeData *QTableWidget::mimeData(const QList<QTableWidgetItem*> items) const
 
     // if non empty, it's called from the model's own mimeData
     if (cachedIndexes.isEmpty()) {
-        cachedIndexes.reserve(items.count());
         foreach (QTableWidgetItem *item, items)
             cachedIndexes << indexFromItem(item);
 
@@ -2691,9 +2676,7 @@ void QTableWidget::dropEvent(QDropEvent *event) {
             }
 
             QList<QTableWidgetItem *> taken;
-            const int indexesCount = indexes.count();
-            taken.reserve(indexesCount);
-            for (int i = 0; i < indexesCount; ++i)
+            for (int i = 0; i < indexes.count(); ++i)
                 taken.append(takeItem(indexes.at(i).row(), indexes.at(i).column()));
 
             for (int i = 0; i < indexes.count(); ++i) {
@@ -2716,6 +2699,5 @@ void QTableWidget::dropEvent(QDropEvent *event) {
 QT_END_NAMESPACE
 
 #include "moc_qtablewidget.cpp"
-#include "moc_qtablewidget_p.cpp"
 
 #endif // QT_NO_TABLEWIDGET

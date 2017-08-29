@@ -553,5 +553,3 @@ Q_WIDGETS_EXPORT QStyleOptionSlider qt_qsliderStyleOption(QSlider *slider)
 #endif
 
 QT_END_NAMESPACE
-
-#include "moc_qslider.cpp"

@@ -1,5 +1,9 @@
 TARGET = qnlabearer
 
+PLUGIN_TYPE = bearer
+PLUGIN_CLASS_NAME = QNlaEnginePlugin
+load(qt_plugin)
+
 QT = core core-private network network-private
 
 !wince* {
@@ -18,7 +22,3 @@ SOURCES += main.cpp \
            ../qnetworksession_impl.cpp
 
 OTHER_FILES += nla.json
-
-PLUGIN_TYPE = bearer
-PLUGIN_CLASS_NAME = QNlaEnginePlugin
-load(qt_plugin)

@@ -304,9 +304,7 @@ void QGraphicsWidget::resize(const QSizeF &size)
 
 /*!
     \fn void QGraphicsWidget::resize(qreal w, qreal h)
-    \overload
 
-    Constructs a resize with the given \c width (\a w) and \c height (\a h).
     This convenience function is equivalent to calling resize(QSizeF(w, h)).
 
     \sa setGeometry(), setTransform()
@@ -2399,7 +2397,7 @@ bool QGraphicsWidget::close()
 #if 0
 void QGraphicsWidget::dumpFocusChain()
 {
-    qDebug("=========== Dumping focus chain ==============");
+    qDebug() << "=========== Dumping focus chain ==============";
     int i = 0;
     QGraphicsWidget *next = this;
     QSet<QGraphicsWidget*> visited;
@@ -2420,7 +2418,5 @@ void QGraphicsWidget::dumpFocusChain()
 #endif
 
 QT_END_NAMESPACE
-
-#include "moc_qgraphicswidget.cpp"
 
 #endif //QT_NO_GRAPHICSVIEW

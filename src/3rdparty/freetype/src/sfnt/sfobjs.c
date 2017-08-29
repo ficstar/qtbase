@@ -4,7 +4,7 @@
 /*                                                                         */
 /*    SFNT object management (base).                                       */
 /*                                                                         */
-/*  Copyright 1996-2015 by                                                 */
+/*  Copyright 1996-2008, 2010-2014 by                                      */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -120,9 +120,27 @@
                                                    FT_Memory     memory );
 
 
-  /* documentation is in sfnt.h */
-
-  FT_LOCAL_DEF( FT_Error )
+  /*************************************************************************/
+  /*                                                                       */
+  /* <Function>                                                            */
+  /*    tt_face_get_name                                                   */
+  /*                                                                       */
+  /* <Description>                                                         */
+  /*    Returns a given ENGLISH name record in ASCII.                      */
+  /*                                                                       */
+  /* <Input>                                                               */
+  /*    face   :: A handle to the source face object.                      */
+  /*                                                                       */
+  /*    nameid :: The name id of the name record to return.                */
+  /*                                                                       */
+  /* <InOut>                                                               */
+  /*    name   :: The address of a string pointer.  NULL if no name is     */
+  /*              present.                                                 */
+  /*                                                                       */
+  /* <Return>                                                              */
+  /*    FreeType error code.  0 means success.                             */
+  /*                                                                       */
+  static FT_Error
   tt_face_get_name( TT_Face      face,
                     FT_UShort    nameid,
                     FT_String**  name )
@@ -358,8 +376,8 @@
     FT_FREE( stream->base );
 
     stream->size  = 0;
-    stream->base  = NULL;
-    stream->close = NULL;
+    stream->base  = 0;
+    stream->close = 0;
   }
 
 
@@ -562,8 +580,8 @@
       table->OrigOffset = sfnt_offset;
 
       /* The offsets must be multiples of 4. */
-      woff_offset += ( table->CompLength + 3 ) & ~3U;
-      sfnt_offset += ( table->OrigLength + 3 ) & ~3U;
+      woff_offset += ( table->CompLength + 3 ) & ~3;
+      sfnt_offset += ( table->OrigLength + 3 ) & ~3;
     }
 
     /*
@@ -591,7 +609,7 @@
     if ( woff.privOffset )
     {
       /* ... if it isn't the last block. */
-      woff_offset = ( woff_offset + 3 ) & ~3U;
+      woff_offset = ( woff_offset + 3 ) & ~3;
 
       if ( woff.privOffset != woff_offset                  ||
            woff.privOffset + woff.privLength > woff.length )
@@ -821,14 +839,13 @@
   FT_LOCAL_DEF( FT_Error )
   sfnt_init_face( FT_Stream      stream,
                   TT_Face        face,
-                  FT_Int         face_instance_index,
+                  FT_Int         face_index,
                   FT_Int         num_params,
                   FT_Parameter*  params )
   {
-    FT_Error      error;
-    FT_Library    library = face->root.driver->root.library;
-    SFNT_Service  sfnt;
-    FT_Int        face_index;
+    FT_Error        error;
+    FT_Library      library = face->root.driver->root.library;
+    SFNT_Service    sfnt;
 
 
     /* for now, parameters are unused */
@@ -861,64 +878,21 @@
     /* Stream may have changed in sfnt_open_font. */
     stream = face->root.stream;
 
-    FT_TRACE2(( "sfnt_init_face: %08p, %ld\n", face, face_instance_index ));
+    FT_TRACE2(( "sfnt_init_face: %08p, %ld\n", face, face_index ));
 
-    face_index = FT_ABS( face_instance_index ) & 0xFFFF;
+    if ( face_index < 0 )
+      face_index = 0;
 
     if ( face_index >= face->ttc_header.count )
-    {
-      if ( face_instance_index >= 0 )
-        return FT_THROW( Invalid_Argument );
-      else
-        face_index = 0;
-    }
+      return FT_THROW( Invalid_Argument );
 
     if ( FT_STREAM_SEEK( face->ttc_header.offsets[face_index] ) )
       return error;
 
-    /* check whether we have a valid TrueType file */
+    /* check that we have a valid TrueType file */
     error = sfnt->load_font_dir( face, stream );
     if ( error )
       return error;
-
-#ifdef TT_CONFIG_OPTION_GX_VAR_SUPPORT
-    {
-      FT_ULong   fvar_len;
-      FT_UShort  num_instances;
-      FT_Int     instance_index;
-
-
-      instance_index = FT_ABS( face_instance_index ) >> 16;
-
-      /* test whether current face is a GX font with named instances */
-      if ( face->goto_table( face, TTAG_fvar, stream, &fvar_len ) ||
-           fvar_len < 20                                          ||
-           FT_STREAM_SKIP( 12 )                                   ||
-           FT_READ_USHORT( num_instances )                        )
-        num_instances = 0;
-
-      /* we support at most 2^15 - 1 instances */
-      if ( num_instances >= ( 1U << 15 ) - 1 )
-      {
-        if ( face_instance_index >= 0 )
-          return FT_THROW( Invalid_Argument );
-        else
-          num_instances = 0;
-      }
-
-      /* instance indices in `face_instance_index' start with index 1, */
-      /* thus `>' and not `>='                                         */
-      if ( instance_index > num_instances )
-      {
-        if ( face_instance_index >= 0 )
-          return FT_THROW( Invalid_Argument );
-        else
-          num_instances = 0;
-      }
-
-      face->root.style_flags = (FT_Long)num_instances << 16;
-    }
-#endif
 
     face->root.num_faces  = face->ttc_header.count;
     face->root.face_index = face_index;
@@ -972,7 +946,7 @@
   FT_LOCAL_DEF( FT_Error )
   sfnt_load_face( FT_Stream      stream,
                   TT_Face        face,
-                  FT_Int         face_instance_index,
+                  FT_Int         face_index,
                   FT_Int         num_params,
                   FT_Parameter*  params )
   {
@@ -988,7 +962,7 @@
 
     SFNT_Service  sfnt = (SFNT_Service)face->sfnt;
 
-    FT_UNUSED( face_instance_index );
+    FT_UNUSED( face_index );
 
 
     /* Check parameters */
@@ -1310,7 +1284,7 @@
           flags |= FT_STYLE_FLAG_ITALIC;
       }
 
-      root->style_flags |= flags;
+      root->style_flags = flags;
 
       /*********************************************************************/
       /*                                                                   */
@@ -1457,8 +1431,8 @@
         root->ascender  = face->horizontal.Ascender;
         root->descender = face->horizontal.Descender;
 
-        root->height = root->ascender - root->descender +
-                       face->horizontal.Line_Gap;
+        root->height = (FT_Short)( root->ascender - root->descender +
+                                   face->horizontal.Line_Gap );
 
         if ( !( root->ascender || root->descender ) )
         {
@@ -1469,24 +1443,23 @@
               root->ascender  = face->os2.sTypoAscender;
               root->descender = face->os2.sTypoDescender;
 
-              root->height = root->ascender - root->descender +
-                             face->os2.sTypoLineGap;
+              root->height = (FT_Short)( root->ascender - root->descender +
+                                         face->os2.sTypoLineGap );
             }
             else
             {
               root->ascender  =  (FT_Short)face->os2.usWinAscent;
               root->descender = -(FT_Short)face->os2.usWinDescent;
 
-              root->height = root->ascender - root->descender;
+              root->height = (FT_UShort)( root->ascender - root->descender );
             }
           }
         }
 
-        root->max_advance_width  =
-          (FT_Short)face->horizontal.advance_Width_Max;
-        root->max_advance_height =
-          (FT_Short)( face->vertical_info ? face->vertical.advance_Height_Max
-                                          : root->height );
+        root->max_advance_width  = face->horizontal.advance_Width_Max;
+        root->max_advance_height = (FT_Short)( face->vertical_info
+                                     ? face->vertical.advance_Height_Max
+                                     : root->height );
 
         /* See http://www.microsoft.com/OpenType/OTSpec/post.htm -- */
         /* Adjust underline position from top edge to centre of     */
@@ -1596,7 +1569,7 @@
 
     FT_FREE( face->postscript_name );
 
-    face->sfnt = NULL;
+    face->sfnt = 0;
   }
 
 

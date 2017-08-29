@@ -26,8 +26,6 @@ using namespace ABI::Windows::Foundation::Collections;
 
 namespace rx
 {
-long ConvertDipsToPixels(float dips);
-
 class InspectableNativeWindow
 {
   public:
@@ -47,7 +45,7 @@ class InspectableNativeWindow
     virtual HRESULT createSwapChain(ID3D11Device *device, DXGIFactory *factory, DXGI_FORMAT format, unsigned int width, unsigned int height, DXGISwapChain **swapChain) = 0;
     virtual bool registerForSizeChangeEvents() = 0;
     virtual void unregisterForSizeChangeEvents() = 0;
-    virtual HRESULT scaleSwapChain(const Size& newSize) { return S_OK; }
+    virtual HRESULT scaleSwapChain(const SIZE& newSize) { return S_OK; }
 
     bool getClientRect(RECT *rect)
     {
@@ -61,11 +59,11 @@ class InspectableNativeWindow
         return true;
     }
 
-    void setNewClientSize(const Size &newSize)
+    void setNewClientSize(const SIZE &newSize)
     {
-        if (mSupportsSwapChainResize)
+        if (mSupportsSwapChainResize && !mRequiresSwapChainScaling)
         {
-            mNewClientRect = { 0, 0, ConvertDipsToPixels(newSize.Width), ConvertDipsToPixels(newSize.Height) };
+            mNewClientRect = { 0, 0, newSize.cx, newSize.cy };
             mClientRectChanged = true;
         }
 

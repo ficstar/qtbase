@@ -9,4 +9,3 @@ INCLUDEPATH += ../
 HEADERS +=  
 SOURCES += tst_qplaintextedit.cpp 
 
-osx: LIBS += -framework AppKit

@@ -58,14 +58,13 @@ struct QTextObjectHandler
 };
 typedef QHash<int, QTextObjectHandler> HandlerHash;
 
-class Q_GUI_EXPORT QAbstractTextDocumentLayoutPrivate : public QObjectPrivate
+class QAbstractTextDocumentLayoutPrivate : public QObjectPrivate
 {
 public:
     Q_DECLARE_PUBLIC(QAbstractTextDocumentLayout)
 
     inline QAbstractTextDocumentLayoutPrivate()
         : paintDevice(0) {}
-    ~QAbstractTextDocumentLayoutPrivate();
 
     inline void setDocument(QTextDocument *doc) {
         document = doc;

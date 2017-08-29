@@ -106,7 +106,7 @@ QT_BEGIN_NAMESPACE
 
   \note Calling QSurfaceFormat::setDefaultFormat() before constructing
   the QApplication instance is mandatory on some platforms (for example,
-  \macos) when an OpenGL core profile context is requested. This is to
+  OS X) when an OpenGL core profile context is requested. This is to
   ensure that resource sharing between contexts stays functional as all
   internal contexts are created using the correct version and profile.
 
@@ -425,12 +425,7 @@ QT_BEGIN_NAMESPACE
 
   Note that this does not apply when there are no other widgets underneath and
   the intention is to have a semi-transparent window. In that case the
-  traditional approach of setting Qt::WA_TranslucentBackground
-  on the top-level window is sufficient. Note that if the transparent areas are
-  only desired in the QOpenGLWidget, then Qt::WA_NoSystemBackground will need
-  to be turned back to \c false after enabling Qt::WA_TranslucentBackground.
-  Additionally, requesting an alpha channel for the QOpenGLWidget's context via
-  setFormat() may be necessary too, depending on the system.
+  traditional approach of setting Qt::WA_TranslucentBackground is sufficient.
 
   QOpenGLWidget supports multiple update behaviors, just like QOpenGLWindow. In
   preserved mode the rendered content from the previous paintGL() call is
@@ -461,7 +456,7 @@ QT_BEGIN_NAMESPACE
   recommended to limit the usage of this approach to cases where there
   is no other choice. Note that this option is not suitable for most
   embedded and mobile platforms, and it is known to have issues on
-  certain desktop platforms (e.g. \macos) too. The stable,
+  certain desktop platforms (e.g. OS X) too. The stable,
   cross-platform solution is always QOpenGLWidget.
 
   \e{OpenGL is a trademark of Silicon Graphics, Inc. in the United States and other
@@ -558,9 +553,7 @@ public:
           hasBeenComposed(false),
           flushPending(false),
           paintDevice(0),
-          updateBehavior(QOpenGLWidget::NoPartialUpdate),
-          requestedSamples(0),
-          inPaintGL(false)
+          updateBehavior(QOpenGLWidget::NoPartialUpdate)
     {
         requestedFormat = QSurfaceFormat::defaultFormat();
     }
@@ -602,8 +595,6 @@ public:
     QOpenGLPaintDevice *paintDevice;
     QSurfaceFormat requestedFormat;
     QOpenGLWidget::UpdateBehavior updateBehavior;
-    int requestedSamples;
-    bool inPaintGL;
 };
 
 void QOpenGLWidgetPaintDevicePrivate::beginPaint()
@@ -614,7 +605,7 @@ void QOpenGLWidgetPaintDevicePrivate::beginPaint()
     // with the palette's background color.
     if (w->autoFillBackground()) {
         QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
-        if (w->format().hasAlpha()) {
+        if (w->testAttribute(Qt::WA_TranslucentBackground)) {
             f->glClearColor(0, 0, 0, 0);
         } else {
             QColor c = w->palette().brush(w->backgroundRole()).color();
@@ -645,6 +636,12 @@ void QOpenGLWidgetPaintDevice::ensureActiveTarget()
 
 GLuint QOpenGLWidgetPrivate::textureId() const
 {
+    Q_Q(const QOpenGLWidget);
+    if (!q->isWindow() && q->internalWinId()) {
+        qWarning() << "QOpenGLWidget cannot be used as a native child widget."
+                   << "Consider setting Qt::WA_DontCreateNativeAncestors and Qt::AA_DontCreateNativeWidgetSiblings.";
+        return 0;
+    }
     return resolvedFbo ? resolvedFbo->texture() : (fbo ? fbo->texture() : 0);
 }
 
@@ -689,7 +686,7 @@ void QOpenGLWidgetPrivate::recreateFbo()
     delete resolvedFbo;
     resolvedFbo = 0;
 
-    int samples = requestedSamples;
+    int samples = context->format().samples();
     QOpenGLExtensions *extfuncs = static_cast<QOpenGLExtensions *>(context->functions());
     if (!extfuncs->hasOpenGLExtension(QOpenGLExtensions::FramebufferMultisample))
         samples = 0;
@@ -698,7 +695,7 @@ void QOpenGLWidgetPrivate::recreateFbo()
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
     format.setSamples(samples);
 
-    const QSize deviceSize = q->size() * q->devicePixelRatioF();
+    const QSize deviceSize = q->size() * q->devicePixelRatio();
     fbo = new QOpenGLFramebufferObject(deviceSize, format);
     if (samples > 0)
         resolvedFbo = new QOpenGLFramebufferObject(deviceSize);
@@ -707,7 +704,7 @@ void QOpenGLWidgetPrivate::recreateFbo()
     context->functions()->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     paintDevice->setSize(deviceSize);
-    paintDevice->setDevicePixelRatio(q->devicePixelRatioF());
+    paintDevice->setDevicePixelRatio(q->devicePixelRatio());
 
     emit q->resized();
 }
@@ -745,13 +742,6 @@ void QOpenGLWidgetPrivate::initialize()
         return;
     }
 
-    // Do not include the sample count. Requesting a multisampled context is not necessary
-    // since we render into an FBO, never to an actual surface. What's more, attempting to
-    // create a pbuffer with a multisampled config crashes certain implementations. Just
-    // avoid the entire hassle, the result is the same.
-    requestedSamples = requestedFormat.samples();
-    requestedFormat.setSamples(0);
-
     QScopedPointer<QOpenGLContext> ctx(new QOpenGLContext);
     ctx->setShareContext(shareContext);
     ctx->setFormat(requestedFormat);
@@ -788,8 +778,8 @@ void QOpenGLWidgetPrivate::initialize()
     }
 
     paintDevice = new QOpenGLWidgetPaintDevice(q);
-    paintDevice->setSize(q->size() * q->devicePixelRatioF());
-    paintDevice->setDevicePixelRatio(q->devicePixelRatioF());
+    paintDevice->setSize(q->size() * q->devicePixelRatio());
+    paintDevice->setDevicePixelRatio(q->devicePixelRatio());
 
     context = ctx.take();
     initialized = true;
@@ -818,10 +808,8 @@ void QOpenGLWidgetPrivate::invokeUserPaint()
     QOpenGLFunctions *f = ctx->functions();
     QOpenGLContextPrivate::get(ctx)->defaultFboRedirect = fbo->handle();
 
-    f->glViewport(0, 0, q->width() * q->devicePixelRatioF(), q->height() * q->devicePixelRatioF());
-    inPaintGL = true;
+    f->glViewport(0, 0, q->width() * q->devicePixelRatio(), q->height() * q->devicePixelRatio());
     q->paintGL();
-    inPaintGL = false;
     flushPending = true;
 
     QOpenGLContextPrivate::get(ctx)->defaultFboRedirect = 0;
@@ -868,24 +856,11 @@ QImage QOpenGLWidgetPrivate::grabFramebuffer()
     if (!initialized)
         return QImage();
 
-    if (!inPaintGL)
-        render();
-
-    if (resolvedFbo) {
-        resolveSamples();
-        resolvedFbo->bind();
-    } else {
-        q->makeCurrent();
-    }
-
-    QImage res = qt_gl_read_framebuffer(q->size() * q->devicePixelRatioF(), false, false);
-    res.setDevicePixelRatio(q->devicePixelRatioF());
-
-    // While we give no guarantees of what is going to be left bound, prefer the
-    // multisample fbo instead of the resolved one. Clients may continue to
-    // render straight after calling this function.
-    if (resolvedFbo)
-        q->makeCurrent();
+    render();
+    resolveSamples();
+    q->makeCurrent();
+    QImage res = qt_gl_read_framebuffer(q->size() * q->devicePixelRatio(), false, false);
+    res.setDevicePixelRatio(q->devicePixelRatio());
 
     return res;
 }
@@ -904,10 +879,8 @@ void QOpenGLWidgetPrivate::resizeViewportFramebuffer()
     if (!initialized)
         return;
 
-    if (!fbo || q->size() * q->devicePixelRatioF() != fbo->size()) {
+    if (!fbo || q->size() * q->devicePixelRatio() != fbo->size())
         recreateFbo();
-        q->update();
-    }
 }
 
 /*!
@@ -973,12 +946,13 @@ QOpenGLWidget::UpdateBehavior QOpenGLWidget::updateBehavior() const
   OpenGL widgets, individual calls to this function can be replaced by one single call to
   QSurfaceFormat::setDefaultFormat() before creating the first widget.
 
-  \note Requesting an alpha buffer via this function will not lead to the
-  desired results when the intention is to make other widgets beneath visible.
-  Instead, use Qt::WA_AlwaysStackOnTop to enable semi-transparent QOpenGLWidget
-  instances with other widgets visible underneath. Keep in mind however that
-  this breaks the stacking order, so it will no longer be possible to have
-  other widgets on top of the QOpenGLWidget.
+  \note Requesting an alpha buffer via this function, or by setting
+  Qt::WA_TranslucentBackground, will not lead to the desired results when the intention is
+  to make other widgets beneath visible. Instead, use Qt::WA_AlwaysStackOnTop to enable
+  semi-transparent QOpenGLWidget instances with other widgets visible underneath. Keep in
+  mind however that this breaks the stacking order, so it will no longer be possible to
+  have other widgets on top of the QOpenGLWidget. When the intention is to have a
+  semi-transparent top-level window, Qt::WA_TranslucentBackground is sufficient.
 
   \sa format(), Qt::WA_AlwaysStackOnTop, QSurfaceFormat::setDefaultFormat()
  */
@@ -1174,7 +1148,8 @@ void QOpenGLWidget::resizeEvent(QResizeEvent *e)
 
     d->recreateFbo();
     resizeGL(width(), height());
-    d->sendPaintEvent(QRect(QPoint(0, 0), size()));
+    d->invokeUserPaint();
+    d->resolveSamples();
 }
 
 /*!
@@ -1221,7 +1196,6 @@ int QOpenGLWidget::metric(QPaintDevice::PaintDeviceMetric metric) const
         return QWidget::metric(metric);
 
     QWidget *tlw = window();
-    QWindow *window = tlw ? tlw->windowHandle() : 0;
     QScreen *screen = tlw && tlw->windowHandle() ? tlw->windowHandle()->screen() : 0;
     if (!screen && QGuiApplication::primaryScreen())
         screen = QGuiApplication::primaryScreen();
@@ -1269,13 +1243,8 @@ int QOpenGLWidget::metric(QPaintDevice::PaintDeviceMetric metric) const
         else
             return qRound(dpmy * 0.0254);
     case PdmDevicePixelRatio:
-        if (window)
-            return int(window->devicePixelRatio());
-        else
-            return 1.0;
-    case PdmDevicePixelRatioScaled:
-        if (window)
-            return int(window->devicePixelRatio() * devicePixelRatioFScale());
+        if (screen)
+            return screen->devicePixelRatio();
         else
             return 1.0;
     default:
@@ -1335,7 +1304,7 @@ bool QOpenGLWidget::event(QEvent *e)
         }
         break;
     case QEvent::ScreenChangeInternal:
-        if (d->initialized && d->paintDevice->devicePixelRatioF() != devicePixelRatioF())
+        if (d->initialized && d->paintDevice->devicePixelRatio() != devicePixelRatio())
             d->recreateFbo();
         break;
     default:
@@ -1345,5 +1314,3 @@ bool QOpenGLWidget::event(QEvent *e)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qopenglwidget.cpp"

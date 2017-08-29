@@ -86,14 +86,14 @@ void tst_QGLBuffer::testBuffer(QGLBuffer::Type type)
 
     // Create the local object, but not the buffer in the server.
     QGLBuffer buffer(type);
-    QCOMPARE(buffer.usagePattern(), QGLBuffer::StaticDraw);
+    QVERIFY(buffer.usagePattern() == QGLBuffer::StaticDraw);
     buffer.setUsagePattern(QGLBuffer::UsagePattern(usagePattern));
 
     // Check the initial state.
-    QCOMPARE(buffer.type(), type);
+    QVERIFY(buffer.type() == type);
     QVERIFY(!buffer.isCreated());
-    QCOMPARE(buffer.bufferId(), GLuint(0));
-    QCOMPARE(buffer.usagePattern(), QGLBuffer::UsagePattern(usagePattern));
+    QVERIFY(buffer.bufferId() == 0);
+    QVERIFY(buffer.usagePattern() == QGLBuffer::UsagePattern(usagePattern));
     QCOMPARE(buffer.size(), -1);
 
     // Should not be able to bind it yet because it isn't created.
@@ -253,7 +253,7 @@ void tst_QGLBuffer::bufferSharing()
     delete w2;
 
     // The buffer should now be invalid.
-    QCOMPARE(buffer.bufferId(), GLuint(0));
+    QVERIFY(buffer.bufferId() == 0);
     QVERIFY(!buffer.isCreated());
 }
 

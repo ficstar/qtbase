@@ -79,6 +79,7 @@
  */
 
 /*!
+  \relates QTest
   \since 4.7
   Returns the enum value \a metric as a character string.
  */
@@ -151,6 +152,7 @@ const char * QTest::benchmarkMetricName(QBenchmarkMetric metric)
 };
 
 /*!
+  \relates QTest
   \since 4.7
   Retuns the units of measure for the specified \a metric.
  */

@@ -59,40 +59,36 @@ public:
                                     const QSharedPointer<QWindowsFontEngineData> &d);
     ~QWindowsFontEngineDirectWrite();
 
-    void initFontInfo(const QFontDef &request, int dpi);
+    void initFontInfo(const QFontDef &request, int dpi, IDWriteFont *font);
 
-    QFixed lineThickness() const Q_DECL_OVERRIDE;
-    QFixed underlinePosition() const Q_DECL_OVERRIDE;
-    bool getSfntTableData(uint tag, uchar *buffer, uint *length) const Q_DECL_OVERRIDE;
-    QFixed emSquareSize() const Q_DECL_OVERRIDE;
+    QFixed lineThickness() const;
+    QFixed underlinePosition() const;
+    bool getSfntTableData(uint tag, uchar *buffer, uint *length) const;
+    QFixed emSquareSize() const;
 
     glyph_t glyphIndex(uint ucs4) const Q_DECL_OVERRIDE;
-    bool stringToCMap(const QChar *str, int len, QGlyphLayout *glyphs, int *nglyphs,
-                      ShaperFlags flags) const Q_DECL_OVERRIDE;
-    void recalcAdvances(QGlyphLayout *glyphs, ShaperFlags) const Q_DECL_OVERRIDE;
+    bool stringToCMap(const QChar *str, int len, QGlyphLayout *glyphs, int *nglyphs, ShaperFlags flags) const;
+    void recalcAdvances(QGlyphLayout *glyphs, ShaperFlags) const;
 
     void addGlyphsToPath(glyph_t *glyphs, QFixedPoint *positions, int nglyphs,
-                         QPainterPath *path, QTextItem::RenderFlags flags) Q_DECL_OVERRIDE;
+                         QPainterPath *path, QTextItem::RenderFlags flags);
 
-    glyph_metrics_t boundingBox(const QGlyphLayout &glyphs) Q_DECL_OVERRIDE;
-    glyph_metrics_t boundingBox(glyph_t g) Q_DECL_OVERRIDE;
-    glyph_metrics_t alphaMapBoundingBox(glyph_t glyph, QFixed,
-                                        const QTransform &matrix, GlyphFormat) Q_DECL_OVERRIDE;
+    glyph_metrics_t boundingBox(const QGlyphLayout &glyphs);
+    glyph_metrics_t boundingBox(glyph_t g);
+    glyph_metrics_t alphaMapBoundingBox(glyph_t glyph, QFixed, const QTransform &matrix, GlyphFormat);
 
-    QFixed ascent() const Q_DECL_OVERRIDE;
-    QFixed descent() const Q_DECL_OVERRIDE;
-    QFixed leading() const Q_DECL_OVERRIDE;
-    QFixed xHeight() const Q_DECL_OVERRIDE;
-    qreal maxCharWidth() const Q_DECL_OVERRIDE;
+    QFixed ascent() const;
+    QFixed descent() const;
+    QFixed leading() const;
+    QFixed xHeight() const;
+    qreal maxCharWidth() const;
 
-    bool supportsSubPixelPositions() const Q_DECL_OVERRIDE;
+    bool supportsSubPixelPositions() const;
 
-    QImage alphaMapForGlyph(glyph_t glyph, QFixed subPixelPosition) Q_DECL_OVERRIDE;
-    QImage alphaMapForGlyph(glyph_t glyph, QFixed subPixelPosition, const QTransform &t) Q_DECL_OVERRIDE;
-    QImage alphaRGBMapForGlyph(glyph_t t, QFixed subPixelPosition, const QTransform &xform) Q_DECL_OVERRIDE;
+    QImage alphaMapForGlyph(glyph_t glyph, QFixed subPixelPosition);
+    QImage alphaRGBMapForGlyph(glyph_t t, QFixed subPixelPosition, const QTransform &xform);
 
-    QFontEngine *cloneWithSize(qreal pixelSize) const Q_DECL_OVERRIDE;
-    Qt::HANDLE handle() const Q_DECL_OVERRIDE;
+    QFontEngine *cloneWithSize(qreal pixelSize) const;
 
     const QSharedPointer<QWindowsFontEngineData> &fontEngineData() const { return m_fontEngineData; }
 

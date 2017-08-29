@@ -48,7 +48,7 @@ public:
     QBitmap(const QPixmap &);
     QBitmap(int w, int h);
     explicit QBitmap(const QSize &);
-    explicit QBitmap(const QString &fileName, const char *format = Q_NULLPTR);
+    explicit QBitmap(const QString &fileName, const char *format=0);
     ~QBitmap();
 
     QBitmap &operator=(const QPixmap &);

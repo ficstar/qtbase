@@ -88,7 +88,6 @@ static inline Q_DECL_UNUSED const QMetaObjectPrivate *priv(const uint* data)
 class QMetaMethodBuilderPrivate
 {
 public:
-    QMetaMethodBuilderPrivate() {} // for QVector, don't use
     QMetaMethodBuilderPrivate
             (QMetaMethod::MethodType _methodType,
              const QByteArray& _signature,
@@ -140,12 +139,10 @@ public:
         return signature.left(qMax(signature.indexOf('('), 0));
     }
 };
-Q_DECLARE_TYPEINFO(QMetaMethodBuilderPrivate, Q_MOVABLE_TYPE);
 
 class QMetaPropertyBuilderPrivate
 {
 public:
-    QMetaPropertyBuilderPrivate() {} // for QVector, don't use
     QMetaPropertyBuilderPrivate
             (const QByteArray& _name, const QByteArray& _type, int notifierIdx=-1,
              int _revision = 0)
@@ -179,12 +176,10 @@ public:
             flags &= ~f;
     }
 };
-Q_DECLARE_TYPEINFO(QMetaPropertyBuilderPrivate, Q_MOVABLE_TYPE);
 
 class QMetaEnumBuilderPrivate
 {
 public:
-    QMetaEnumBuilderPrivate() {} // for QVector, don't use
     QMetaEnumBuilderPrivate(const QByteArray& _name)
         : name(_name), isFlag(false)
     {
@@ -193,9 +188,8 @@ public:
     QByteArray name;
     bool isFlag;
     QList<QByteArray> keys;
-    QVector<int> values;
+    QList<int> values;
 };
-Q_DECLARE_TYPEINFO(QMetaEnumBuilderPrivate, Q_MOVABLE_TYPE);
 
 class QMetaObjectBuilderPrivate
 {
@@ -213,12 +207,12 @@ public:
     QByteArray className;
     const QMetaObject *superClass;
     QMetaObjectBuilder::StaticMetacallFunction staticMetacallFunction;
-    QVector<QMetaMethodBuilderPrivate> methods;
-    QVector<QMetaMethodBuilderPrivate> constructors;
-    QVector<QMetaPropertyBuilderPrivate> properties;
+    QList<QMetaMethodBuilderPrivate> methods;
+    QList<QMetaMethodBuilderPrivate> constructors;
+    QList<QMetaPropertyBuilderPrivate> properties;
     QList<QByteArray> classInfoNames;
     QList<QByteArray> classInfoValues;
-    QVector<QMetaEnumBuilderPrivate> enumerators;
+    QList<QMetaEnumBuilderPrivate> enumerators;
     QList<const QMetaObject *> relatedMetaObjects;
     int flags;
 };
@@ -1155,7 +1149,7 @@ void QMetaStringTable::writeBlob(char *out) const
 // Returns the sum of all parameters (including return type) for the given
 // \a methods. This is needed for calculating the size of the methods'
 // parameter type/name meta-data.
-static int aggregateParameterCount(const QVector<QMetaMethodBuilderPrivate> &methods)
+static int aggregateParameterCount(const QList<QMetaMethodBuilderPrivate> &methods)
 {
     int sum = 0;
     for (int i = 0; i < methods.size(); ++i)
@@ -1336,7 +1330,7 @@ static int buildMetaObject(QMetaObjectBuilderPrivate *d, char *buf,
     Q_ASSERT(!buf || dataIndex == pmeta->methodData + d->methods.size() * 5
              + (hasRevisionedMethods ? d->methods.size() : 0));
     for (int x = 0; x < 2; ++x) {
-        QVector<QMetaMethodBuilderPrivate> &methods = (x == 0) ? d->methods : d->constructors;
+        QList<QMetaMethodBuilderPrivate> &methods = (x == 0) ? d->methods : d->constructors;
         for (index = 0; index < methods.size(); ++index) {
             QMetaMethodBuilderPrivate *method = &(methods[index]);
             QList<QByteArray> paramTypeNames = method->parameterTypes();

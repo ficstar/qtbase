@@ -127,7 +127,6 @@ struct QConfFileCustomFormat
     QSettings::WriteFunc writeFunc;
     Qt::CaseSensitivity caseSensitivity;
 };
-Q_DECLARE_TYPEINFO(QConfFileCustomFormat, Q_MOVABLE_TYPE);
 
 typedef QHash<QString, QConfFile *> ConfFileHash;
 typedef QCache<QString, QConfFile> ConfFileCache;
@@ -300,7 +299,7 @@ QSettingsPrivate *QSettingsPrivate::create(const QString &fileName, QSettings::F
 }
 #endif
 
-void QSettingsPrivate::processChild(QStringRef key, ChildSpec spec, QStringList &result)
+void QSettingsPrivate::processChild(QString key, ChildSpec spec, QMap<QString, QString> &result)
 {
     if (spec != AllKeys) {
         int slashPos = key.indexOf(QLatin1Char('/'));
@@ -313,7 +312,7 @@ void QSettingsPrivate::processChild(QStringRef key, ChildSpec spec, QStringList 
             key.truncate(slashPos);
         }
     }
-    result.append(key.toString());
+    result.insert(key, QString());
 }
 
 void QSettingsPrivate::beginGroupOrArray(const QSettingsGroup &group)
@@ -358,7 +357,6 @@ void QSettingsPrivate::requestUpdate()
 QStringList QSettingsPrivate::variantListToStringList(const QVariantList &l)
 {
     QStringList result;
-    result.reserve(l.count());
     QVariantList::const_iterator it = l.constBegin();
     for (; it != l.constEnd(); ++it)
         result.append(variantToString(*it));
@@ -376,9 +374,7 @@ QVariant QSettingsPrivate::stringListToVariantList(const QStringList &l)
                 outStringList[i].remove(0, 1);
             } else {
                 QVariantList variantList;
-                const int stringCount = l.count();
-                variantList.reserve(stringCount);
-                for (int j = 0; j < stringCount; ++j)
+                for (int j = 0; j < l.count(); ++j)
                     variantList.append(stringToVariant(l.at(j)));
                 return variantList;
             }
@@ -453,23 +449,14 @@ QString QSettingsPrivate::variantToString(const QVariant &v)
 
         default: {
 #ifndef QT_NO_DATASTREAM
-            QDataStream::Version version;
-            const char *typeSpec;
-            if (v.type() == QVariant::DateTime) {
-                version = QDataStream::Qt_5_6;
-                typeSpec = "@DateTime(";
-            } else {
-                version = QDataStream::Qt_4_0;
-                typeSpec = "@Variant(";
-            }
             QByteArray a;
             {
                 QDataStream s(&a, QIODevice::WriteOnly);
-                s.setVersion(version);
+                s.setVersion(QDataStream::Qt_4_0);
                 s << v;
             }
 
-            result = QLatin1String(typeSpec);
+            result = QLatin1String("@Variant(");
             result += QString::fromLatin1(a.constData(), a.size());
             result += QLatin1Char(')');
 #else
@@ -488,22 +475,12 @@ QVariant QSettingsPrivate::stringToVariant(const QString &s)
     if (s.startsWith(QLatin1Char('@'))) {
         if (s.endsWith(QLatin1Char(')'))) {
             if (s.startsWith(QLatin1String("@ByteArray("))) {
-                return QVariant(s.midRef(11, s.size() - 12).toLatin1());
-            } else if (s.startsWith(QLatin1String("@Variant("))
-                       || s.startsWith(QLatin1String("@DateTime("))) {
+                return QVariant(s.toLatin1().mid(11, s.size() - 12));
+            } else if (s.startsWith(QLatin1String("@Variant("))) {
 #ifndef QT_NO_DATASTREAM
-                QDataStream::Version version;
-                int offset;
-                if (s.at(1) == QLatin1Char('D')) {
-                    version = QDataStream::Qt_5_6;
-                    offset = 10;
-                } else {
-                    version = QDataStream::Qt_4_0;
-                    offset = 9;
-                }
-                QByteArray a = s.midRef(offset).toLatin1();
+                QByteArray a(s.toLatin1().mid(9));
                 QDataStream stream(&a, QIODevice::ReadOnly);
-                stream.setVersion(version);
+                stream.setVersion(QDataStream::Qt_4_0);
                 QVariant result;
                 stream >> result;
                 return result;
@@ -632,9 +609,8 @@ void QSettingsPrivate::iniEscapedString(const QString &str, QByteArray &result, 
     int startPos = result.size();
 
     result.reserve(startPos + str.size() * 3 / 2);
-    const QChar *unicode = str.unicode();
     for (i = 0; i < str.size(); ++i) {
-        uint ch = unicode[i].unicode();
+        uint ch = str.at(i).unicode();
         if (ch == ';' || ch == ',' || ch == '=')
             needsQuotes = true;
 
@@ -688,7 +664,7 @@ void QSettingsPrivate::iniEscapedString(const QString &str, QByteArray &result, 
 #ifndef QT_NO_TEXTCODEC
             } else if (useCodec) {
                 // slow
-                result += codec->fromUnicode(&unicode[i], 1);
+                result += codec->fromUnicode(str.at(i));
 #endif
             } else {
                 result += (char)ch;
@@ -1076,12 +1052,12 @@ static void initDefaultPaths(QMutexLocker *locker)
         // Non XDG platforms (OS X, iOS, Blackberry, Android...) have used this code path erroneously
         // for some time now. Moving away from that would require migrating existing settings.
         QString userPath;
-        QByteArray env = qgetenv("XDG_CONFIG_HOME");
-        if (env.isEmpty()) {
+        char *env = getenv("XDG_CONFIG_HOME");
+        if (env == 0) {
             userPath = QDir::homePath();
             userPath += QLatin1Char('/');
             userPath += QLatin1String(".config");
-        } else if (env.startsWith('/')) {
+        } else if (*env == '/') {
             userPath = QFile::decodeName(env);
         } else {
             userPath = QDir::homePath();
@@ -1293,7 +1269,7 @@ bool QConfFileSettingsPrivate::get(const QString &key, QVariant *value) const
 
 QStringList QConfFileSettingsPrivate::children(const QString &prefix, ChildSpec spec) const
 {
-    QStringList result;
+    QMap<QString, QString> result;
     ParsedSettingsMap::const_iterator j;
 
     QSettingsKey thePrefix(prefix, caseSensitivity);
@@ -1313,14 +1289,14 @@ QStringList QConfFileSettingsPrivate::children(const QString &prefix, ChildSpec 
                     &confFile->originalKeys)->lowerBound( thePrefix);
             while (j != confFile->originalKeys.constEnd() && j.key().startsWith(thePrefix)) {
                 if (!confFile->removedKeys.contains(j.key()))
-                    processChild(j.key().originalCaseKey().midRef(startPos), spec, result);
+                    processChild(j.key().originalCaseKey().mid(startPos), spec, result);
                 ++j;
             }
 
             j = const_cast<const ParsedSettingsMap *>(
                     &confFile->addedKeys)->lowerBound(thePrefix);
             while (j != confFile->addedKeys.constEnd() && j.key().startsWith(thePrefix)) {
-                processChild(j.key().originalCaseKey().midRef(startPos), spec, result);
+                processChild(j.key().originalCaseKey().mid(startPos), spec, result);
                 ++j;
             }
 
@@ -1328,10 +1304,7 @@ QStringList QConfFileSettingsPrivate::children(const QString &prefix, ChildSpec 
                 break;
         }
     }
-    std::sort(result.begin(), result.end());
-    result.erase(std::unique(result.begin(), result.end()),
-                 result.end());
-    return result;
+    return result.keys();
 }
 
 void QConfFileSettingsPrivate::clear()
@@ -1410,17 +1383,13 @@ void QConfFileSettingsPrivate::syncConfFile(int confFileNo)
         Concurrent read and write are not a problem because the writing operation is atomic.
     */
     QLockFile lockFile(confFile->name + QLatin1String(".lock"));
-#endif
     if (!readOnly) {
-        if (!confFile->isWritable()
-#ifndef QT_BOOTSTRAPPED
-            || !lockFile.lock()
-#endif
-            ) {
+        if (!confFile->isWritable() || !lockFile.lock() ) {
             setStatus(QSettings::AccessError);
             return;
         }
     }
+#endif
 
     /*
         We hold the lock. Let's reread the file if it has changed
@@ -1786,7 +1755,6 @@ public:
 
     int position;
 };
-Q_DECLARE_TYPEINFO(QSettingsIniKey, Q_MOVABLE_TYPE);
 
 static bool operator<(const QSettingsIniKey &k1, const QSettingsIniKey &k2)
 {
@@ -1951,7 +1919,7 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
     Users normally expect an application to remember its settings
     (window sizes and positions, options, etc.) across sessions. This
     information is often stored in the system registry on Windows,
-    and in property list files on \macos and iOS. On Unix systems, in the
+    and in property list files on OS X and iOS. On Unix systems, in the
     absence of a standard, many applications (including the KDE
     applications) use INI text files.
 
@@ -1996,8 +1964,8 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
     \snippet settings/settings.cpp 4
 
     (Here, we also specify the organization's Internet domain. When
-    the Internet domain is set, it is used on \macos and iOS instead of the
-    organization name, since \macos and iOS applications conventionally use
+    the Internet domain is set, it is used on OS X and iOS instead of the
+    organization name, since OS X and iOS applications conventionally use
     Internet domains to identify themselves. If no domain is set, a
     fake domain is derived from the organization name. See the
     \l{Platform-Specific Notes} below for details.)
@@ -2055,7 +2023,7 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
 
     Setting keys can contain any Unicode characters. The Windows
     registry and INI files use case-insensitive keys, whereas the
-    CFPreferences API on \macos and iOS uses case-sensitive keys. To
+    CFPreferences API on OS X and iOS uses case-sensitive keys. To
     avoid portability problems, follow these simple rules:
 
     \list 1
@@ -2229,7 +2197,7 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
     \li \c{/etc/xdg/MySoft.conf}
     \endlist
 
-    On \macos versions 10.2 and 10.3, these files are used by
+    On Mac OS X versions 10.2 and 10.3, these files are used by
     default:
 
     \list 1
@@ -2258,7 +2226,7 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
     in the application's home directory.
 
     If the file format is IniFormat, the following files are
-    used on Unix, \macos, and iOS:
+    used on Unix, OS X, and iOS:
 
     \list 1
     \li \c{$HOME/.config/MySoft/Star Runner.ini} (Qt for Embedded Linux: \c{$HOME/Settings/MySoft/Star Runner.ini})
@@ -2270,27 +2238,23 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
     On Windows, the following files are used:
 
     \list 1
-    \li \c{CSIDL_APPDATA\MySoft\Star Runner.ini}
-    \li \c{CSIDL_APPDATA\MySoft.ini}
-    \li \c{CSIDL_COMMON_APPDATA\MySoft\Star Runner.ini}
-    \li \c{CSIDL_COMMON_APPDATA\MySoft.ini}
+    \li \c{%APPDATA%\MySoft\Star Runner.ini}
+    \li \c{%APPDATA%\MySoft.ini}
+    \li \c{%COMMON_APPDATA%\MySoft\Star Runner.ini}
+    \li \c{%COMMON_APPDATA%\MySoft.ini}
     \endlist
 
-    The identifiers prefixed by \c{CSIDL_} are special item ID lists to be passed
-    to the Win32 API function \c{SHGetSpecialFolderPath()} to obtain the
-    corresponding path.
-
-    \c{CSIDL_APPDATA} usually points to \tt{C:\\Users\\\e{User Name}\\AppData\\Roaming},
-    also shown by the environment variable \c{%APPDATA%}.
-
-    \c{CSIDL_COMMON_APPDATA} usually points to \tt{C:\\ProgramData}.
+    The \c %APPDATA% path is usually \tt{C:\\Documents and
+    Settings\\\e{User Name}\\Application Data}; the \c
+    %COMMON_APPDATA% path is usually \tt{C:\\Documents and
+    Settings\\All Users\\Application Data}.
 
     On BlackBerry only a single file is used (see \l{Platform Limitations}).
     If the file format is IniFormat, this is "Settings/MySoft/Star Runner.ini"
     in the application's home directory.
 
     The paths for the \c .ini and \c .conf files can be changed using
-    setPath(). On Unix, \macos, and iOS the user can override them by
+    setPath(). On Unix, OS X, and iOS the user can override them by
     setting the \c XDG_CONFIG_HOME environment variable; see
     setPath() for details.
 
@@ -2307,7 +2271,7 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
     You can then use the QSettings object to read and write settings
     in the file.
 
-    On \macos and iOS, you can access property list \c .plist files by passing
+    On OS X and iOS, you can access property list \c .plist files by passing
     QSettings::NativeFormat as second argument. For example:
 
     \snippet code/src_corelib_io_qsettings.cpp 3
@@ -2361,13 +2325,13 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
         limitations is to store the settings using the IniFormat
         instead of the NativeFormat.
 
-    \li  On \macos and iOS, allKeys() will return some extra keys for global
+    \li  On OS X and iOS, allKeys() will return some extra keys for global
         settings that apply to all applications. These keys can be
         read using value() but cannot be changed, only shadowed.
         Calling setFallbacksEnabled(false) will hide these global
         settings.
 
-    \li  On \macos and iOS, the CFPreferences API used by QSettings expects
+    \li  On OS X and iOS, the CFPreferences API used by QSettings expects
         Internet domain names rather than organization names. To
         provide a uniform API, QSettings derives a fake domain name
         from the organization name (unless the organization name
@@ -2384,7 +2348,7 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
 
         \snippet code/src_corelib_io_qsettings.cpp 7
 
-    \li On \macos, permissions to access settings not belonging to the
+    \li On OS X, permissions to access settings not belonging to the
        current user (i.e. SystemScope) have changed with 10.7 (Lion). Prior to
        that version, users having admin rights could access these. For 10.7 and
        10.8 (Mountain Lion), only root can. However, 10.9 (Mavericks) changes
@@ -2424,7 +2388,7 @@ void QConfFileSettingsPrivate::ensureSectionParsed(QConfFile *confFile,
     \value NativeFormat  Store the settings using the most
                          appropriate storage format for the platform.
                          On Windows, this means the system registry;
-                         on \macos and iOS, this means the CFPreferences
+                         on OS X and iOS, this means the CFPreferences
                          API; on Unix, this means textual
                          configuration files in INI format.
     \value IniFormat  Store the settings in INI files.
@@ -2587,7 +2551,7 @@ QSettings::QSettings(Format format, Scope scope, const QString &organization,
 
     If \a format is QSettings::NativeFormat, the meaning of \a
     fileName depends on the platform. On Unix, \a fileName is the
-    name of an INI file. On \macos and iOS, \a fileName is the name of a
+    name of an INI file. On OS X and iOS, \a fileName is the name of a
     \c .plist file. On Windows, \a fileName is a path in the system
     registry.
 
@@ -2640,7 +2604,7 @@ QSettings::QSettings(const QString &fileName, Format format, QObject *parent)
     called, the QSettings object will not be able to read or write
     any settings, and status() will return AccessError.
 
-    On \macos and iOS, if both a name and an Internet domain are specified
+    On OS X and iOS, if both a name and an Internet domain are specified
     for the organization, the domain is preferred over the name. On
     other platforms, the name is preferred over the domain.
 
@@ -3156,7 +3120,7 @@ bool QSettings::isWritable() const
   exists, the previous value is overwritten.
 
   Note that the Windows registry and INI files use case-insensitive
-  keys, whereas the CFPreferences API on \macos and iOS uses
+  keys, whereas the CFPreferences API on OS X and iOS uses
   case-sensitive keys. To avoid portability problems, see the
   \l{Section and Key Syntax} rules.
 
@@ -3195,7 +3159,7 @@ void QSettings::setValue(const QString &key, const QVariant &value)
     \snippet code/src_corelib_io_qsettings.cpp 25
 
     Note that the Windows registry and INI files use case-insensitive
-    keys, whereas the CFPreferences API on \macos and iOS uses
+    keys, whereas the CFPreferences API on OS X and iOS uses
     case-sensitive keys. To avoid portability problems, see the
     \l{Section and Key Syntax} rules.
 
@@ -3230,7 +3194,7 @@ void QSettings::remove(const QString &key)
     relative to that group.
 
     Note that the Windows registry and INI files use case-insensitive
-    keys, whereas the CFPreferences API on \macos and iOS uses
+    keys, whereas the CFPreferences API on OS X and iOS uses
     case-sensitive keys. To avoid portability problems, see the
     \l{Section and Key Syntax} rules.
 
@@ -3292,7 +3256,7 @@ bool QSettings::event(QEvent *event)
     returned.
 
     Note that the Windows registry and INI files use case-insensitive
-    keys, whereas the CFPreferences API on \macos and iOS uses
+    keys, whereas the CFPreferences API on OS X and iOS uses
     case-sensitive keys. To avoid portability problems, see the
     \l{Section and Key Syntax} rules.
 
@@ -3389,24 +3353,24 @@ void QSettings::setUserIniPath(const QString &dir)
 
     \table
     \header \li Platform         \li Format                       \li Scope       \li Path
-    \row    \li{1,2} Windows     \li{1,2} IniFormat               \li UserScope   \li \c CSIDL_APPDATA
-    \row                                                        \li SystemScope \li \c CSIDL_COMMON_APPDATA
+    \row    \li{1,2} Windows     \li{1,2} IniFormat               \li UserScope   \li \c %APPDATA%
+    \row                                                        \li SystemScope \li \c %COMMON_APPDATA%
     \row    \li{1,2} Unix        \li{1,2} NativeFormat, IniFormat \li UserScope   \li \c $HOME/.config
     \row                                                        \li SystemScope \li \c /etc/xdg
     \row    \li{1,2} Qt for Embedded Linux \li{1,2} NativeFormat, IniFormat \li UserScope   \li \c $HOME/Settings
     \row                                                        \li SystemScope \li \c /etc/xdg
-    \row    \li{1,2} \macos and iOS   \li{1,2} IniFormat               \li UserScope   \li \c $HOME/.config
+    \row    \li{1,2} OS X and iOS   \li{1,2} IniFormat               \li UserScope   \li \c $HOME/.config
     \row                                                        \li SystemScope \li \c /etc/xdg
     \endtable
 
-    The default UserScope paths on Unix, \macos, and iOS (\c
+    The default UserScope paths on Unix, OS X, and iOS (\c
     $HOME/.config or $HOME/Settings) can be overridden by the user by setting the
     \c XDG_CONFIG_HOME environment variable. The default SystemScope
-    paths on Unix, \macos, and iOS (\c /etc/xdg) can be overridden when
+    paths on Unix, OS X, and iOS (\c /etc/xdg) can be overridden when
     building the Qt library using the \c configure script's \c
     -sysconfdir flag (see QLibraryInfo for details).
 
-    Setting the NativeFormat paths on Windows, \macos, and iOS has no
+    Setting the NativeFormat paths on Windows, OS X, and iOS has no
     effect.
 
     \warning This function doesn't affect existing QSettings objects.

@@ -115,8 +115,6 @@ int QBlittablePlatformPixmap::metric(QPaintDevice::PaintDeviceMetric metric) con
         return qt_defaultDpiY();
     case QPaintDevice::PdmDevicePixelRatio:
         return devicePixelRatio();
-    case QPaintDevice::PdmDevicePixelRatioScaled:
-        return devicePixelRatio() * QPaintDevice::devicePixelRatioFScale();
     default:
         qWarning("QRasterPlatformPixmap::metric(): Unhandled metric type %d", metric);
         break;
@@ -183,7 +181,7 @@ void QBlittablePlatformPixmap::fromImage(const QImage &image,
         correctFormatPic = correctFormatPic.convertToFormat(thisImg->format(), flags);
 
     uchar *mem = thisImg->bits();
-    const uchar *bits = correctFormatPic.constBits();
+    const uchar *bits = correctFormatPic.bits();
     int bytesCopied = 0;
     while (bytesCopied < correctFormatPic.byteCount()) {
         memcpy(mem,bits,correctFormatPic.bytesPerLine());

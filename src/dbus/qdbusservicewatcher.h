@@ -37,7 +37,7 @@
 #include <QtCore/qobject.h>
 #include <QtDBus/qdbusmacros.h>
 
-#if !defined(QT_NO_DBUS) && !defined(QT_NO_QOBJECT)
+#ifndef QT_NO_DBUS
 
 QT_BEGIN_NAMESPACE
 
@@ -58,9 +58,9 @@ public:
     };
     Q_DECLARE_FLAGS(WatchMode, WatchModeFlag)
 
-    explicit QDBusServiceWatcher(QObject *parent = Q_NULLPTR);
+    explicit QDBusServiceWatcher(QObject *parent = 0);
     QDBusServiceWatcher(const QString &service, const QDBusConnection &connection,
-                        WatchMode watchMode = WatchForOwnerChange, QObject *parent = Q_NULLPTR);
+                        WatchMode watchMode = WatchForOwnerChange, QObject *parent = 0);
     ~QDBusServiceWatcher();
 
     QStringList watchedServices() const;
@@ -89,5 +89,5 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(QDBusServiceWatcher::WatchMode)
 
 QT_END_NAMESPACE
 
-#endif // QT_NO_DBUS || QT_NO_QOBJECT
+#endif // QT_NO_DBUS
 #endif // QDBUSSERVICEWATCHER_H

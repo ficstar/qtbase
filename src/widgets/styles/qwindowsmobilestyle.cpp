@@ -4682,8 +4682,8 @@ void QWindowsMobileStyle::drawPrimitive(PrimitiveElement element, const QStyleOp
 #ifndef QT_NO_PROGRESSBAR
     case PE_IndicatorProgressChunk: {
             bool vertical = false;
-            if (const QStyleOptionProgressBar *pb = qstyleoption_cast<const QStyleOptionProgressBar *>(option))
-                vertical = pb->orientation == Qt::Vertical;
+            if (const QStyleOptionProgressBarV2 *pb2 = qstyleoption_cast<const QStyleOptionProgressBarV2 *>(option))
+                vertical = (pb2->orientation == Qt::Vertical);
             if (!vertical) {
                 painter->fillRect(option->rect.x(), option->rect.y()+2, option->rect.width(), option->rect.height()-4,
                             option->palette.brush(QPalette::Highlight));
@@ -4806,7 +4806,8 @@ void QWindowsMobileStyle::drawPrimitive(PrimitiveElement element, const QStyleOp
     case PE_FrameGroupBox:
         if (const QStyleOptionFrame *frame = qstyleoption_cast<const QStyleOptionFrame *>(option)) {
 
-            if (!(frame->features & QStyleOptionFrame::Flat)) {
+            const QStyleOptionFrameV2 *frame2 = qstyleoption_cast<const QStyleOptionFrameV2 *>(option);
+            if (frame2 && !(frame2->features & QStyleOptionFrameV2::Flat)) {
               QPen oldPen = painter->pen();
               QRect r = frame->rect;
               painter->setPen(frame->palette.shadow().color());
@@ -5677,8 +5678,9 @@ void QWindowsMobileStyle::drawControl(ControlElement element, const QStyleOption
 #ifndef QT_NO_DOCKWIDGET
     case CE_DockWidgetTitle:
         if (const QStyleOptionDockWidget *dwOpt = qstyleoption_cast<const QStyleOptionDockWidget *>(option)) {
-
-            const bool verticalTitleBar = dwOpt->verticalTitleBar;
+            const QStyleOptionDockWidgetV2 *v2
+                = qstyleoption_cast<const QStyleOptionDockWidgetV2*>(option);
+            bool verticalTitleBar = v2 == 0 ? false : v2->verticalTitleBar;
 
             QRect rect = dwOpt->rect;
             QRect r = rect;
@@ -6105,7 +6107,8 @@ void QWindowsMobileStyle::drawComplexControl(ComplexControl control, const QStyl
                 buttonFlags |= State_Sunken;
             if (toolbutton->activeSubControls & SC_ToolButtonMenu)
                 menuFlags |= State_On;
-            QStyleOption tool = *toolbutton;
+            QStyleOption tool(0);
+            tool.palette = toolbutton->palette;
             if (toolbutton->subControls & SC_ToolButton) {
                     tool.rect = button;
                     tool.state = buttonFlags;
@@ -6114,11 +6117,14 @@ void QWindowsMobileStyle::drawComplexControl(ComplexControl control, const QStyl
             if (toolbutton->subControls & SC_ToolButtonMenu) {
                 tool.rect = menuarea;
                 tool.state = buttonFlags & State_Enabled;
-                QStyleOption toolMenu = *toolbutton;
+                QStyleOption toolMenu(0);
+                toolMenu = *toolbutton;
                 toolMenu.state = menuFlags;
                 if (buttonFlags & State_Sunken)
                   proxy()->drawPrimitive(PE_PanelButtonTool, &toolMenu, painter, widget);
-                QStyleOption arrowOpt = toolMenu;
+                QStyleOption arrowOpt(0);
+                arrowOpt.rect = tool.rect;
+                arrowOpt.palette = tool.palette;
                 State flags = State_None;
                 if (menuFlags & State_Enabled)
                     flags |= State_Enabled;
@@ -6162,7 +6168,7 @@ void QWindowsMobileStyle::drawComplexControl(ComplexControl control, const QStyl
             QRect textRect = proxy()->subControlRect(CC_GroupBox, &groupBoxFont, SC_GroupBoxLabel, widget);
             QRect checkBoxRect = proxy()->subControlRect(CC_GroupBox, option, SC_GroupBoxCheckBox, widget).adjusted(0,0,0,0);
             if (groupBox->subControls & QStyle::SC_GroupBoxFrame) {
-                QStyleOptionFrame frame;
+                QStyleOptionFrameV2 frame;
                 frame.QStyleOption::operator=(*groupBox);
                 frame.features = groupBox->features;
                 frame.lineWidth = groupBox->lineWidth;
@@ -6240,8 +6246,9 @@ void QWindowsMobileStyle::drawComplexControl(ComplexControl control, const QStyl
                 flags |= State_Enabled;
             if (option->state & State_On)
                 flags |= State_Sunken;
-            QStyleOption arrowOpt = *cmb;
+            QStyleOption arrowOpt(0);
             arrowOpt.rect = ar;
+            arrowOpt.palette = cmb->palette;
             arrowOpt.state = flags;
             proxy()->drawPrimitive(PrimitiveElement(PE_IndicatorArrowDownBig), &arrowOpt, painter, widget);
             if (cmb->subControls & SC_ComboBoxEditField) {
@@ -6793,8 +6800,8 @@ QRect QWindowsMobileStyle::subControlRect(ComplexControl control, const QStyleOp
                 QFontMetrics fontMetrics = groupBox->fontMetrics;
                 int h = fontMetrics.height();
                 int textWidth = fontMetrics.size(Qt::TextShowMnemonic, groupBox->text + QLatin1Char(' ')).width();
-                const int margX = (groupBox->features & QStyleOptionFrame::Flat) ? 0 : 2;
-                const int margY = (groupBox->features & QStyleOptionFrame::Flat) ? 0 : 2;
+                int margX = (groupBox->features & QStyleOptionFrameV2::Flat) ? 0 : 2;
+                int margY = (groupBox->features & QStyleOptionFrameV2::Flat) ? 0 : 2;
                 rect = groupBox->rect.adjusted(margX, margY, -margX, 0);
                 if (groupBox->text.size())
                     rect.setHeight(h);

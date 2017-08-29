@@ -34,6 +34,8 @@
 
 #include "qcupsprintersupport_p.h"
 
+#ifndef QT_NO_PRINTER
+
 #include "qcupsprintengine_p.h"
 #include "qppdprintdevice.h"
 #include <private/qprinterinfo_p.h>
@@ -78,7 +80,6 @@ QStringList QCupsPrinterSupport::availablePrintDeviceIds() const
     QStringList list;
     cups_dest_t *dests;
     int count = cupsGetDests(&dests);
-    list.reserve(count);
     for (int i = 0; i < count; ++i) {
         QString printerId = QString::fromLocal8Bit(dests[i].name);
         if (dests[i].instance)
@@ -108,3 +109,5 @@ QString QCupsPrinterSupport::defaultPrintDeviceId() const
 }
 
 QT_END_NAMESPACE
+
+#endif // QT_NO_PRINTER

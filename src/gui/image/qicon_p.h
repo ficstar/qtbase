@@ -71,7 +71,6 @@ public:
     QAtomicInt ref;
     int serialNum;
     int detach_no;
-    bool is_mask;
 };
 
 

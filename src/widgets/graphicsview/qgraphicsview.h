@@ -108,8 +108,8 @@ public:
     };
     Q_DECLARE_FLAGS(OptimizationFlags, OptimizationFlag)
 
-    QGraphicsView(QWidget *parent = Q_NULLPTR);
-    QGraphicsView(QGraphicsScene *scene, QWidget *parent = Q_NULLPTR);
+    QGraphicsView(QWidget *parent = 0);
+    QGraphicsView(QGraphicsScene *scene, QWidget *parent = 0);
     ~QGraphicsView();
 
     QSize sizeHint() const Q_DECL_OVERRIDE;
@@ -230,7 +230,7 @@ protected Q_SLOTS:
     void setupViewport(QWidget *widget) Q_DECL_OVERRIDE;
 
 protected:
-    QGraphicsView(QGraphicsViewPrivate &, QWidget *parent = Q_NULLPTR);
+    QGraphicsView(QGraphicsViewPrivate &, QWidget *parent = 0);
     bool event(QEvent *event) Q_DECL_OVERRIDE;
     bool viewportEvent(QEvent *event) Q_DECL_OVERRIDE;
 

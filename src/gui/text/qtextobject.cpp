@@ -33,7 +33,6 @@
 
 #include "qtextobject.h"
 #include "qtextobject_p.h"
-#include "qtextcursor_p.h"
 #include "qtextdocument.h"
 #include "qtextformat_p.h"
 #include "qtextdocument_p.h"
@@ -412,12 +411,9 @@ QTextFrame::QTextFrame(QTextDocument *doc)
 {
 }
 
+// ### DOC: What does this do to child frames?
 /*!
-    Destroys the text frame.
-
-    \warning Text frames are owned by the document, so you should
-    never destroy them yourself. In order to remove a frame from
-    its document, remove its contents using a \c QTextCursor.
+    Destroys the frame, and removes it from the document's layout.
 */
 QTextFrame::~QTextFrame()
 {
@@ -465,7 +461,7 @@ QTextFrame *QTextFrame::parentFrame() const
 QTextCursor QTextFrame::firstCursorPosition() const
 {
     Q_D(const QTextFrame);
-    return QTextCursorPrivate::fromPosition(d->pieceTable, firstPosition());
+    return QTextCursor(d->pieceTable, firstPosition());
 }
 
 /*!
@@ -476,7 +472,7 @@ QTextCursor QTextFrame::firstCursorPosition() const
 QTextCursor QTextFrame::lastCursorPosition() const
 {
     Q_D(const QTextFrame);
-    return QTextCursorPrivate::fromPosition(d->pieceTable, lastPosition());
+    return QTextCursor(d->pieceTable, lastPosition());
 }
 
 /*!

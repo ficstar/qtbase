@@ -114,7 +114,7 @@ public:
 
     Q_DECLARE_FLAGS(WizardOptions, WizardOption)
 
-    explicit QWizard(QWidget *parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags());
+    explicit QWizard(QWidget *parent = 0, Qt::WindowFlags flags = 0);
     ~QWizard();
 
     int addPage(QWizardPage *page);
@@ -182,7 +182,7 @@ protected:
     void resizeEvent(QResizeEvent *event) Q_DECL_OVERRIDE;
     void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
 #ifdef Q_OS_WIN
-    bool nativeEvent(const QByteArray &eventType, void *message, long *result) Q_DECL_OVERRIDE;
+    bool nativeEvent(const QByteArray &eventType, void * message, long * result);
 #endif
     void done(int result) Q_DECL_OVERRIDE;
     virtual void initializePage(int id);
@@ -209,7 +209,7 @@ class Q_WIDGETS_EXPORT QWizardPage : public QWidget
     Q_PROPERTY(QString subTitle READ subTitle WRITE setSubTitle)
 
 public:
-    explicit QWizardPage(QWidget *parent = Q_NULLPTR);
+    explicit QWizardPage(QWidget *parent = 0);
     ~QWizardPage();
 
     void setTitle(const QString &title);
@@ -237,8 +237,8 @@ Q_SIGNALS:
 protected:
     void setField(const QString &name, const QVariant &value);
     QVariant field(const QString &name) const;
-    void registerField(const QString &name, QWidget *widget, const char *property = Q_NULLPTR,
-                       const char *changedSignal = Q_NULLPTR);
+    void registerField(const QString &name, QWidget *widget, const char *property = 0,
+                       const char *changedSignal = 0);
     QWizard *wizard() const;
 
 private:

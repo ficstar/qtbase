@@ -139,11 +139,6 @@ public:
     lock calls unlock(). A non-blocking alternative to lock() is
     tryLock().
 
-    QMutex is optimized to be fast in the non-contended case. A non-recursive
-    QMutex will not allocate memory if there is no contention on that mutex.
-    It is constructed and destroyed with almost no overhead,
-    which means it is fine to have many mutexes as part of other classes.
-
     \sa QMutexLocker, QReadWriteLock, QSemaphore, QWaitCondition
 */
 
@@ -169,8 +164,6 @@ public:
     corresponding number of unlock() calls have been made. Otherwise
     a thread may only lock a mutex once. The default is
     QMutex::NonRecursive.
-
-    Recursive mutexes are slower and take more memory than non-recursive ones.
 
     \sa lock(), unlock()
 */
@@ -571,11 +564,27 @@ const int FreeListConstants::Sizes[FreeListConstants::BlockCount] = {
 
 typedef QFreeList<QMutexPrivate, FreeListConstants> FreeList;
 // We cannot use Q_GLOBAL_STATIC because it uses QMutex
-static FreeList freeList_;
+#if defined(Q_COMPILER_THREADSAFE_STATICS)
 FreeList *freelist()
 {
-    return &freeList_;
+    static FreeList list;
+    return &list;
 }
+#else
+FreeList *freelist()
+{
+    static QAtomicPointer<FreeList> list;
+    FreeList *local = list.loadAcquire();
+    if (!local) {
+        local = new FreeList;
+        if (!list.testAndSetRelease(0, local)) {
+            delete local;
+            local = list.loadAcquire();
+        }
+    }
+    return local;
+}
+#endif
 }
 
 QMutexPrivate *QMutexPrivate::allocate()

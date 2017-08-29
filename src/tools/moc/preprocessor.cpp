@@ -50,7 +50,7 @@ QT_BEGIN_NAMESPACE
 static QByteArray cleaned(const QByteArray &input)
 {
     QByteArray result;
-    result.resize(input.size());
+    result.reserve(input.size());
     const char *data = input.constData();
     const char *end = input.constData() + input.size();
     char *output = result.data();
@@ -78,15 +78,13 @@ static QByteArray cleaned(const QByteArray &input)
                 if (data != end && (*(data + 1) == '\n' || (*data) == '\r')) {
                     ++newlines;
                     data += 1;
-                    if (data != end && *data != '\r')
+                    if (*data != '\r')
                         data += 1;
                     continue;
                 }
             } else if (*data == '\r' && *(data + 1) == '\n') { // reduce \r\n to \n
                 ++data;
             }
-            if (data == end)
-                break;
 
             char ch = *data;
             if (ch == '\r') // os9: replace \r with \n
@@ -188,8 +186,7 @@ Symbols Preprocessor::tokenize(const QByteArray& input, int lineNum, Preprocesso
                 token = keywords[state].ident;
 
             if (token == NOTOKEN) {
-                if (*data)
-                    ++data;
+                ++data;
                 // an error really, but let's ignore this input
                 // to not confuse moc later. However in pre-processor
                 // only mode let's continue.
@@ -362,6 +359,7 @@ Symbols Preprocessor::tokenize(const QByteArray& input, int lineNum, Preprocesso
                     ++data;
                     continue;
                 }
+
                 int nextindex = pp_keywords[state].next;
                 int next = 0;
                 if (*data == pp_keywords[state].defchar)
@@ -380,8 +378,7 @@ Symbols Preprocessor::tokenize(const QByteArray& input, int lineNum, Preprocesso
 
             switch (token) {
             case NOTOKEN:
-                if (*data)
-                    ++data;
+                ++data;
                 break;
             case PP_DEFINE:
                 mode = PrepareDefine;
@@ -532,7 +529,7 @@ Symbols Preprocessor::tokenize(const QByteArray& input, int lineNum, Preprocesso
     return symbols;
 }
 
-void Preprocessor::macroExpand(Symbols *into, Preprocessor *that, const Symbols &toExpand, int &index,
+Symbols Preprocessor::macroExpand(Preprocessor *that, Symbols &toExpand, int &index,
                                   int lineNum, bool one, const QSet<QByteArray> &excludeSymbols)
 {
     SymbolStack symbols;
@@ -542,18 +539,16 @@ void Preprocessor::macroExpand(Symbols *into, Preprocessor *that, const Symbols 
     sf.excludedSymbols = excludeSymbols;
     symbols.push(sf);
 
+    Symbols result;
     if (toExpand.isEmpty())
-        return;
+        return result;
 
     for (;;) {
         QByteArray macro;
         Symbols newSyms = macroExpandIdentifier(that, symbols, lineNum, &macro);
 
         if (macro.isEmpty()) {
-            // not a macro
-            Symbol s = symbols.symbol();
-            s.lineNum = lineNum;
-            *into += s;
+            result += newSyms;
         } else {
             SafeSymbols sf;
             sf.symbols = newSyms;
@@ -570,6 +565,8 @@ void Preprocessor::macroExpand(Symbols *into, Preprocessor *that, const Symbols 
         index = symbols.top().index;
     else
         index = toExpand.size();
+
+    return result;
 }
 
 
@@ -579,7 +576,10 @@ Symbols Preprocessor::macroExpandIdentifier(Preprocessor *that, SymbolStack &sym
 
     // not a macro
     if (s.token != PP_IDENTIFIER || !that->macros.contains(s) || symbols.dontReplaceSymbol(s.lexem())) {
-        return Symbols();
+        Symbols syms;
+        syms += s;
+        syms.last().lineNum = lineNum;
+        return syms;
     }
 
     const Macro &macro = that->macros.value(s);
@@ -600,7 +600,7 @@ Symbols Preprocessor::macroExpandIdentifier(Preprocessor *that, SymbolStack &sym
             syms.last().lineNum = lineNum;
             return syms;
         }
-        QVarLengthArray<Symbols, 5> arguments;
+        QList<Symbols> arguments;
         while (symbols.hasNext()) {
             Symbols argument;
             // strip leading space
@@ -653,7 +653,7 @@ Symbols Preprocessor::macroExpandIdentifier(Preprocessor *that, SymbolStack &sym
                     if (i == macro.symbols.size() - 1 || macro.symbols.at(i + 1).token != PP_HASHHASH) {
                         Symbols arg = arguments.at(index);
                         int idx = 1;
-                        macroExpand(&expansion, that, arg, idx, lineNum, false, symbols.excludeSymbols());
+                        expansion += macroExpand(that, arg, idx, lineNum, false, symbols.excludeSymbols());
                     } else {
                         expansion += arguments.at(index);
                     }
@@ -661,11 +661,8 @@ Symbols Preprocessor::macroExpandIdentifier(Preprocessor *that, SymbolStack &sym
                     expansion += s;
                 }
             } else if (mode == Hash) {
-                if (index < 0) {
+                if (index < 0 || index >= arguments.size()) {
                     that->error("'#' is not followed by a macro parameter");
-                    continue;
-                } else if (index >= arguments.size()) {
-                    that->error("Macro invoked with too few parameters for a use of '#'");
                     continue;
                 }
 
@@ -729,7 +726,7 @@ void Preprocessor::substituteUntilNewline(Symbols &substituted)
     while (hasNext()) {
         Token token = next();
         if (token == PP_IDENTIFIER) {
-            macroExpand(&substituted, this, symbols, index, symbol().lineNum, true);
+            substituted += macroExpand(this, symbols, index, symbol().lineNum, true);
         } else if (token == PP_DEFINED) {
             bool braces = test(PP_LPAREN);
             next(PP_IDENTIFIER);
@@ -1151,7 +1148,7 @@ void Preprocessor::preprocess(const QByteArray &filename, Symbols &preprocessed)
         }
         case PP_IDENTIFIER: {
             // substitute macros
-            macroExpand(&preprocessed, this, symbols, index, symbol().lineNum, true);
+            preprocessed += macroExpand(this, symbols, index, symbol().lineNum, true);
             continue;
         }
         case PP_HASH:
@@ -1252,6 +1249,7 @@ void Preprocessor::parseDefineArguments(Macro *m)
                     error("missing ')' in macro argument list");
                 break;
             } else if (!is_identifier(l.constData(), l.length())) {
+                qDebug() << l;
                 error("Unexpected character in macro argument list.");
             }
         }

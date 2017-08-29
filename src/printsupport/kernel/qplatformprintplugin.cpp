@@ -55,7 +55,6 @@ QPlatformPrinterSupportPlugin::~QPlatformPrinterSupportPlugin()
 
 static QPlatformPrinterSupport *printerSupport = 0;
 
-#ifndef QT_NO_LIBRARY
 static void cleanupPrinterSupport()
 {
 #ifndef QT_NO_PRINTER
@@ -63,7 +62,6 @@ static void cleanupPrinterSupport()
 #endif
     printerSupport = 0;
 }
-#endif // !QT_NO_LIBRARY
 
 /*!
     \internal
@@ -75,7 +73,6 @@ static void cleanupPrinterSupport()
 */
 QPlatformPrinterSupport *QPlatformPrinterSupportPlugin::get()
 {
-#ifndef QT_NO_LIBRARY
     if (!printerSupport) {
         const QMultiMap<int, QString> keyMap = loader()->keyMap();
         if (!keyMap.isEmpty())
@@ -83,7 +80,6 @@ QPlatformPrinterSupport *QPlatformPrinterSupportPlugin::get()
         if (printerSupport)
             qAddPostRoutine(cleanupPrinterSupport);
     }
-#endif // !QT_NO_LIBRARY
     return printerSupport;
 }
 

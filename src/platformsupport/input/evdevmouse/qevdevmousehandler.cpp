@@ -43,7 +43,6 @@
 
 #include <qplatformdefs.h>
 #include <private/qcore_unix_p.h> // overrides QT_OPEN
-#include <private/qhighdpiscaling_p.h>
 
 #include <errno.h>
 
@@ -105,8 +104,9 @@ QEvdevMouseHandler::QEvdevMouseHandler(const QString &device, int fd, bool abs, 
         m_abs = getHardwareMaximum();
 
     // socket notifier for events on the mouse device
-    m_notify = new QSocketNotifier(m_fd, QSocketNotifier::Read, this);
-    connect(m_notify, SIGNAL(activated(int)), this, SLOT(readMouseData()));
+    QSocketNotifier *notifier;
+    notifier = new QSocketNotifier(m_fd, QSocketNotifier::Read, this);
+    connect(notifier, SIGNAL(activated(int)), this, SLOT(readMouseData()));
 }
 
 QEvdevMouseHandler::~QEvdevMouseHandler()
@@ -141,15 +141,14 @@ bool QEvdevMouseHandler::getHardwareMaximum()
 
     m_hardwareHeight = absInfo.maximum - absInfo.minimum;
 
-    QScreen *primaryScreen = QGuiApplication::primaryScreen();
-    QRect g = QHighDpi::toNativePixels(primaryScreen->virtualGeometry(), primaryScreen);
+    QRect g = QGuiApplication::primaryScreen()->virtualGeometry();
     m_hardwareScalerX = static_cast<qreal>(m_hardwareWidth) / (g.right() - g.left());
     m_hardwareScalerY = static_cast<qreal>(m_hardwareHeight) / (g.bottom() - g.top());
 
     qCDebug(qLcEvdevMouse) << "Absolute pointing device"
                            << "hardware max x" << m_hardwareWidth
                            << "hardware max y" << m_hardwareHeight
-                           << "hardware scalers x" << m_hardwareScalerX << 'y' << m_hardwareScalerY;
+                           << "hardware scalers x" << m_hardwareScalerX << "y" << m_hardwareScalerY;
 
     return true;
 }
@@ -195,14 +194,6 @@ void QEvdevMouseHandler::readMouseData()
         } else if (result < 0) {
             if (errno != EINTR && errno != EAGAIN) {
                 qErrnoWarning(errno, "evdevmouse: Could not read from input device");
-                // If the device got disconnected, stop reading, otherwise we get flooded
-                // by the above error over and over again.
-                if (errno == ENODEV) {
-                    delete m_notify;
-                    m_notify = Q_NULLPTR;
-                    qt_safe_close(m_fd);
-                    m_fd = -1;
-                }
                 return;
             }
         } else {

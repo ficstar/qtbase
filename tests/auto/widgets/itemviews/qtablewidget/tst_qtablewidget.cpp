@@ -94,7 +94,6 @@ private slots:
     void task262056_sortDuplicate();
     void itemWithHeaderItems();
     void mimeData();
-    void selectedRowAfterSorting();
 
 private:
     QTableWidget *testWidget;
@@ -197,9 +196,9 @@ void tst_QTableWidget::clearContents()
 {
     QTableWidgetItem *item = new QTableWidgetItem("test");
     testWidget->setHorizontalHeaderItem(0, item);
-    QCOMPARE(testWidget->horizontalHeaderItem(0), item);
+    QVERIFY(testWidget->horizontalHeaderItem(0) == item);
     testWidget->clearContents();
-    QCOMPARE(testWidget->horizontalHeaderItem(0), item);
+    QVERIFY(testWidget->horizontalHeaderItem(0) == item);
 }
 
 void tst_QTableWidget::clear()
@@ -1560,28 +1559,10 @@ void tst_QTableWidget::mimeData()
 
     QVERIFY(data->hasFormat(format));
     QVERIFY(data2->hasFormat(format));
-    QCOMPARE(data->data(format), data2->data(format));
+    QVERIFY(data->data(format) == data2->data(format));
 
     delete data;
     delete data2;
-}
-
-void tst_QTableWidget::selectedRowAfterSorting()
-{
-    TestTableWidget table(3,3);
-    table.setSelectionBehavior(QAbstractItemView::SelectRows);
-    for (int r = 0; r < 3; r++)
-        for (int c = 0; c < 3; c++)
-            table.setItem(r,c,new QTableWidgetItem(QStringLiteral("0")));
-    QHeaderView *localHorizontalHeader = table.horizontalHeader();
-    localHorizontalHeader->setSortIndicator(1,Qt::DescendingOrder);
-    table.setProperty("sortingEnabled",true);
-    table.selectRow(1);
-    table.item(1,1)->setText("9");
-    QCOMPARE(table.selectedItems().count(),3);
-    foreach (QTableWidgetItem *item, table.selectedItems()) {
-        QCOMPARE(item->row(),0);
-    }
 }
 
 QTEST_MAIN(tst_QTableWidget)

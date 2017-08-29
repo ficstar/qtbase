@@ -103,13 +103,4 @@ QTcpSocket::QTcpSocket(QTcpSocketPrivate &dd, QObject *parent)
     d_func()->isBuffered = true;
 }
 
-/*!
-    \internal
-*/
-QTcpSocket::QTcpSocket(QAbstractSocket::SocketType socketType,
-                       QTcpSocketPrivate &dd, QObject *parent)
-    : QAbstractSocket(socketType, dd, parent)
-{
-}
-
 QT_END_NAMESPACE

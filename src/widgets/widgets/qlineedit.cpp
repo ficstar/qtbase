@@ -1488,7 +1488,7 @@ void QLineEdit::mousePressEvent(QMouseEvent* e)
     int cursor = d->xToPos(e->pos().x());
 #ifndef QT_NO_DRAGANDDROP
     if (!mark && d->dragEnabled && d->control->echoMode() == Normal &&
-         e->button() == Qt::LeftButton && d->inSelection(e->pos().x())) {
+         e->button() == Qt::LeftButton && d->control->inSelection(e->pos().x())) {
         if (!d->dndTimer.isActive())
             d->dndTimer.start(QApplication::startDragTime(), this);
     } else
@@ -1897,14 +1897,18 @@ void QLineEdit::paintEvent(QPaintEvent *)
     }
     QRect lineRect(r.x() + d->horizontalMargin, d->vscroll, r.width() - 2*d->horizontalMargin, fm.height());
 
+    int minLB = qMax(0, -fm.minLeftBearing());
+    int minRB = qMax(0, -fm.minRightBearing());
+
     if (d->shouldShowPlaceholderText()) {
         if (!d->placeholderText.isEmpty()) {
             QColor col = pal.text().color();
             col.setAlpha(128);
             QPen oldpen = p.pen();
             p.setPen(col);
-            QString elidedText = fm.elidedText(d->placeholderText, Qt::ElideRight, lineRect.width());
-            p.drawText(lineRect, va, elidedText);
+            QRect ph = lineRect.adjusted(minLB, 0, 0, 0);
+            QString elidedText = fm.elidedText(d->placeholderText, Qt::ElideRight, ph.width());
+            p.drawText(ph, va, elidedText);
             p.setPen(oldpen);
         }
     }
@@ -1914,10 +1918,11 @@ void QLineEdit::paintEvent(QPaintEvent *)
     // horizontal scrolling. d->hscroll is the left indent from the beginning
     // of the text line to the left edge of lineRect. we update this value
     // depending on the delta from the last paint event; in effect this means
-    // the below code handles all scrolling based on the textline (widthUsed),
-    // the line edit rect (lineRect) and the cursor position (cix).
-    int widthUsed = qRound(d->control->naturalTextWidth()) + 1;
-    if (widthUsed <= lineRect.width()) {
+    // the below code handles all scrolling based on the textline (widthUsed,
+    // minLB, minRB), the line edit rect (lineRect) and the cursor position
+    // (cix).
+    int widthUsed = qRound(d->control->naturalTextWidth()) + 1 + minRB;
+    if ((minLB + widthUsed) <=  lineRect.width()) {
         // text fits in lineRect; use hscroll for alignment
         switch (va & ~(Qt::AlignAbsolute|Qt::AlignVertical_Mask)) {
         case Qt::AlignRight:
@@ -1931,6 +1936,7 @@ void QLineEdit::paintEvent(QPaintEvent *)
             d->hscroll = 0;
             break;
         }
+        d->hscroll -= minLB;
     } else if (cix - d->hscroll >= lineRect.width()) {
         // text doesn't fit, cursor is to the right of lineRect (scroll right)
         d->hscroll = cix - lineRect.width() + 1;
@@ -2176,6 +2182,7 @@ void QLineEdit::changeEvent(QEvent *ev)
             d->control->setPasswordCharacter(style()->styleHint(QStyle::SH_LineEdit_PasswordCharacter, &opt, this));
             d->control->setPasswordMaskDelay(style()->styleHint(QStyle::SH_LineEdit_PasswordMaskDelay, &opt, this));
         }
+        d->m_iconSize = QSize();
         update();
         break;
     case QEvent::LayoutDirectionChange:

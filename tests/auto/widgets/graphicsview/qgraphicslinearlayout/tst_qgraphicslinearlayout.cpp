@@ -1,3 +1,4 @@
+
 /****************************************************************************
 **
 ** Copyright (C) 2015 The Qt Company Ltd.
@@ -1229,8 +1230,8 @@ void tst_QGraphicsLinearLayout::testStretch()
     layout->addStretch(2);
     layout->addItem(w2);
     QCOMPARE(layout->count(), 2);
-    QCOMPARE(layout->itemAt(0), w1);
-    QCOMPARE(layout->itemAt(1), w2);
+    QVERIFY(layout->itemAt(0) == w1);
+    QVERIFY(layout->itemAt(1) == w2);
     layout->activate();
 
     //view->setSceneRect(-50, -50, 800, 800);

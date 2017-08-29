@@ -46,8 +46,6 @@
 
 QT_BEGIN_NAMESPACE
 
-extern void Q_CORE_EXPORT qt_call_post_routines();
-
 typedef QHash<QString, int> NameHash_t;
 
 class QCommandLineParserPrivate
@@ -55,7 +53,6 @@ class QCommandLineParserPrivate
 public:
     inline QCommandLineParserPrivate()
         : singleDashWordOptionMode(QCommandLineParser::ParseAsCompactedShortOptions),
-          optionsAfterPositionalArgumentsMode(QCommandLineParser::ParseAsOptions),
           builtinVersionOption(false),
           builtinHelpOption(false),
           needsParsing(true)
@@ -106,9 +103,6 @@ public:
     //! The parsing mode for "-abc"
     QCommandLineParser::SingleDashWordOptionMode singleDashWordOptionMode;
 
-    //! How to parse "arg -option"
-    QCommandLineParser::OptionsAfterPositionalArgumentsMode optionsAfterPositionalArgumentsMode;
-
     //! Whether addVersionOption was called
     bool builtinVersionOption;
 
@@ -118,7 +112,6 @@ public:
     //! True if parse() needs to be called
     bool needsParsing;
 };
-Q_DECLARE_TYPEINFO(QCommandLineParserPrivate::PositionalArgumentDefinition, Q_MOVABLE_TYPE);
 
 QStringList QCommandLineParserPrivate::aliases(const QString &optionName) const
 {
@@ -303,41 +296,6 @@ QCommandLineParser::~QCommandLineParser()
 void QCommandLineParser::setSingleDashWordOptionMode(QCommandLineParser::SingleDashWordOptionMode singleDashWordOptionMode)
 {
     d->singleDashWordOptionMode = singleDashWordOptionMode;
-}
-
-/*!
-    \enum QCommandLineParser::OptionsAfterPositionalArgumentsMode
-
-    This enum describes the way the parser interprets options that
-    occur after positional arguments.
-
-    \value ParseAsOptions \c{application argument --opt -t} is interpreted as setting
-    the options \c{opt} and \c{t}, just like \c{application --opt -t argument} would do.
-    This is the default parsing mode. In order to specify that \c{--opt} and \c{-t}
-    are positional arguments instead, the user can use \c{--}, as in
-    \c{application argument -- --opt -t}.
-
-    \value ParseAsPositionalArguments \c{application argument --opt} is interpreted as
-    having two positional arguments, \c{argument} and \c{--opt}.
-    This mode is useful for executables that aim to launch other executables
-    (e.g. wrappers, debugging tools, etc.) or that support internal commands
-    followed by options for the command. \c{argument} is the name of the command,
-    and all options occurring after it can be collected and parsed by another
-    command line parser, possibly in another executable.
-
-    \sa setOptionsAfterPositionalArgumentsMode()
-
-    \since 5.6
-*/
-
-/*!
-    Sets the parsing mode to \a parsingMode.
-    This must be called before process() or parse().
-    \since 5.6
-*/
-void QCommandLineParser::setOptionsAfterPositionalArgumentsMode(QCommandLineParser::OptionsAfterPositionalArgumentsMode parsingMode)
-{
-    d->optionsAfterPositionalArgumentsMode = parsingMode;
 }
 
 /*!
@@ -542,13 +500,7 @@ static inline bool displayMessageBox()
 
 static void showParserMessage(const QString &message, MessageType type)
 {
-#if defined(Q_OS_WINRT)
-    if (type == UsageMessage)
-        qInfo(qPrintable(message));
-    else
-        qCritical(qPrintable(message));
-    return;
-#elif defined(Q_OS_WIN) && !defined(QT_BOOTSTRAPPED) && !defined(Q_OS_WINCE)
+#if defined(Q_OS_WIN) && !defined(QT_BOOTSTRAPPED) && !defined(Q_OS_WINCE) && !defined(Q_OS_WINRT)
     if (displayMessageBox()) {
         const UINT flags = MB_OK | MB_TOPMOST | MB_SETFOREGROUND
             | (type == UsageMessage ? MB_ICONINFORMATION : MB_ICONERROR);
@@ -561,7 +513,7 @@ static void showParserMessage(const QString &message, MessageType type)
                     reinterpret_cast<const wchar_t *>(title.utf16()), flags);
         return;
     }
-#endif // Q_OS_WIN && !QT_BOOTSTRAPPED && !Q_OS_WINCE
+#endif // Q_OS_WIN && !QT_BOOTSTRAPPED && !Q_OS_WIN && !Q_OS_WINRT
     fputs(qPrintable(message), type == UsageMessage ? stdout : stderr);
 }
 
@@ -582,7 +534,6 @@ void QCommandLineParser::process(const QStringList &arguments)
 {
     if (!d->parse(arguments)) {
         showParserMessage(errorText() + QLatin1Char('\n'), ErrorMessage);
-        qt_call_post_routines();
         ::exit(EXIT_FAILURE);
     }
 
@@ -689,7 +640,7 @@ bool QCommandLineParserPrivate::parse(const QStringList &args)
     const QLatin1Char dashChar('-');
     const QLatin1Char assignChar('=');
 
-    bool forcePositional = false;
+    bool doubleDashFound = false;
     errorText.clear();
     positionalArgumentList.clear();
     optionNames.clear();
@@ -707,7 +658,7 @@ bool QCommandLineParserPrivate::parse(const QStringList &args)
     for (; argumentIterator != args.end() ; ++argumentIterator) {
         QString argument = *argumentIterator;
 
-        if (forcePositional) {
+        if (doubleDashFound) {
             positionalArgumentList.append(argument);
         } else if (argument.startsWith(doubleDashString)) {
             if (argument.length() > 2) {
@@ -719,7 +670,7 @@ bool QCommandLineParserPrivate::parse(const QStringList &args)
                     error = true;
                 }
             } else {
-                forcePositional = true;
+                doubleDashFound = true;
             }
         } else if (argument.startsWith(dashChar)) {
             if (argument.size() == 1) { // single dash ("stdin")
@@ -771,8 +722,6 @@ bool QCommandLineParserPrivate::parse(const QStringList &args)
             }
         } else {
             positionalArgumentList.append(argument);
-            if (optionsAfterPositionalArgumentsMode == QCommandLineParser::ParseAsPositionalArguments)
-                forcePositional = true;
         }
         if (argumentIterator == args.end())
             break;
@@ -993,7 +942,6 @@ Q_NORETURN void QCommandLineParser::showVersion()
     showParserMessage(QCoreApplication::applicationName() + QLatin1Char(' ')
                       + QCoreApplication::applicationVersion() + QLatin1Char('\n'),
                       UsageMessage);
-    qt_call_post_routines();
     ::exit(EXIT_SUCCESS);
 }
 
@@ -1011,7 +959,6 @@ Q_NORETURN void QCommandLineParser::showVersion()
 Q_NORETURN void QCommandLineParser::showHelp(int exitCode)
 {
     showParserMessage(d->helpText(), UsageMessage);
-    qt_call_post_routines();
     ::exit(exitCode);
 }
 
@@ -1115,8 +1062,6 @@ QString QCommandLineParserPrivate::helpText() const
     ++longestOptionNameString;
     for (int i = 0; i < commandLineOptionList.count(); ++i) {
         const QCommandLineOption &option = commandLineOptionList.at(i);
-        if (option.isHidden())
-            continue;
         text += wrapText(optionNameList.at(i), longestOptionNameString, option.description());
     }
     if (!positionalArgumentDefinitions.isEmpty()) {

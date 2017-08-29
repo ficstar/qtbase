@@ -32,188 +32,131 @@
 ****************************************************************************/
 
 #include "qwindowspipewriter_p.h"
-#include "qiodevice_p.h"
 
 QT_BEGIN_NAMESPACE
 
-extern bool qt_cancelIo(HANDLE handle, OVERLAPPED *overlapped);     // from qwindowspipereader.cpp
+#ifndef QT_NO_THREAD
 
-
-QWindowsPipeWriter::Overlapped::Overlapped(QWindowsPipeWriter *pipeWriter)
-    : pipeWriter(pipeWriter)
+QWindowsPipeWriter::QWindowsPipeWriter(HANDLE pipe, QObject * parent)
+    : QThread(parent),
+      writePipe(INVALID_HANDLE_VALUE),
+      quitNow(false),
+      hasWritten(false)
 {
-}
-
-void QWindowsPipeWriter::Overlapped::clear()
-{
-    ZeroMemory(this, sizeof(OVERLAPPED));
-}
-
-
-QWindowsPipeWriter::QWindowsPipeWriter(HANDLE pipeWriteEnd, QObject *parent)
-    : QObject(parent),
-      handle(pipeWriteEnd),
-      overlapped(this),
-      numberOfBytesToWrite(0),
-      pendingBytesWrittenValue(0),
-      stopped(true),
-      writeSequenceStarted(false),
-      notifiedCalled(false),
-      bytesWrittenPending(false),
-      inBytesWritten(false)
-{
-    connect(this, &QWindowsPipeWriter::_q_queueBytesWritten,
-            this, &QWindowsPipeWriter::emitPendingBytesWrittenValue, Qt::QueuedConnection);
+#if !defined(Q_OS_WINCE) || (_WIN32_WCE >= 0x600)
+    DuplicateHandle(GetCurrentProcess(), pipe, GetCurrentProcess(),
+                         &writePipe, 0, FALSE, DUPLICATE_SAME_ACCESS);
+#else
+    Q_UNUSED(pipe);
+    writePipe = GetCurrentProcess();
+#endif
 }
 
 QWindowsPipeWriter::~QWindowsPipeWriter()
 {
-    stop();
+    lock.lock();
+    quitNow = true;
+    waitCondition.wakeOne();
+    lock.unlock();
+    if (!wait(30000))
+        terminate();
+#if !defined(Q_OS_WINCE) || (_WIN32_WCE >= 0x600)
+    CloseHandle(writePipe);
+#endif
 }
 
 bool QWindowsPipeWriter::waitForWrite(int msecs)
 {
-    if (bytesWrittenPending) {
-        emitPendingBytesWrittenValue();
+    QMutexLocker locker(&lock);
+    bool hadWritten = hasWritten;
+    hasWritten = false;
+    if (hadWritten)
         return true;
-    }
-
-    if (!writeSequenceStarted)
+    if (!waitCondition.wait(&lock, msecs))
         return false;
-
-    if (!waitForNotification(msecs))
-        return false;
-
-    if (bytesWrittenPending) {
-        emitPendingBytesWrittenValue();
-        return true;
-    }
-
-    return false;
+    hadWritten = hasWritten;
+    hasWritten = false;
+    return hadWritten;
 }
 
-qint64 QWindowsPipeWriter::bytesToWrite() const
+qint64 QWindowsPipeWriter::write(const char *ptr, qint64 maxlen)
 {
-    return numberOfBytesToWrite + pendingBytesWrittenValue;
+    if (!isRunning())
+        return -1;
+
+    QMutexLocker locker(&lock);
+    data.append(ptr, maxlen);
+    waitCondition.wakeOne();
+    return maxlen;
 }
 
-void QWindowsPipeWriter::emitPendingBytesWrittenValue()
+void QWindowsPipeWriter::run()
 {
-    if (bytesWrittenPending) {
-        // Reset the state even if we don't emit bytesWritten().
-        // It's a defined behavior to not re-emit this signal recursively.
-        bytesWrittenPending = false;
-        const qint64 bytes = pendingBytesWrittenValue;
-        pendingBytesWrittenValue = 0;
-
-        emit canWrite();
-        if (!inBytesWritten) {
-            inBytesWritten = true;
-            emit bytesWritten(bytes);
-            inBytesWritten = false;
+    OVERLAPPED overl;
+    memset(&overl, 0, sizeof overl);
+    overl.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    forever {
+        lock.lock();
+        while(data.isEmpty() && (!quitNow)) {
+            waitCondition.wakeOne();
+            waitCondition.wait(&lock);
         }
-    }
-}
 
-void QWindowsPipeWriter::writeFileCompleted(DWORD errorCode, DWORD numberOfBytesTransfered,
-                                            OVERLAPPED *overlappedBase)
-{
-    Overlapped *overlapped = static_cast<Overlapped *>(overlappedBase);
-    overlapped->pipeWriter->notified(errorCode, numberOfBytesTransfered);
-}
-
-/*!
-    \internal
-    Will be called whenever the write operation completes.
- */
-void QWindowsPipeWriter::notified(DWORD errorCode, DWORD numberOfBytesWritten)
-{
-    notifiedCalled = true;
-    writeSequenceStarted = false;
-    numberOfBytesToWrite = 0;
-    Q_ASSERT(errorCode != ERROR_SUCCESS || numberOfBytesWritten == DWORD(buffer.size()));
-    buffer.clear();
-
-    switch (errorCode) {
-    case ERROR_SUCCESS:
-        break;
-    case ERROR_OPERATION_ABORTED:
-        if (stopped)
+        if (quitNow) {
+            lock.unlock();
+            quitNow = false;
             break;
-        // fall through
-    default:
-        qErrnoWarning(errorCode, "QWindowsPipeWriter: asynchronous write failed.");
-        break;
-    }
+        }
 
-    // After the writer was stopped, the only reason why this function can be called is the
-    // completion of a cancellation. No signals should be emitted, and no new write sequence should
-    // be started in this case.
-    if (stopped)
-        return;
+        QByteArray copy = data;
 
-    pendingBytesWrittenValue += qint64(numberOfBytesWritten);
-    if (!bytesWrittenPending) {
-        bytesWrittenPending = true;
-        emit _q_queueBytesWritten(QWindowsPipeWriter::QPrivateSignal());
-    }
-}
+        lock.unlock();
 
-bool QWindowsPipeWriter::waitForNotification(int timeout)
-{
-    QElapsedTimer t;
-    t.start();
-    notifiedCalled = false;
-    int msecs = timeout;
-    while (SleepEx(msecs == -1 ? INFINITE : msecs, TRUE) == WAIT_IO_COMPLETION) {
-        if (notifiedCalled)
-            return true;
+        const char *ptrData = copy.data();
+        qint64 maxlen = copy.size();
+        qint64 totalWritten = 0;
+        overl.Offset = 0;
+        overl.OffsetHigh = 0;
+        while ((!quitNow) && totalWritten < maxlen) {
+            DWORD written = 0;
+            if (!WriteFile(writePipe, ptrData + totalWritten,
+                           maxlen - totalWritten, &written, &overl)) {
 
-        // Some other I/O completion routine was called. Wait some more.
-        msecs = qt_subtract_from_timeout(timeout, t.elapsed());
-        if (!msecs)
-            break;
-    }
-    return notifiedCalled;
-}
-
-bool QWindowsPipeWriter::write(const QByteArray &ba)
-{
-    if (writeSequenceStarted)
-        return false;
-
-    overlapped.clear();
-    buffer = ba;
-    numberOfBytesToWrite = buffer.size();
-    stopped = false;
-    writeSequenceStarted = true;
-    if (!WriteFileEx(handle, buffer.constData(), numberOfBytesToWrite,
-                     &overlapped, &writeFileCompleted)) {
-        writeSequenceStarted = false;
-        numberOfBytesToWrite = 0;
-        buffer.clear();
-        qErrnoWarning("QWindowsPipeWriter::write failed.");
-        return false;
-    }
-
-    return true;
-}
-
-void QWindowsPipeWriter::stop()
-{
-    stopped = true;
-    bytesWrittenPending = false;
-    pendingBytesWrittenValue = 0;
-    if (writeSequenceStarted) {
-        if (!qt_cancelIo(handle, &overlapped)) {
-            const DWORD dwError = GetLastError();
-            if (dwError != ERROR_NOT_FOUND) {
-                qErrnoWarning(dwError, "QWindowsPipeWriter: qt_cancelIo on handle %x failed.",
-                              handle);
+                if (GetLastError() == 0xE8/*NT_STATUS_INVALID_USER_BUFFER*/) {
+                    // give the os a rest
+                    msleep(100);
+                    continue;
+                }
+#ifndef Q_OS_WINCE
+                if (GetLastError() == ERROR_IO_PENDING) {
+                  if (!GetOverlappedResult(writePipe, &overl, &written, TRUE)) {
+                      CloseHandle(overl.hEvent);
+                      return;
+                  }
+                } else {
+                    CloseHandle(overl.hEvent);
+                    return;
+                }
+#else
+                return;
+#endif
             }
+            totalWritten += written;
+#if defined QPIPEWRITER_DEBUG
+            qDebug("QWindowsPipeWriter::run() wrote %d %d/%d bytes",
+                   written, int(totalWritten), int(maxlen));
+#endif
+            lock.lock();
+            data.remove(0, written);
+            hasWritten = true;
+            lock.unlock();
         }
-        waitForNotification(-1);
+        emit bytesWritten(totalWritten);
+        emit canWrite();
     }
+    CloseHandle(overl.hEvent);
 }
+
+#endif //QT_NO_THREAD
 
 QT_END_NAMESPACE

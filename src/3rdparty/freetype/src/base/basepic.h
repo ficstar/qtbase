@@ -4,7 +4,7 @@
 /*                                                                         */
 /*    The FreeType position independent code services for base.            */
 /*                                                                         */
-/*  Copyright 2009-2015 by                                                 */
+/*  Copyright 2009 by                                                      */
 /*  Oran Agra and Mickey Gabel.                                            */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -20,8 +20,9 @@
 #define __BASEPIC_H__
 
 
-#include FT_INTERNAL_PIC_H
+FT_BEGIN_HEADER
 
+#include FT_INTERNAL_PIC_H
 
 #ifndef FT_CONFIG_OPTION_PIC
 
@@ -41,8 +42,6 @@
 #include FT_INTERNAL_RFORK_H
 #endif
 
-
-FT_BEGIN_HEADER
 
   typedef struct  BasePIC_
   {
@@ -79,11 +78,11 @@ FT_BEGIN_HEADER
   FT_Error
   ft_base_pic_init( FT_Library  library );
 
-FT_END_HEADER
-
 #endif /* FT_CONFIG_OPTION_PIC */
 
   /* */
+
+FT_END_HEADER
 
 #endif /* __BASEPIC_H__ */
 

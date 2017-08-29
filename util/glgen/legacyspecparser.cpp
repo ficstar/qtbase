@@ -80,7 +80,7 @@ bool LegacySpecParser::parseTypeMap()
     while (!stream.atEnd()) {
         QString line = stream.readLine();
 
-        if (line.startsWith(QLatin1Char('#')))
+        if (line.startsWith(QStringLiteral("#")))
             continue;
 
         if (typeMapRegExp.indexIn(line) != -1) {
@@ -88,7 +88,7 @@ bool LegacySpecParser::parseTypeMap()
             QString value = typeMapRegExp.cap(2).simplified();
 
             // Special case for void
-            if (value == QLatin1String("*"))
+            if (value == QStringLiteral("*"))
                 value = QStringLiteral("void");
 
             m_typeMap.insert(key, value);
@@ -144,7 +144,7 @@ void LegacySpecParser::parseFunctions(QTextStream &stream)
                 // extension. These functions should be added to the DSA extension rather
                 // than the core functionality. The core will already contain non-DSA
                 // versions of these functions.
-                if (acceptCurrentFunctionInCore && currentFunction.name.endsWith(QLatin1String("EXT"))) {
+                if (acceptCurrentFunctionInCore && currentFunction.name.endsWith(QStringLiteral("EXT"))) {
                     acceptCurrentFunctionInCore = false;
                     acceptCurrentFunctionInExtension = true;
                     currentCategory = QStringLiteral("EXT_direct_state_access");
@@ -191,9 +191,9 @@ void LegacySpecParser::parseFunctions(QTextStream &stream)
             arg.type = m_typeMap.value(type);
 
             QString direction = argumentRegExp.cap(3);
-            if (direction == QLatin1String("in")) {
+            if (direction == QStringLiteral("in")) {
                 arg.direction = Argument::In;
-            } else if (direction == QLatin1String("out")) {
+            } else if (direction == QStringLiteral("out")) {
                 arg.direction = Argument::Out;
             } else {
                 qWarning() << "Invalid argument direction found:" << direction;
@@ -201,11 +201,11 @@ void LegacySpecParser::parseFunctions(QTextStream &stream)
             }
 
             QString mode = argumentRegExp.cap(4);
-            if (mode == QLatin1String("value")) {
+            if (mode == QStringLiteral("value")) {
                 arg.mode = Argument::Value;
-            } else if (mode == QLatin1String("array")) {
+            } else if (mode == QStringLiteral("array")) {
                 arg.mode = Argument::Array;
-            } else if (mode == QLatin1String("reference")) {
+            } else if (mode == QStringLiteral("reference")) {
                 arg.mode = Argument::Reference;
             } else {
                 qWarning() << "Invalid argument mode found:" << mode;
@@ -246,7 +246,7 @@ void LegacySpecParser::parseFunctions(QTextStream &stream)
             // Extract the OpenGL version in which this function was deprecated.
             // If it is OpenGL 3.1 then it must be a compatibility profile function
             QString deprecatedVersion = deprecatedRegExp.cap(1).simplified();
-            if (deprecatedVersion == QLatin1String("3.1") && !inDeprecationException(currentFunction.name))
+            if (deprecatedVersion == QStringLiteral("3.1") && !inDeprecationException(currentFunction.name))
                 currentVersionProfile.profile = VersionProfile::CompatibilityProfile;
 
         } else if (categoryRegExp.indexIn(line) != -1) {
@@ -301,5 +301,5 @@ void LegacySpecParser::parseFunctions(QTextStream &stream)
 
 bool LegacySpecParser::inDeprecationException(const QString &functionName) const
 {
-    return functionName == QLatin1String("TexImage3D");
+    return (functionName == QStringLiteral("TexImage3D"));
 }

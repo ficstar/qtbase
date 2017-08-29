@@ -239,7 +239,9 @@ private slots:
     void macroBeginEnd();
     void compression();
     void undoLimit();
+#ifndef QT_NO_PROCESS
     void commandTextFormat();
+#endif
     void separateUndoText();
 };
 
@@ -2956,11 +2958,9 @@ void tst_QUndoStack::undoLimit()
                 true);      // redoChanged
 }
 
+#ifndef QT_NO_PROCESS
 void tst_QUndoStack::commandTextFormat()
 {
-#ifdef QT_NO_PROCESS
-    QSKIP("No QProcess available");
-#else
     QString binDir = QLibraryInfo::location(QLibraryInfo::BinariesPath);
 
     if (QProcess::execute(binDir + "/lrelease -version") != 0)
@@ -2968,12 +2968,12 @@ void tst_QUndoStack::commandTextFormat()
 
     const QString tsFile = QFINDTESTDATA("testdata/qundostack.ts");
     QVERIFY(!tsFile.isEmpty());
-    QFile::remove("qundostack.qm"); // Avoid confusion by strays.
-    QVERIFY(!QProcess::execute(binDir + "/lrelease -silent " + tsFile + " -qm qundostack.qm"));
+    QVERIFY(!QProcess::execute(binDir + "/lrelease " + tsFile));
 
     QTranslator translator;
-    QVERIFY(translator.load("qundostack.qm"));
-    QFile::remove("qundostack.qm");
+    const QString qmFile = QFINDTESTDATA("testdata/qundostack.qm");
+    QVERIFY(!qmFile.isEmpty());
+    QVERIFY(translator.load(qmFile));
     qApp->installTranslator(&translator);
 
     QUndoStack stack;
@@ -2999,8 +2999,8 @@ void tst_QUndoStack::commandTextFormat()
     QCOMPARE(redo_action->text(), QString("redo-prefix append redo-suffix"));
 
     qApp->removeTranslator(&translator);
-#endif
 }
+#endif
 
 void tst_QUndoStack::separateUndoText()
 {

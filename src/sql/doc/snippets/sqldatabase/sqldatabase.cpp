@@ -239,9 +239,8 @@ void QSqlQueryModel_snippets()
     }
 
 //! [21]
-    QSqlTableModel model;
-    model.setTable("employee");
-    model.select();
+    QSqlQueryModel model;
+    model.setQuery("SELECT * FROM employee");
     int salary = model.record(4).value("salary").toInt();
 //! [21]
     Q_UNUSED(salary);

@@ -70,12 +70,6 @@ int QLineEditPrivate::xToPos(int x, QTextLine::CursorPosition betweenOrOn) const
     return control->xToPos(x, betweenOrOn);
 }
 
-bool QLineEditPrivate::inSelection(int x) const
-{
-    x -= adjustedContentsRect().x() - hscroll + horizontalMargin;
-    return control->inSelection(x);
-}
-
 QRect QLineEditPrivate::cursorRect() const
 {
     return adjustedControlRect(control->cursorRect());
@@ -314,28 +308,17 @@ QLineEditIconButton::QLineEditIconButton(QWidget *parent)
     setFocusPolicy(Qt::NoFocus);
 }
 
-QLineEditPrivate *QLineEditIconButton::lineEditPrivate() const
-{
-    QLineEdit *le = qobject_cast<QLineEdit *>(parentWidget());
-    return le ? static_cast<QLineEditPrivate *>(qt_widget_private(le)) : Q_NULLPTR;
-}
-
 void QLineEditIconButton::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
-    QWindow *window = Q_NULLPTR;
-    if (const QWidget *nativeParent = nativeParentWidget())
-        window = nativeParent->windowHandle();
     // Note isDown should really use the active state but in most styles
     // this has no proper feedback
     QIcon::Mode state = QIcon::Disabled;
     if (isEnabled())
         state = isDown() ? QIcon::Selected : QIcon::Normal;
-    const QLineEditPrivate *lep = lineEditPrivate();
-    const int iconWidth = lep ? lep->sideWidgetParameters().iconSize : 16;
-    const QSize iconSize(iconWidth, iconWidth);
-    const QPixmap iconPixmap = icon().pixmap(window, iconSize, state, QIcon::Off);
-    QRect pixmapRect = QRect(QPoint(0, 0), iconSize);
+    const QPixmap iconPixmap = icon().pixmap(QSize(IconButtonSize, IconButtonSize),
+                                             state, QIcon::Off);
+    QRect pixmapRect = QRect(QPoint(0, 0), iconPixmap.size() / iconPixmap.devicePixelRatio());
     pixmapRect.moveCenter(rect().center());
     painter.setOpacity(m_opacity);
     painter.drawPixmap(pixmapRect, iconPixmap);
@@ -346,10 +329,10 @@ void QLineEditIconButton::actionEvent(QActionEvent *e)
     switch (e->type()) {
     case QEvent::ActionChanged: {
         const QAction *action = e->action();
-        if (isVisibleTo(parentWidget()) != action->isVisible()) {
+        if (isVisible() != action->isVisible()) {
             setVisible(action->isVisible());
-            if (QLineEditPrivate *lep = lineEditPrivate())
-                lep->positionSideWidgets();
+            if (QLineEdit *le = qobject_cast<QLineEdit *>(parentWidget()))
+                static_cast<QLineEditPrivate *>(qt_widget_private(le))->positionSideWidgets();
         }
     }
         break;
@@ -381,7 +364,7 @@ void QLineEditIconButton::startOpacityAnimation(qreal endValue)
 void QLineEditIconButton::updateCursor()
 {
 #ifndef QT_NO_CURSOR
-    setCursor(qFuzzyCompare(m_opacity, qreal(1.0)) || !parentWidget() ? QCursor(Qt::ArrowCursor) : parentWidget()->cursor());
+    setCursor(qFuzzyCompare(m_opacity, 1.0) || !parentWidget() ? QCursor(Qt::ArrowCursor) : parentWidget()->cursor());
 #endif
 }
 
@@ -415,15 +398,11 @@ void QLineEditPrivate::_q_clearButtonClicked()
     }
 }
 
-QLineEditPrivate::SideWidgetParameters QLineEditPrivate::sideWidgetParameters() const
+QSize QLineEditPrivate::iconSize() const
 {
-    Q_Q(const QLineEdit);
-    SideWidgetParameters result;
-    result.iconSize = q->height() < 34 ? 16 : 32;
-    result.margin = result.iconSize / 4;
-    result.widgetWidth = result.iconSize + 6;
-    result.widgetHeight = result.iconSize + 2;
-    return result;
+    if (!m_iconSize.isValid()) // This might require style-specific handling (pixel metric).
+        m_iconSize = QSize(QLineEditIconButton::IconButtonSize + 6, QLineEditIconButton::IconButtonSize + 2);
+    return m_iconSize;
 }
 
 QIcon QLineEditPrivate::clearButtonIcon() const
@@ -431,7 +410,7 @@ QIcon QLineEditPrivate::clearButtonIcon() const
     Q_Q(const QLineEdit);
     QStyleOptionFrame styleOption;
     q->initStyleOption(&styleOption);
-    return q->style()->standardIcon(QStyle::SP_LineEditClearButton, &styleOption, q);
+    return QIcon(q->style()->standardPixmap(QStyle::SP_LineEditClearButton, &styleOption, q));
 }
 
 void QLineEditPrivate::setClearButtonEnabled(bool enabled)
@@ -449,19 +428,18 @@ void QLineEditPrivate::positionSideWidgets()
     Q_Q(QLineEdit);
     if (hasSideWidgets()) {
         const QRect contentRect = q->rect();
-        const SideWidgetParameters p = sideWidgetParameters();
-        const int delta = p.margin + p.widgetWidth;
-        QRect widgetGeometry(QPoint(p.margin, (contentRect.height() - p.widgetHeight) / 2),
-                             QSize(p.widgetWidth, p.widgetHeight));
+        const QSize iconSize = QLineEditPrivate::iconSize();
+        const int delta = QLineEditIconButton::IconMargin + iconSize.width();
+        QRect widgetGeometry(QPoint(QLineEditIconButton::IconMargin, (contentRect.height() - iconSize.height()) / 2), iconSize);
         foreach (const SideWidgetEntry &e, leftSideWidgetList()) {
             e.widget->setGeometry(widgetGeometry);
-            if (e.action->isVisible())
+            if (e.widget->isVisible())
                 widgetGeometry.moveLeft(widgetGeometry.left() + delta);
         }
-        widgetGeometry.moveLeft(contentRect.width() - p.widgetWidth - p.margin);
+        widgetGeometry.moveLeft(contentRect.width() - iconSize.width() - QLineEditIconButton::IconMargin);
         foreach (const SideWidgetEntry &e, rightSideWidgetList()) {
             e.widget->setGeometry(widgetGeometry);
-            if (e.action->isVisible())
+            if (e.widget->isVisible())
                 widgetGeometry.moveLeft(widgetGeometry.left() - delta);
         }
     }
@@ -535,7 +513,5 @@ void QLineEditPrivate::removeAction(QAction *action)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qlineedit_p.cpp"
 
 #endif

@@ -197,7 +197,7 @@ bool QDesktopServices::openUrl(const QUrl &url)
 
     QPlatformServices *platformServices = platformIntegration->services();
     if (!platformServices) {
-        qWarning("The platform plugin does not support services.");
+        qWarning("%s: The platform plugin does not support services.", Q_FUNC_INFO);
         return false;
     }
     return url.scheme() == QLatin1String("file") ?
@@ -231,13 +231,13 @@ void QDesktopServices::setUrlHandler(const QString &scheme, QObject *receiver, c
     QOpenUrlHandlerRegistry *registry = handlerRegistry();
     QMutexLocker locker(&registry->mutex);
     if (!receiver) {
-        registry->handlers.remove(scheme.toLower());
+        registry->handlers.remove(scheme);
         return;
     }
     QOpenUrlHandlerRegistry::Handler h;
     h.receiver = receiver;
     h.name = method;
-    registry->handlers.insert(scheme.toLower(), h);
+    registry->handlers.insert(scheme, h);
     QObject::connect(receiver, SIGNAL(destroyed(QObject*)),
                      registry, SLOT(handlerDestroyed(QObject*)));
 }

@@ -34,6 +34,7 @@
 #include "qcocoacursor.h"
 #include "qcocoawindow.h"
 #include "qcocoahelpers.h"
+#include "qcocoaautoreleasepool.h"
 
 #include <QtGui/QBitmap>
 

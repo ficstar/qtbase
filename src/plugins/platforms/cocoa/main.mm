@@ -50,9 +50,11 @@ public:
 
 QPlatformIntegration * QCocoaIntegrationPlugin::create(const QString& system, const QStringList& paramList)
 {
-    QMacAutoReleasePool pool;
+    Q_UNUSED(paramList);
+
+    QCocoaAutoReleasePool pool;
     if (system.compare(QLatin1String("cocoa"), Qt::CaseInsensitive) == 0)
-        return new QCocoaIntegration(paramList);
+        return new QCocoaIntegration;
 
     return 0;
 }

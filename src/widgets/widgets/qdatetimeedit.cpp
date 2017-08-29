@@ -873,7 +873,7 @@ void QDateTimeEdit::setDisplayFormat(const QString &format)
             d->displayFormat.clear();
             for (int i=d->sectionNodes.size() - 1; i>=0; --i) {
                 d->displayFormat += d->separators.at(i + 1);
-                d->displayFormat += d->sectionNode(i).format();
+                d->displayFormat += d->sectionFormat(i);
             }
             d->displayFormat += d->separators.at(0);
             d->separators = reverse(d->separators);
@@ -1668,7 +1668,12 @@ QDateTimeEditPrivate::QDateTimeEditPrivate()
     cachedDay = -1;
     currentSectionIndex = FirstSectionIndex;
 
+    first.type = FirstSection;
+    last.type = LastSection;
+    none.type = NoSection;
     first.pos = 0;
+    last.pos = -1;
+    none.pos = -1;
     sections = 0;
     calendarPopup = false;
     minimum = QDATETIMEEDIT_COMPAT_DATETIME_MIN;
@@ -1680,10 +1685,6 @@ QDateTimeEditPrivate::QDateTimeEditPrivate()
 #ifdef QT_KEYPAD_NAVIGATION
     focusOnButton = false;
 #endif
-}
-
-QDateTimeEditPrivate::~QDateTimeEditPrivate()
-{
 }
 
 void QDateTimeEditPrivate::updateTimeSpec()
@@ -2042,7 +2043,7 @@ QDateTime QDateTimeEditPrivate::stepBy(int sectionIndex, int steps, bool test) c
             // doesn't mean that we hit the floor in the other
             if (steps > 0) {
                 setDigit(v, sectionIndex, min);
-                if (!(sn.type & DaySectionMask) && sections & DateSectionMask) {
+                if (!(sn.type & (DaySection|DayOfWeekSectionShort|DayOfWeekSectionLong)) && sections & DateSectionMask) {
                     const int daysInMonth = v.date().daysInMonth();
                     if (v.date().day() < oldDay && v.date().day() < daysInMonth) {
                         const int adds = qMin(oldDay, daysInMonth);
@@ -2057,7 +2058,7 @@ QDateTime QDateTimeEditPrivate::stepBy(int sectionIndex, int steps, bool test) c
                 }
             } else {
                 setDigit(v, sectionIndex, max);
-                if (!(sn.type & DaySectionMask) && sections & DateSectionMask) {
+                if (!(sn.type & (DaySection|DayOfWeekSectionShort|DayOfWeekSectionLong)) && sections & DateSectionMask) {
                     const int daysInMonth = v.date().daysInMonth();
                     if (v.date().day() < oldDay && v.date().day() < daysInMonth) {
                         const int adds = qMin(oldDay, daysInMonth);
@@ -2075,7 +2076,7 @@ QDateTime QDateTimeEditPrivate::stepBy(int sectionIndex, int steps, bool test) c
             setDigit(v, sectionIndex, (steps > 0 ? localmax : localmin));
         }
     }
-    if (!test && oldDay != v.date().day() && !(sn.type & DaySectionMask)) {
+    if (!test && oldDay != v.date().day() && !(sn.type & (DaySection|DayOfWeekSectionShort|DayOfWeekSectionLong))) {
         // this should not happen when called from stepEnabled
         cachedDay = qMax<int>(oldDay, cachedDay);
     }
@@ -2209,9 +2210,9 @@ void QDateTimeEditPrivate::_q_editorCursorPositionChanged(int oldpos, int newpos
         }
     }
 
-    QDTEDEBUG << "currentSectionIndex is set to" << sectionNode(s).name()
+    QDTEDEBUG << "currentSectionIndex is set to" << sectionName(sectionType(s))
               << oldpos << newpos
-              << "was" << sectionNode(currentSectionIndex).name();
+              << "was" << sectionName(sectionType(currentSectionIndex));
 
     currentSectionIndex = s;
     Q_ASSERT_X(currentSectionIndex < sectionNodes.size(),
@@ -2267,15 +2268,15 @@ QDateTimeEdit::Sections QDateTimeEditPrivate::convertSections(QDateTimeParser::S
         ret |= QDateTimeEdit::SecondSection;
     if (s & QDateTimeParser::MinuteSection)
         ret |= QDateTimeEdit::MinuteSection;
-    if (s & (QDateTimeParser::HourSectionMask))
+    if (s & (QDateTimeParser::Hour24Section|QDateTimeParser::Hour12Section))
         ret |= QDateTimeEdit::HourSection;
     if (s & QDateTimeParser::AmPmSection)
         ret |= QDateTimeEdit::AmPmSection;
-    if (s & (QDateTimeParser::DaySectionMask))
+    if (s & (QDateTimeParser::DaySection|QDateTimeParser::DayOfWeekSectionShort|QDateTimeParser::DayOfWeekSectionLong))
         ret |= QDateTimeEdit::DaySection;
     if (s & QDateTimeParser::MonthSection)
         ret |= QDateTimeEdit::MonthSection;
-    if (s & (QDateTimeParser::YearSectionMask))
+    if (s & (QDateTimeParser::YearSection|QDateTimeParser::YearSection2Digits))
         ret |= QDateTimeEdit::YearSection;
 
     return ret;
@@ -2654,7 +2655,7 @@ bool QCalendarPopup::event(QEvent *event)
 {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-        if (keyEvent->matches(QKeySequence::Cancel))
+        if (keyEvent->key()== Qt::Key_Escape)
             dateChanged = false;
     }
     return QWidget::event(event);
@@ -2681,6 +2682,5 @@ void QCalendarPopup::hideEvent(QHideEvent *)
 
 QT_END_NAMESPACE
 #include "moc_qdatetimeedit.cpp"
-#include "moc_qdatetimeedit_p.cpp"
 
 #endif // QT_NO_DATETIMEEDIT

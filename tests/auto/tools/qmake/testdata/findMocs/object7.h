@@ -33,7 +33,6 @@
 
 /**//*'*/
 #include <QObject>
-#define bogon /"/*"
 
 class Object7 : public QObject
 {

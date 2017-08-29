@@ -36,7 +36,6 @@
 
 #include <UIKit/UIKit.h>
 
-#include <QtCore/qlocale.h>
 #include <QtGui/qevent.h>
 #include <QtGui/qtransform.h>
 #include <qpa/qplatforminputcontext.h>
@@ -47,7 +46,6 @@ const char kImePlatformDataReturnKeyType[] = "returnKeyType";
 
 QT_BEGIN_NAMESPACE
 
-@class QIOSLocaleListener;
 @class QIOSKeyboardListener;
 @class QIOSTextInputResponder;
 @protocol KeyboardState;
@@ -94,8 +92,6 @@ public:
     void reset() Q_DECL_OVERRIDE;
     void commit() Q_DECL_OVERRIDE;
 
-    QLocale locale() const Q_DECL_OVERRIDE;
-
     void clearCurrentFocusObject();
 
     void setFocusObject(QObject *object) Q_DECL_OVERRIDE;
@@ -116,7 +112,6 @@ public:
 private:
     UIView* scrollableRootView();
 
-    QIOSLocaleListener *m_localeListener;
     QIOSKeyboardListener *m_keyboardHideGesture;
     QIOSTextInputResponder *m_textResponder;
     KeyboardState m_keyboardState;

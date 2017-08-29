@@ -38,35 +38,37 @@
 #include <QtCore/qmetaobject.h>
 
 #include <string.h>
-#include <vector>
-#include <algorithm>
 
 QT_BEGIN_NAMESPACE
 
 class QTestTablePrivate
 {
 public:
-    ~QTestTablePrivate()
+    struct ElementList
     {
-        qDeleteAll(dataList.begin(), dataList.end());
-    }
-
-    struct Element {
-        Element() : name(Q_NULLPTR), type(0) {}
-        Element(const char *n, int t) : name(n), type(t) {}
-
-        const char *name;
-        int type;
+        ElementList(): elementName(0), elementType(0), next(0) {}
+        const char *elementName;
+        int elementType;
+        ElementList *next;
     };
 
-    typedef std::vector<Element> ElementList;
-    ElementList elementList;
+    struct DataList
+    {
+        DataList(): data(0), next(0) {}
+        QTestData *data;
+        DataList *next;
+    };
 
-    typedef std::vector<QTestData *> DataList;
-    DataList dataList;
+    QTestTablePrivate(): list(0), dataList(0) {}
+    ~QTestTablePrivate();
 
-    void addColumn(int elemType, const char *elemName) { elementList.push_back(Element(elemName, elemType)); }
-    void addRow(QTestData *data) { dataList.push_back(data); }
+    ElementList *list;
+    DataList *dataList;
+
+    void addColumn(int elemType, const char *elemName);
+    void addRow(QTestData *data);
+    ElementList *elementAt(int index);
+    QTestData *dataAt(int index);
 
     static QTestTable *currentTestTable;
     static QTestTable *gTable;
@@ -74,6 +76,74 @@ public:
 
 QTestTable *QTestTablePrivate::currentTestTable = 0;
 QTestTable *QTestTablePrivate::gTable = 0;
+
+QTestTablePrivate::ElementList *QTestTablePrivate::elementAt(int index)
+{
+    ElementList *iter = list;
+    for (int i = 0; i < index; ++i) {
+        if (!iter)
+            return 0;
+        iter = iter->next;
+    }
+    return iter;
+}
+
+QTestData *QTestTablePrivate::dataAt(int index)
+{
+    DataList *iter = dataList;
+    for (int i = 0; i < index; ++i) {
+        if (!iter)
+            return 0;
+        iter = iter->next;
+    }
+    return iter ? iter->data : 0;
+}
+
+QTestTablePrivate::~QTestTablePrivate()
+{
+    DataList *dit = dataList;
+    while (dit) {
+        DataList *next = dit->next;
+        delete dit->data;
+        delete dit;
+        dit = next;
+    }
+    ElementList *iter = list;
+    while (iter) {
+        ElementList *next = iter->next;
+        delete iter;
+        iter = next;
+    }
+}
+
+void QTestTablePrivate::addColumn(int elemType, const char *elemName)
+{
+    ElementList *item = new ElementList;
+    item->elementName = elemName;
+    item->elementType = elemType;
+    if (!list) {
+        list = item;
+        return;
+    }
+    ElementList *last = list;
+    while (last->next != 0)
+        last = last->next;
+    last->next = item;
+}
+
+void QTestTablePrivate::addRow(QTestData *data)
+{
+    DataList *item = new DataList;
+    item->data = data;
+    if (!dataList) {
+        dataList = item;
+        return;
+    }
+    DataList *last = dataList;
+    while (last->next != 0)
+        last = last->next;
+    last->next = item;
+}
 
 void QTestTable::addColumn(int type, const char *name)
 {
@@ -85,17 +155,30 @@ void QTestTable::addColumn(int type, const char *name)
 
 int QTestTable::elementCount() const
 {
-    return int(d->elementList.size());
+    QTestTablePrivate::ElementList *item = d->list;
+    int count = 0;
+    while (item) {
+        ++count;
+        item = item->next;
+    }
+    return count;
 }
+
 
 int QTestTable::dataCount() const
 {
-    return int(d->dataList.size());
+    QTestTablePrivate::DataList *item = d->dataList;
+    int count = 0;
+    while (item) {
+        ++count;
+        item = item->next;
+    }
+    return count;
 }
 
 bool QTestTable::isEmpty() const
 {
-    return d->elementList.empty();
+    return !d->list;
 }
 
 QTestData *QTestTable::newData(const char *tag)
@@ -119,43 +202,38 @@ QTestTable::~QTestTable()
 
 int QTestTable::elementTypeId(int index) const
 {
-    return size_t(index) < d->elementList.size() ? d->elementList[index].type : -1;
+    QTestTablePrivate::ElementList *item = d->elementAt(index);
+    if (!item)
+        return -1;
+    return item->elementType;
 }
 
 const char *QTestTable::dataTag(int index) const
 {
-    return size_t(index) < d->elementList.size() ? d->elementList[index].name : Q_NULLPTR;
+    QTestTablePrivate::ElementList *item = d->elementAt(index);
+    if (!item)
+        return 0;
+    return item->elementName;
 }
 
 QTestData *QTestTable::testData(int index) const
 {
-    return size_t(index) < d->dataList.size() ? d->dataList[index] : Q_NULLPTR;
+    return d->dataAt(index);
 }
-
-class NamePredicate : public std::unary_function<QTestTablePrivate::Element, bool>
-{
-public:
-    explicit NamePredicate(const char *needle) : m_needle(needle) {}
-
-    bool operator()(const QTestTablePrivate::Element &e) const
-        { return !strcmp(e.name, m_needle); }
-
-private:
-    const char *m_needle;
-};
 
 int QTestTable::indexOf(const char *elementName) const
 {
-    typedef QTestTablePrivate::ElementList::const_iterator It;
-
     QTEST_ASSERT(elementName);
 
-    const QTestTablePrivate::ElementList &elementList = d->elementList;
-
-    const It it = std::find_if(elementList.begin(), elementList.end(),
-                               NamePredicate(elementName));
-    return it != elementList.end() ?
-        int(it - elementList.begin()) : -1;
+    QTestTablePrivate::ElementList *item = d->list;
+    int i = 0;
+    while (item) {
+        if (strcmp(elementName, item->elementName) == 0)
+            return i;
+        item = item->next;
+        ++i;
+    }
+    return -1;
 }
 
 QTestTable *QTestTable::globalTestTable()

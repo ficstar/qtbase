@@ -171,7 +171,7 @@ void QTextEditPrivate::init(const QString &html)
 
     viewport->setBackgroundRole(QPalette::Base);
     q->setAcceptDrops(true);
-    q->setFocusPolicy(Qt::StrongFocus);
+    q->setFocusPolicy(Qt::WheelFocus);
     q->setAttribute(Qt::WA_KeyCompression);
     q->setAttribute(Qt::WA_InputMethodEnabled);
     q->setInputMethodHints(Qt::ImhMultiLine);
@@ -1719,22 +1719,24 @@ QVariant QTextEdit::inputMethodQuery(Qt::InputMethodQuery property) const
 QVariant QTextEdit::inputMethodQuery(Qt::InputMethodQuery query, QVariant argument) const
 {
     Q_D(const QTextEdit);
-    if (query == Qt::ImHints)
-        return QWidget::inputMethodQuery(query);
-    const QVariant v = d->control->inputMethodQuery(query, argument);
-    const QPointF offset(-d->horizontalOffset(), -d->verticalOffset());
-    switch (v.type()) {
-    case QVariant::RectF:
-        return v.toRectF().translated(offset);
-    case QVariant::PointF:
-        return v.toPointF() + offset;
-    case QVariant::Rect:
-        return v.toRect().translated(offset.toPoint());
-    case QVariant::Point:
-        return v.toPoint() + offset.toPoint();
-    default:
+    QVariant v;
+    switch (query) {
+    case Qt::ImHints:
+        v = QWidget::inputMethodQuery(query);
         break;
+    default:
+        v = d->control->inputMethodQuery(query, argument);
+        const QPoint offset(-d->horizontalOffset(), -d->verticalOffset());
+        if (v.type() == QVariant::RectF)
+            v = v.toRectF().toRect().translated(offset);
+        else if (v.type() == QVariant::PointF)
+            v = v.toPointF().toPoint() + offset;
+        else if (v.type() == QVariant::Rect)
+            v = v.toRect().translated(offset);
+        else if (v.type() == QVariant::Point)
+            v = v.toPoint() + offset;
     }
+
     return v;
 }
 

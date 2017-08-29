@@ -44,9 +44,10 @@ class Object4 : public QObject
 Comment ends there --> /*/
 
 // Now we poison moc, just to make sure this doesn't get moc'ed :)
-class NonMocObject4
+class NonMocObject
 /*  : QObject */
 {
     /* qmake ignore Q_OBJECT */
     Q_OBJECT
 };
+

@@ -191,7 +191,6 @@ private slots:
     void inputMethodQuery();
     void inputMethodQueryImHints_data();
     void inputMethodQueryImHints();
-    void inputMethodCursorRect();
 
     void highlightLongLine();
 
@@ -399,13 +398,12 @@ void tst_QTextEdit::cleanup()
 
 void tst_QTextEdit::inlineAttributesOnInsert()
 {
-    const QColor blue(Qt::blue);
-    QVERIFY(ed->textCursor().charFormat().foreground().color() != blue);
+    QVERIFY(ed->textCursor().charFormat().foreground().color() != Qt::blue);
 
-    ed->setTextColor(blue);
+    ed->setTextColor(Qt::blue);
     QTest::keyClick(ed, Qt::Key_A);
 
-    QCOMPARE(ed->textCursor().charFormat().foreground().color(), blue);
+    QVERIFY(ed->textCursor().charFormat().foreground().color() == Qt::blue);
 }
 
 void tst_QTextEdit::inlineAttributesOnSelection()
@@ -459,7 +457,7 @@ void tst_QTextEdit::autoBulletList1()
     QTest::keyClicks(ed, "*This should become a list");
 
     QVERIFY(ed->textCursor().currentList());
-    QCOMPARE(ed->textCursor().currentList()->format().style(), QTextListFormat::ListDisc);
+    QVERIFY(ed->textCursor().currentList()->format().style() == QTextListFormat::ListDisc);
 }
 
 void tst_QTextEdit::autoBulletList2()
@@ -584,7 +582,7 @@ void tst_QTextEdit::selectAllSetsNotSelection()
     }
 
     QApplication::clipboard()->setText(QString("foobar"), QClipboard::Selection);
-    QCOMPARE(QApplication::clipboard()->text(QClipboard::Selection), QString("foobar"));
+    QVERIFY(QApplication::clipboard()->text(QClipboard::Selection) == QString("foobar"));
 
     ed->insertPlainText("Hello World");
     ed->selectAll();
@@ -869,12 +867,11 @@ void tst_QTextEdit::appendShouldUseCurrentFormat()
     fmt.setFontItalic(true);
     ed->setCurrentCharFormat(fmt);
     ed->append("Hello");
-    const QColor blue(Qt::blue);
 
     QTextCursor cursor(ed->document());
 
     QVERIFY(cursor.movePosition(QTextCursor::NextCharacter));
-    QVERIFY(cursor.charFormat().foreground().color() != blue);
+    QVERIFY(cursor.charFormat().foreground().color() != Qt::blue);
     QVERIFY(!cursor.charFormat().fontItalic());
 
     QVERIFY(cursor.movePosition(QTextCursor::NextBlock));
@@ -886,7 +883,7 @@ void tst_QTextEdit::appendShouldUseCurrentFormat()
     }
 
     QVERIFY(cursor.movePosition(QTextCursor::NextCharacter));
-    QCOMPARE(cursor.charFormat().foreground().color(), blue);
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::blue);
     QVERIFY(cursor.charFormat().fontItalic());
 }
 
@@ -1214,7 +1211,7 @@ void tst_QTextEdit::lineWrapModes()
 {
     ed->setLineWrapMode(QTextEdit::NoWrap);
     // NoWrap at the same time as having all lines that are all left aligned means we optimize to only layout once. The effect is that the width is always 0
-    QCOMPARE(ed->document()->pageSize().width(), qreal(0));
+    QVERIFY(ed->document()->pageSize().width() == qreal(0));
 
     QTextCursor cursor = QTextCursor(ed->document());
     cursor.insertText(QString("A simple line"));
@@ -1240,13 +1237,13 @@ void tst_QTextEdit::mouseCursorShape()
 {
     // always show an IBeamCursor, see change 170146
     QVERIFY(!ed->isReadOnly());
-    QCOMPARE(ed->viewport()->cursor().shape(), Qt::IBeamCursor);
+    QVERIFY(ed->viewport()->cursor().shape() == Qt::IBeamCursor);
 
     ed->setReadOnly(true);
-    QCOMPARE(ed->viewport()->cursor().shape(), Qt::IBeamCursor);
+    QVERIFY(ed->viewport()->cursor().shape() == Qt::IBeamCursor);
 
     ed->setPlainText("Foo");
-    QCOMPARE(ed->viewport()->cursor().shape(), Qt::IBeamCursor);
+    QVERIFY(ed->viewport()->cursor().shape() == Qt::IBeamCursor);
 }
 #endif
 
@@ -1530,19 +1527,12 @@ void tst_QTextEdit::selectWordsFromStringsContainingSeparators_data()
     QTest::addColumn<QString>("testString");
     QTest::addColumn<QString>("selectedWord");
 
-    const ushort wordSeparators[] =
-        {'.', ',', '?', '!', ':', ';', '-', '<', '>', '[', ']', '(', ')', '{', '}',
-         '=', '\t', ushort(QChar::Nbsp)};
+    QStringList wordSeparators;
+    wordSeparators << "." << "," << "?" << "!" << ":" << ";" << "-" << "<" << ">" << "["
+                   << "]" << "(" << ")" << "{" << "}" << "=" << "\t"<< QString(QChar::Nbsp);
 
-    for (size_t i = 0, count = sizeof(wordSeparators) / sizeof(wordSeparators[0]); i < count; ++i) {
-        const ushort u = wordSeparators[i];
-        QByteArray rowName = QByteArrayLiteral("separator: ");
-        if (u >= 32 && u < 128)
-            rowName += char(u);
-        else
-            rowName += QByteArrayLiteral("0x") + QByteArray::number(u, 16);
-        QTest::newRow(rowName.constData()) << QString("foo") + QChar(u) + QString("bar") << QString("foo");
-    }
+    foreach (QString s, wordSeparators)
+        QTest::newRow(QString("separator: " + s).toLocal8Bit()) << QString("foo") + s + QString("bar") << QString("foo");
 }
 
 void tst_QTextEdit::selectWordsFromStringsContainingSeparators()
@@ -1671,7 +1661,7 @@ void tst_QTextEdit::preserveCharFormatAfterSetPlainText()
     QTextBlock block = ed->document()->begin();
     block = block.next();
     QCOMPARE(block.text(), QString("This should still be blue"));
-    QCOMPARE(block.begin().fragment().charFormat().foreground().color(), QColor(Qt::blue));
+    QVERIFY(block.begin().fragment().charFormat().foreground().color() == QColor(Qt::blue));
 }
 
 void tst_QTextEdit::extraSelections()
@@ -1806,25 +1796,25 @@ void tst_QTextEdit::wordWrapProperty()
         QTextDocument *doc = new QTextDocument(&edit);
         edit.setDocument(doc);
         edit.setWordWrapMode(QTextOption::NoWrap);
-        QCOMPARE(doc->defaultTextOption().wrapMode(), QTextOption::NoWrap);
+        QVERIFY(doc->defaultTextOption().wrapMode() == QTextOption::NoWrap);
     }
     {
         QTextEdit edit;
         QTextDocument *doc = new QTextDocument(&edit);
         edit.setWordWrapMode(QTextOption::NoWrap);
         edit.setDocument(doc);
-        QCOMPARE(doc->defaultTextOption().wrapMode(), QTextOption::NoWrap);
+        QVERIFY(doc->defaultTextOption().wrapMode() == QTextOption::NoWrap);
     }
 }
 
 void tst_QTextEdit::lineWrapProperty()
 {
-    QCOMPARE(ed->wordWrapMode(), QTextOption::WrapAtWordBoundaryOrAnywhere);
-    QCOMPARE(ed->lineWrapMode(), QTextEdit::WidgetWidth);
+    QVERIFY(ed->wordWrapMode() == QTextOption::WrapAtWordBoundaryOrAnywhere);
+    QVERIFY(ed->lineWrapMode() == QTextEdit::WidgetWidth);
     ed->setLineWrapMode(QTextEdit::NoWrap);
-    QCOMPARE(ed->lineWrapMode(), QTextEdit::NoWrap);
-    QCOMPARE(ed->wordWrapMode(), QTextOption::WrapAtWordBoundaryOrAnywhere);
-    QCOMPARE(ed->document()->defaultTextOption().wrapMode(), QTextOption::NoWrap);
+    QVERIFY(ed->lineWrapMode() == QTextEdit::NoWrap);
+    QVERIFY(ed->wordWrapMode() == QTextOption::WrapAtWordBoundaryOrAnywhere);
+    QVERIFY(ed->document()->defaultTextOption().wrapMode() == QTextOption::NoWrap);
 }
 
 void tst_QTextEdit::selectionChanged()
@@ -2132,7 +2122,7 @@ void tst_QTextEdit::setDocumentPreservesPalette()
 
     QTextDocument *newDoc = new QTextDocument(ed);
     ed->setDocument(newDoc);
-    QCOMPARE(control->document(), newDoc);
+    QVERIFY(control->document() == newDoc);
     QVERIFY(whitePal.color(QPalette::Active, QPalette::Text)
             == control->palette().color(QPalette::Active, QPalette::Text));
 }
@@ -2481,18 +2471,6 @@ void tst_QTextEdit::inputMethodQueryImHints()
     QCOMPARE(static_cast<Qt::InputMethodHints>(value.toInt()), hints);
 }
 
-// QTBUG-51923: Verify that the cursor rectangle returned by the input
-// method query correctly reflects the viewport offset.
-void tst_QTextEdit::inputMethodCursorRect()
-{
-    ed->setPlainText("Line1\nLine2Line3\nLine3");
-    ed->moveCursor(QTextCursor::End);
-    const QRectF cursorRect = ed->cursorRect();
-    const QVariant cursorRectV = ed->inputMethodQuery(Qt::ImCursorRectangle);
-    QCOMPARE(cursorRectV.type(), QVariant::RectF);
-    QCOMPARE(cursorRectV.toRect(), cursorRect.toRect());
-}
-
 void tst_QTextEdit::highlightLongLine()
 {
     QTextEdit edit;
@@ -2547,7 +2525,7 @@ void tst_QTextEdit::findWithRegExp()
 
     bool found = ed->find(rx);
 
-    QVERIFY(found);
+    QVERIFY(found == true);
     QCOMPARE(ed->textCursor().selectedText(), QStringLiteral("text"));
 }
 
@@ -2561,7 +2539,7 @@ void tst_QTextEdit::findBackwardWithRegExp()
 
     bool found = ed->find(rx, QTextDocument::FindBackward);
 
-    QVERIFY(found);
+    QVERIFY(found == true);
     QCOMPARE(ed->textCursor().selectedText(), QStringLiteral("arbit"));
 }
 
@@ -2573,7 +2551,7 @@ void tst_QTextEdit::findWithRegExpReturnsFalseIfNoMoreResults()
 
     bool found = ed->find(rx);
 
-    QVERIFY(!found);
+    QVERIFY(found == false);
     QCOMPARE(ed->textCursor().selectedText(), QStringLiteral("text"));
 }
 #endif

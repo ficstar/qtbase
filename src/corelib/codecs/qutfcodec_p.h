@@ -217,6 +217,8 @@ namespace QUtf8Functions
                 return Traits::Error;
             if (bytesAvailable > 1 && !isContinuationByte(Traits::peekByte(src, 1)))
                 return Traits::Error;
+            if (bytesAvailable > 2 && !isContinuationByte(Traits::peekByte(src, 2)))
+                return Traits::Error;
             return Traits::EndOfString;
         }
 

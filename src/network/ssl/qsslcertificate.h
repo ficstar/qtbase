@@ -83,12 +83,9 @@ public:
     explicit QSslCertificate(const QByteArray &data = QByteArray(), QSsl::EncodingFormat format = QSsl::Pem);
     QSslCertificate(const QSslCertificate &other);
     ~QSslCertificate();
-#ifdef Q_COMPILER_RVALUE_REFS
-    QSslCertificate &operator=(QSslCertificate &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
     QSslCertificate &operator=(const QSslCertificate &other);
 
-    void swap(QSslCertificate &other) Q_DECL_NOTHROW
+    inline void swap(QSslCertificate &other)
     { qSwap(d, other.d); }
 
     bool operator==(const QSslCertificate &other) const;
@@ -97,7 +94,7 @@ public:
     bool isNull() const;
 #if QT_DEPRECATED_SINCE(5,0)
     QT_DEPRECATED inline bool isValid() const {
-        const QDateTime currentTime = QDateTime::currentDateTimeUtc();
+        const QDateTime currentTime = QDateTime::currentDateTime();
         return currentTime >= effectiveDate() &&
                currentTime <= expiryDate() &&
                !isBlacklisted();
@@ -147,7 +144,7 @@ public:
 
     static bool importPkcs12(QIODevice *device,
                              QSslKey *key, QSslCertificate *cert,
-                             QList<QSslCertificate> *caCertificates = Q_NULLPTR,
+                             QList<QSslCertificate> *caCertificates=0,
                              const QByteArray &passPhrase=QByteArray());
 
     Qt::HANDLE handle() const;

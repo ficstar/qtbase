@@ -227,9 +227,9 @@ QString QFileSelector::select(const QString &filePath) const
 
 static bool isLocalScheme(const QString &file)
 {
-    bool local = file == QLatin1String("qrc");
+    bool local = file == QStringLiteral("qrc");
 #ifdef Q_OS_ANDROID
-    local |= file == QLatin1String("assets");
+    local |= file == QStringLiteral("assets");
 #endif
     return local;
 }
@@ -248,16 +248,9 @@ QUrl QFileSelector::select(const QUrl &filePath) const
         return filePath;
     QUrl ret(filePath);
     if (isLocalScheme(filePath.scheme())) {
-        QLatin1String scheme(":");
-#ifdef Q_OS_ANDROID
-        // use other scheme because ":" means "qrc" here
-        if (filePath.scheme() == QLatin1String("assets"))
-            scheme = QLatin1String("assets:");
-#endif
-
-        QString equivalentPath = scheme + filePath.path();
+        QString equivalentPath = QLatin1Char(':') + filePath.path();
         QString selectedPath = d->select(equivalentPath);
-        ret.setPath(selectedPath.remove(0, scheme.size()));
+        ret.setPath(selectedPath.remove(0, 1));
     } else {
         ret = QUrl::fromLocalFile(d->select(ret.toLocalFile()));
     }
@@ -383,12 +376,8 @@ QStringList QFileSelectorPrivate::platformSelectors()
 #     endif
 #  endif
     QString productName = QSysInfo::productType();
-#     ifdef Q_OS_MACOS
-    if (productName != QStringLiteral("osx"))
-        ret << QStringLiteral("osx"); // compatibility
-#     endif
     if (productName != QLatin1String("unknown"))
-        ret << productName; // "opensuse", "fedora", "macos", "ios", "blackberry", "android"
+        ret << productName; // "opensuse", "fedora", "osx", "ios", "blackberry", "android"
 #endif
     return ret;
 }

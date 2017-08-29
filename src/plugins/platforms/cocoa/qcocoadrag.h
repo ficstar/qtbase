@@ -47,13 +47,13 @@ class QCocoaDrag : public QPlatformDrag
 {
 public:
     QCocoaDrag();
-    ~QCocoaDrag();
+    virtual ~QCocoaDrag();
 
-    QMimeData *platformDropData() Q_DECL_OVERRIDE;
-    Qt::DropAction drag(QDrag *m_drag) Q_DECL_OVERRIDE;
+    virtual QMimeData *platformDropData();
+    virtual Qt::DropAction drag(QDrag *m_drag);
 
-    Qt::DropAction defaultAction(Qt::DropActions possibleActions,
-                                 Qt::KeyboardModifiers modifiers) const Q_DECL_OVERRIDE;
+    virtual Qt::DropAction defaultAction(Qt::DropActions possibleActions,
+                                               Qt::KeyboardModifiers modifiers) const;
 
     /**
     * to meet NSView dragImage:at guarantees, we need to record the original

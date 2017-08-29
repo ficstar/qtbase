@@ -48,7 +48,7 @@ class QTextTablePrivate;
 class Q_GUI_EXPORT QTextTableCell
 {
 public:
-    QTextTableCell() : table(Q_NULLPTR) {}
+    QTextTableCell() : table(0) {}
     ~QTextTableCell() {}
     QTextTableCell(const QTextTableCell &o) : table(o.table), fragment(o.fragment) {}
     QTextTableCell &operator=(const QTextTableCell &o)
@@ -63,7 +63,7 @@ public:
     int rowSpan() const;
     int columnSpan() const;
 
-    inline bool isValid() const { return table != Q_NULLPTR; }
+    inline bool isValid() const { return table != 0; }
 
     QTextCursor firstCursorPosition() const;
     QTextCursor lastCursorPosition() const;

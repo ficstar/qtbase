@@ -86,7 +86,7 @@ static IApplicationDataContainer *subContainer(IApplicationDataContainer *parent
     if (FAILED(hr))
         return 0;
 
-    while (SUCCEEDED(hr) && current) {
+    while (SUCCEEDED(S_OK) && current) {
         ComPtr<ContainerItem> item;
         hr = iterator->get_Current(&item);
         if (FAILED(hr))

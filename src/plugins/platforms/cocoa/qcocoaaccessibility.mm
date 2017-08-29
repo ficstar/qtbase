@@ -37,8 +37,6 @@
 
 QT_BEGIN_NAMESPACE
 
-#ifndef QT_NO_ACCESSIBILITY
-
 QCocoaAccessibility::QCocoaAccessibility()
 {
 
@@ -51,8 +49,6 @@ QCocoaAccessibility::~QCocoaAccessibility()
 
 void QCocoaAccessibility::notifyAccessibilityUpdate(QAccessibleEvent *event)
 {
-    if (!isActive() || !event->accessibleInterface() || !event->accessibleInterface()->isValid())
-        return;
     QMacAccessibilityElement *element = [QMacAccessibilityElement elementWithId: event->uniqueId()];
     if (!element) {
         qWarning() << "QCocoaAccessibility::notifyAccessibilityUpdate: invalid element";
@@ -195,8 +191,6 @@ NSString *macSubrole(QAccessibleInterface *interface)
     QAccessible::State s = interface->state();
     if (s.searchEdit)
         return NSAccessibilitySearchFieldSubrole;
-    if (s.passwordEdit)
-        return NSAccessibilitySecureTextFieldSubrole;
     return nil;
 }
 
@@ -351,23 +345,18 @@ id getValueAttribute(QAccessibleInterface *interface)
     const QAccessible::Role qtrole = interface->role();
     if (qtrole == QAccessible::EditableText) {
         if (QAccessibleTextInterface *textInterface = interface->textInterface()) {
-
+            // VoiceOver will read out the entire text string at once when returning
+            // text as a value. For large text edits the size of the returned string
+            // needs to be limited and text range attributes need to be used instead.
+            // NSTextEdit returns the first sentence as the value, Do the same here:
             int begin = 0;
             int end = textInterface->characterCount();
-            QString text;
-            if (interface->state().passwordEdit) {
-                // return round password replacement chars
-                text = QString(end, QChar(kBulletUnicode));
-            } else {
-                // VoiceOver will read out the entire text string at once when returning
-                // text as a value. For large text edits the size of the returned string
-                // needs to be limited and text range attributes need to be used instead.
-                // NSTextEdit returns the first sentence as the value, Do the same here:
-                // ### call to textAfterOffset hangs. Booo!
-                //if (textInterface->characterCount() > 0)
-                //    textInterface->textAfterOffset(0, QAccessible2::SentenceBoundary, &begin, &end);
-                text = textInterface->text(begin, end);
-            }
+            // ### call to textAfterOffset hangs. Booo!
+            //if (textInterface->characterCount() > 0)
+            //    textInterface->textAfterOffset(0, QAccessible2::SentenceBoundary, &begin, &end);
+
+            QString text = textInterface->text(begin, end);
+            //qDebug() << "text" << begin << end << text;
             return QCFString::toNSString(text);
         }
     }
@@ -384,8 +373,6 @@ id getValueAttribute(QAccessibleInterface *interface)
 }
 
 } // namespace QCocoaAccessible
-
-#endif // QT_NO_ACCESSIBILITY
 
 QT_END_NAMESPACE
 

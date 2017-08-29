@@ -93,6 +93,13 @@ QOpenGL2PaintEngineExPrivate::~QOpenGL2PaintEngineExPrivate()
 {
     delete shaderManager;
 
+    while (pathCaches.size()) {
+        QVectorPath::CacheEntry *e = *(pathCaches.constBegin());
+        e->cleanup(e->engine, e->data);
+        e->data = 0;
+        e->engine = 0;
+    }
+
     if (elementIndicesVBOId != 0) {
         funcs.glDeleteBuffers(1, &elementIndicesVBOId);
         elementIndicesVBOId = 0;
@@ -285,6 +292,8 @@ void QOpenGL2PaintEngineExPrivate::updateBrushTexture()
         }
 
         updateTexture(QT_BRUSH_TEXTURE_UNIT, currentBrushImage, wrapMode, filterMode, ForceUpdate);
+
+        textureInvertedY = false;
     }
     brushTextureDirty = false;
 }
@@ -400,7 +409,11 @@ void QOpenGL2PaintEngineExPrivate::updateBrushUniforms()
             dy = 0;
         }
         QTransform gl_to_qt(1, 0, 0, m22, 0, dy);
-        QTransform inv_matrix = gl_to_qt * (brushQTransform * matrix).inverted() * translate;
+        QTransform inv_matrix;
+        if (style == Qt::TexturePattern && textureInvertedY == -1)
+            inv_matrix = gl_to_qt * (QTransform(1, 0, 0, -1, 0, currentBrush.texture().height()) * brushQTransform * matrix).inverted() * translate;
+        else
+            inv_matrix = gl_to_qt * (brushQTransform * matrix).inverted() * translate;
 
         shaderManager->currentProgram()->setUniformValue(location(QOpenGLEngineShaderManager::BrushTransform), inv_matrix);
         shaderManager->currentProgram()->setUniformValue(location(QOpenGLEngineShaderManager::BrushTexture), QT_BRUSH_TEXTURE_UNIT);
@@ -2063,7 +2076,7 @@ bool QOpenGL2PaintEngineEx::begin(QPaintDevice *pdev)
 
     d->device->ensureActiveTarget();
 
-    if (d->device->context() != QOpenGLContext::currentContext() || !d->device->context()) {
+    if (d->device->context() != QOpenGLContext::currentContext()) {
         qWarning("QPainter::begin(): QOpenGLPaintDevice's context needs to be current");
         return false;
     }

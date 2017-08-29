@@ -85,4 +85,3 @@
     Add the \a item from the index.
 */
 
-#include "moc_qgraphicsscenelinearindex_p.cpp"

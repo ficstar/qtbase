@@ -33,8 +33,8 @@
 
 
 #include <stdlib.h>
-int main(int argc, char **argv)
+int main(int /* argc */, char **argv)
 {
-    return argc >= 2 ? atoi(argv[1]) : -1;
+    return atoi(argv[1]);
 }
 

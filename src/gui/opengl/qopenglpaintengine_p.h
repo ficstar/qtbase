@@ -309,9 +309,14 @@ public:
     bool needsSync;
     bool multisamplingAlwaysEnabled;
 
+    GLfloat depthRange[2];
+
+    float textureInvertedY;
+
     QTriangulatingStroker stroker;
     QDashedStrokeProcessor dasher;
 
+    QSet<QVectorPath::CacheEntry *> pathCaches;
     QVector<GLuint> unusedVBOSToClean;
     QVector<GLuint> unusedIBOSToClean;
 

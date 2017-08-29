@@ -7,8 +7,4 @@ contains(QT_CONFIG, system-zlib) {
     }
 } else {
     INCLUDEPATH +=  $$PWD/zlib
-    !no_core_dep {
-        CONFIG += qt
-        QT_PRIVATE += core
-    }
 }

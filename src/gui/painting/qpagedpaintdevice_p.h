@@ -61,7 +61,9 @@ public:
     {
     }
 
-    virtual ~QPagedPaintDevicePrivate();
+    virtual ~QPagedPaintDevicePrivate()
+    {
+    }
 
     // ### Qt6 Remove these and make public class methods virtual
     virtual bool setPageLayout(const QPageLayout &newPageLayout)

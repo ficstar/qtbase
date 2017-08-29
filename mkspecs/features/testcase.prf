@@ -6,16 +6,8 @@ have_target {
 # qt_build_config tells us to re-enable exceptions here.
 testcase_exceptions: CONFIG += exceptions
 
-benchmark: type = benchmark
-else: type = check
-
-$${type}.files =
-$${type}.path = .
-
-# Add environment for non-installed builds. Do this first, so the
-# 'make' variable expansions don't end up in a batch file/script.
-QT_TOOL_NAME = target
-qtAddTargetEnv($${type}.commands, QT)
+check.files                =
+check.path                 = .
 
 # If the test ends up in a different directory, we should cd to that directory.
 TESTRUN_CWD = $$DESTDIR
@@ -30,44 +22,48 @@ debug_and_release:debug_and_release_target {
 }
 
 # Allow for a custom test runner script
-$${type}.commands += $(TESTRUNNER)
+check.commands += $(TESTRUNNER)
 
 unix {
     isEmpty(TEST_TARGET_DIR): TEST_TARGET_DIR = .
 
-    app_bundle: \
-        $${type}.commands += $${TEST_TARGET_DIR}/$(QMAKE_TARGET).app/Contents/MacOS/$(QMAKE_TARGET)
+    mac:app_bundle: \
+        check.commands += $${TEST_TARGET_DIR}/$(QMAKE_TARGET).app/Contents/MacOS/$(QMAKE_TARGET)
     else: \
-        $${type}.commands += $${TEST_TARGET_DIR}/$(QMAKE_TARGET)
+        check.commands += $${TEST_TARGET_DIR}/$(QMAKE_TARGET)
 } else {
     # Windows
     !isEmpty(TEST_TARGET_DIR): TEST_TARGET_DIR = $${TEST_TARGET_DIR}$${QMAKE_DIR_SEP}
-    $${type}.commands += $${TEST_TARGET_DIR}$(TARGET)
+    check.commands += $${TEST_TARGET_DIR}$(TARGET)
 }
 
 # Allow for custom arguments to tests
-$${type}.commands += $(TESTARGS)
+check.commands += $(TESTARGS)
 
+# Add environment for non-installed builds
+qtAddTargetEnv(check.commands, QT)
+
+# This must happen after adding the environment.
 !isEmpty(TESTRUN_CWD):!contains(TESTRUN_CWD, ^\\./?): \
-    $${type}.commands = cd $$shell_path($$TESTRUN_CWD) && $$eval($${type}.commands)
+    check.commands = cd $$shell_path($$TESTRUN_CWD) && $$check.commands
 
 # If the test is marked as insignificant, discard the exit code
-insignificant_test: $${type}.commands = -$$eval($${type}.commands)
+insignificant_test:check.commands = -$${check.commands}
 
-QMAKE_EXTRA_TARGETS *= $${type}
+QMAKE_EXTRA_TARGETS *= check
 
 isEmpty(BUILDS)|build_pass {
-    $${type}.depends = first
+    check.depends = first
 } else {
     # For exclusive builds, only run the test once.
-    $${type}.CONFIG = recursive
-    $${type}.target = $${type}_all
-    $${type}.recurse_target = $${type}
-    $${type}.commands =
+    check.CONFIG = recursive
+    check.target = check_all
+    check.recurse_target = check
+    check.commands =
 
-    $${type}_first.depends = $$eval($$first(BUILDS).target)-$${type}
-    $${type}_first.target = $${type}
-    QMAKE_EXTRA_TARGETS += $${type}_first
+    check_first.depends = $$eval($$first(BUILDS).target)-check
+    check_first.target = check
+    QMAKE_EXTRA_TARGETS += check_first
 }
 
 !no_testcase_installs:!contains(INSTALLS, target) {
@@ -83,7 +79,7 @@ isEmpty(BUILDS)|build_pass {
     INSTALLS += target
 }
 
-!builtin_testdata:contains(INSTALLS, target) {
+contains(INSTALLS, target) {
     # Install testdata and helpers as well, but only if we're actually installing the test.
     #
     # Testdata is installed relative to the directory containing the testcase
@@ -182,20 +178,6 @@ isEmpty(BUILDS)|build_pass {
         $$subConfig += no_check_exist executable
         INSTALLS += $${subInstall}
     }
-}
-
-builtin_testdata {
-    ALL_TESTDATA = $$TESTDATA $$GENERATED_TESTDATA
-    # RESOURCES does not support wildcards (for good reasons)
-    for(td, ALL_TESTDATA): \
-        testdata.files += $$files($$absolute_path($$td, $$_PRO_FILE_PWD_))
-    !isEmpty(testdata.files) {
-        testdata.base = $$_PRO_FILE_PWD_
-        RESOURCES += testdata
-    }
-
-    !isEmpty(TEST_HELPER_INSTALLS): \
-        error("This platform does not support tests which require helpers.")
 }
 
 macx-xcode:bundle:isEmpty(QMAKE_BUNDLE_EXTENSION) {

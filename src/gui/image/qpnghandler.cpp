@@ -43,8 +43,13 @@
 #include <qvariant.h>
 #include <qvector.h>
 
+#ifdef QT_USE_BUNDLED_LIBPNG
+#include <../../3rdparty/libpng/png.h>
+#include <../../3rdparty/libpng/pngconf.h>
+#else
 #include <png.h>
 #include <pngconf.h>
+#endif
 
 #if PNG_LIBPNG_VER >= 10400 && PNG_LIBPNG_VER <= 10502 \
         && defined(PNG_PEDANTIC_WARNINGS_SUPPORTED)
@@ -103,11 +108,10 @@ public:
     };
 
     QPngHandlerPrivate(QPngHandler *qq)
-        : gamma(0.0), fileGamma(0.0), quality(2), png_ptr(0), info_ptr(0), end_info(0), state(Ready), q(qq)
+        : gamma(0.0), quality(2), png_ptr(0), info_ptr(0), end_info(0), state(Ready), q(qq)
     { }
 
     float gamma;
-    float fileGamma;
     int quality;
     QString description;
     QSize scaledSize;
@@ -230,10 +234,13 @@ void CALLBACK_CALL_TYPE qpiw_flush_fn(png_structp /* png_ptr */)
 }
 
 static
-void setup_qt(QImage& image, png_structp png_ptr, png_infop info_ptr, QSize scaledSize, bool *doScaledRead, float screen_gamma=0.0, float file_gamma=0.0)
+void setup_qt(QImage& image, png_structp png_ptr, png_infop info_ptr, QSize scaledSize, bool *doScaledRead, float screen_gamma=0.0)
 {
-    if (screen_gamma != 0.0 && file_gamma != 0.0)
-        png_set_gamma(png_ptr, 1.0f / screen_gamma, file_gamma);
+    if (screen_gamma != 0.0 && png_get_valid(png_ptr, info_ptr, PNG_INFO_gAMA)) {
+        double file_gamma;
+        png_get_gAMA(png_ptr, info_ptr, &file_gamma);
+        png_set_gamma(png_ptr, screen_gamma, file_gamma);
+    }
 
     png_uint_32 width;
     png_uint_32 height;
@@ -550,12 +557,6 @@ bool Q_INTERNAL_WIN_NO_THROW QPngHandlerPrivate::readPngHeader()
 
     readPngTexts(info_ptr);
 
-    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_gAMA)) {
-        double file_gamma = 0.0;
-        png_get_gAMA(png_ptr, info_ptr, &file_gamma);
-        fileGamma = file_gamma;
-    }
-
     state = ReadHeader;
     return true;
 }
@@ -579,7 +580,7 @@ bool Q_INTERNAL_WIN_NO_THROW QPngHandlerPrivate::readPngImage(QImage *outImage)
     }
 
     bool doScaledRead = false;
-    setup_qt(*outImage, png_ptr, info_ptr, scaledSize, &doScaledRead, gamma, fileGamma);
+    setup_qt(*outImage, png_ptr, info_ptr, scaledSize, &doScaledRead, gamma);
 
     if (outImage->isNull()) {
         png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
@@ -1062,7 +1063,7 @@ QVariant QPngHandler::option(ImageOption option) const
         return QVariant();
 
     if (option == Gamma)
-        return d->gamma == 0.0 ? d->fileGamma : d->gamma;
+        return d->gamma;
     else if (option == Quality)
         return d->quality;
     else if (option == Description)

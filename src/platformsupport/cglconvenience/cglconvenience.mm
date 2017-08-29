@@ -81,11 +81,8 @@ void *qcgl_createNSOpenGLPixelFormat(const QSurfaceFormat &format)
 
     QVector<NSOpenGLPixelFormatAttribute> attrs;
 
-    if (format.swapBehavior() == QSurfaceFormat::DoubleBuffer
-        || format.swapBehavior() == QSurfaceFormat::DefaultSwapBehavior)
+    if (format.swapBehavior() != QSurfaceFormat::SingleBuffer)
         attrs.append(NSOpenGLPFADoubleBuffer);
-    else if (format.swapBehavior() == QSurfaceFormat::TripleBuffer)
-        attrs.append(NSOpenGLPFATripleBuffer);
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
     if (QSysInfo::MacintoshVersion >= QSysInfo::MV_10_7) {

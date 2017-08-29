@@ -110,9 +110,6 @@ public:
     void setAutoTransform(bool enabled);
     bool autoTransform() const;
 
-    void setGamma(float gamma);
-    float gamma() const;
-
     QByteArray subType() const;
     QList<QByteArray> supportedSubTypes() const;
 

@@ -53,7 +53,7 @@ void tst_QPixelFormat::testOperators()
 {
     QPixelFormat first = qPixelFormatRgba(8,8,8,8,QPixelFormat::UsesAlpha, QPixelFormat::AtBeginning, QPixelFormat::Premultiplied);
     QPixelFormat second = qPixelFormatRgba(8,8,8,8,QPixelFormat::UsesAlpha, QPixelFormat::AtBeginning, QPixelFormat::Premultiplied);
-    QCOMPARE(first, second);
+    QVERIFY(first == second);
 
     QPixelFormat third = qPixelFormatRgba(8,8,8,8,QPixelFormat::UsesAlpha, QPixelFormat::AtEnd, QPixelFormat::NotPremultiplied);
     QVERIFY(first != third);

@@ -43,8 +43,6 @@
 
 //#define DEBUG_GENERATOR
 
-/* Whenever QComposeTableElement gets modified supportedCacheVersion
- from qtablegenerator.cpp must be bumped. */
 struct QComposeTableElement {
     uint keys[QT_KEYSEQUENCE_MAX_LEN];
     uint value;
@@ -109,7 +107,7 @@ protected:
     void parseKeySequence(char *line);
     void parseIncludeInstruction(QString line);
 
-    QString findComposeFile();
+    void findComposeFile();
     bool findSystemComposeDir();
     QString systemComposeDir();
     QString composeTableForLocale();

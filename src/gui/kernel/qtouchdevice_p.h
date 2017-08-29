@@ -45,6 +45,7 @@
 // We mean it.
 //
 
+#include <QtCore/qobject.h>
 #include <QtGui/qtouchdevice.h>
 
 QT_BEGIN_NAMESPACE
@@ -64,9 +65,8 @@ public:
     QString name;
     int maxTouchPoints;
 
-    static void registerDevice(const QTouchDevice *dev);
-    static void unregisterDevice(const QTouchDevice *dev);
-    static bool isRegistered(const QTouchDevice *dev);
+    static void registerDevice(QTouchDevice *dev);
+    static bool isRegistered(QTouchDevice *dev);
 };
 
 QT_END_NAMESPACE

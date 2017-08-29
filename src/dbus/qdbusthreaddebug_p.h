@@ -1,7 +1,6 @@
 /****************************************************************************
 **
 ** Copyright (C) 2015 The Qt Company Ltd.
-** Copyright (C) 2015 Intel Corporation.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtDBus module of the Qt Toolkit.
@@ -83,12 +82,13 @@ enum ThreadAction {
     HandleObjectCallPostEventAction = 22,
     HandleObjectCallSemaphoreAction = 23,
     DoDispatchAction = 24,
-    SetDispatchEnabledAction = 25,
+    SendWithReplyAsyncAction = 25,
     MessageResultReceivedAction = 26,
     ActivateSignalAction = 27,
     PendingCallBlockAction = 28,
     SendMessageAction = 29,
-    HuntAndEmitAction = 30,
+    SendWithReplyAndBlockAction = 30,
+    HuntAndEmitAction = 31,
 
     AddTimeoutAction = 50,
     RealAddTimeoutAction = 51,

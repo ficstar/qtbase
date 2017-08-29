@@ -177,7 +177,6 @@ void tst_QUrlQuery::constructing()
         QVERIFY(copy.isEmpty());
         QVERIFY(!copy.isDetached());
         QVERIFY(copy == empty);
-        QCOMPARE(qHash(copy), qHash(empty));
         QVERIFY(!(copy != empty));
 
         copy = empty;
@@ -185,7 +184,6 @@ void tst_QUrlQuery::constructing()
 
         copy = QUrlQuery();
         QVERIFY(copy == empty);
-        QCOMPARE(qHash(copy), qHash(empty));
     }
     {
         QUrlQuery copy(emptyQuery());
@@ -300,7 +298,6 @@ void tst_QUrlQuery::addRemove()
 
         QVERIFY(query == original);
         QVERIFY(!(query != original));
-        QCOMPARE(qHash(query), qHash(original));
     }
 
     {

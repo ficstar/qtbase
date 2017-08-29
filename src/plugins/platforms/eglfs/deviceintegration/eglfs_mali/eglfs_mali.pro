@@ -1,5 +1,9 @@
 TARGET = qeglfs-mali-integration
 
+PLUGIN_TYPE = egldeviceintegrations
+PLUGIN_CLASS_NAME = QEglFSMaliIntegrationPlugin
+load(qt_plugin)
+
 QT += core-private gui-private platformsupport-private eglfs_device_lib-private
 
 # Avoid X11 header collision
@@ -15,7 +19,3 @@ SOURCES += $$PWD/qeglfsmalimain.cpp \
 HEADERS += $$PWD/qeglfsmaliintegration.h
 
 OTHER_FILES += $$PWD/eglfs_mali.json
-
-PLUGIN_TYPE = egldeviceintegrations
-PLUGIN_CLASS_NAME = QEglFSMaliIntegrationPlugin
-load(qt_plugin)

@@ -36,6 +36,7 @@
 #include "qprintdialog.h"
 #include "qabstractprintdialog_p.h"
 
+#include <QtCore/qhash.h>
 #include <QtCore/private/qcore_mac_p.h>
 #include <QtWidgets/private/qapplication_p.h>
 #include <QtPrintSupport/qprinter.h>
@@ -301,9 +302,10 @@ int QPrintDialog::exec()
 
     QDialog::setVisible(true);
 
-    QMacAutoReleasePool pool;
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     d->openCocoaPrintPanel(Qt::ApplicationModal);
     d->closeCocoaPrintPanel();
+    [pool release];
 
     QDialog::setVisible(false);
 

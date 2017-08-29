@@ -239,32 +239,32 @@ void tst_QIntValidator::notifySignals()
     iv.setTop(9);
     QCOMPARE(topSpy.count(), 1);
     QCOMPARE(changedSpy.count(), 1);
-    QCOMPARE(iv.top(), 9);
+    QVERIFY(iv.top() == 9);
     iv.setBottom(1);
     QCOMPARE(bottomSpy.count(), 1);
     QCOMPARE(changedSpy.count(), 2);
-    QCOMPARE(iv.bottom(), 1);
+    QVERIFY(iv.bottom() == 1);
 
     iv.setRange(1, 8);
     QCOMPARE(topSpy.count(), 2);
     QCOMPARE(bottomSpy.count(), 1);
     QCOMPARE(changedSpy.count(), 3);
-    QCOMPARE(iv.top(), 8);
-    QCOMPARE(iv.bottom(), 1);
+    QVERIFY(iv.top() == 8);
+    QVERIFY(iv.bottom() == 1);
 
     iv.setRange(2, 8);
     QCOMPARE(topSpy.count(), 2);
     QCOMPARE(bottomSpy.count(), 2);
     QCOMPARE(changedSpy.count(), 4);
-    QCOMPARE(iv.top(), 8);
-    QCOMPARE(iv.bottom(), 2);
+    QVERIFY(iv.top() == 8);
+    QVERIFY(iv.bottom() == 2);
 
     iv.setRange(3, 7);
     QCOMPARE(topSpy.count(), 3);
     QCOMPARE(bottomSpy.count(), 3);
     QCOMPARE(changedSpy.count(), 5);
-    QCOMPARE(iv.top(), 7);
-    QCOMPARE(iv.bottom(), 3);
+    QVERIFY(iv.top() == 7);
+    QVERIFY(iv.bottom() == 3);
 
     iv.setRange(3, 7);
     QCOMPARE(topSpy.count(), 3);

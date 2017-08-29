@@ -65,8 +65,6 @@ private:
     qreal mPress, mTangential, mRot;
     qint64 mUnique;
     bool mMouseToo;
-    ulong mTimestamp;
-    int mWheelEventCount;
 };
 
 #endif // TABLETWIDGET_H

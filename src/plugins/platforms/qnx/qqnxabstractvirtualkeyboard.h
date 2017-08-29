@@ -74,8 +74,6 @@ public:
     KeyboardMode keyboardMode() const { return m_keyboardMode; }
     EnterKeyType enterKeyType() const { return m_enterKeyType; }
 
-    static EnterKeyType qtEnterKeyTypeToQnx(Qt::EnterKeyType type);
-
 Q_SIGNALS:
     void heightChanged(int height);
     void visibilityChanged(bool visible);

@@ -84,7 +84,7 @@ void QQnxScreenEventThread::unlock()
 
 void QQnxScreenEventThread::run()
 {
-    qScreenEventThreadDebug("screen event thread started");
+    qScreenEventThreadDebug() << Q_FUNC_INFO << "screen event thread started";
 
     int errorCounter = 0;
     // loop indefinitely
@@ -117,7 +117,7 @@ void QQnxScreenEventThread::run()
 
         if (qnxType == SCREEN_EVENT_USER) {
             // treat all user events as shutdown requests
-            qScreenEventThreadDebug("QNX user screen event");
+            qScreenEventThreadDebug() << Q_FUNC_INFO << "QNX user screen event";
             m_quit = true;
         } else {
             m_mutex.lock();
@@ -127,7 +127,7 @@ void QQnxScreenEventThread::run()
         }
     }
 
-    qScreenEventThreadDebug("screen event thread stopped");
+    qScreenEventThreadDebug() << Q_FUNC_INFO << "screen event thread stopped";
 
     // cleanup
     m_mutex.lock();
@@ -160,10 +160,10 @@ void QQnxScreenEventThread::shutdown()
     // cleanup
     screen_destroy_event(event);
 
-    qScreenEventThreadDebug("screen event thread shutdown begin");
+    qScreenEventThreadDebug() << Q_FUNC_INFO << "screen event thread shutdown begin";
 
     // block until thread terminates
     wait();
 
-    qScreenEventThreadDebug("screen event thread shutdown end");
+    qScreenEventThreadDebug() << Q_FUNC_INFO << "screen event thread shutdown end";
 }

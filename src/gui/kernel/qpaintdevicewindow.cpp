@@ -155,10 +155,8 @@ int QPaintDeviceWindow::metric(PaintDeviceMetric metric) const
             return qRound(screen->physicalDotsPerInchY());
         break;
     case PdmDevicePixelRatio:
-        return int(QWindow::devicePixelRatio());
-        break;
-    case PdmDevicePixelRatioScaled:
-        return int(QWindow::devicePixelRatio() * devicePixelRatioFScale());
+        if (screen)
+            return screen->devicePixelRatio();
         break;
     default:
         break;

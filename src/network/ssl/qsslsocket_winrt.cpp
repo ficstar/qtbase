@@ -251,8 +251,9 @@ void QSslSocketBackendPrivate::startClientEncryption()
     case QSsl::TlsV1_2OrLater:
         // TlsV1_0OrLater, TlsV1_1OrLater and TlsV1_2OrLater are disabled on WinRT
         // because there is no good way to map them to the native API.
-        setErrorAndEmit(QAbstractSocket::SslInvalidUserDataError,
-                        QStringLiteral("unsupported protocol"));
+        q->setErrorString(QStringLiteral("unsupported protocol"));
+        q->setSocketError(QAbstractSocket::SslInvalidUserDataError);
+        emit q->error(QAbstractSocket::SslInvalidUserDataError);
         return;
     default:
         protectionLevel = SocketProtectionLevel_Tls12; // default to highest
@@ -346,10 +347,13 @@ QSsl::SslProtocol QSslSocketBackendPrivate::sessionProtocol() const
 
 void QSslSocketBackendPrivate::continueHandshake()
 {
+    Q_Q(QSslSocket);
+
     IStreamSocket *socket = reinterpret_cast<IStreamSocket *>(plainSocket->socketDescriptor());
     if (qintptr(socket) == -1) {
-        setErrorAndEmit(QAbstractSocket::SslInternalError,
-                        QStringLiteral("At attempt was made to continue the handshake on an invalid socket."));
+        q->setErrorString(QStringLiteral("At attempt was made to continue the handshake on an invalid socket."));
+        q->setSocketError(QAbstractSocket::SslInternalError);
+        emit q->error(QAbstractSocket::SslInternalError);
         return;
     }
 
@@ -368,7 +372,9 @@ void QSslSocketBackendPrivate::continueHandshake()
         Q_ASSERT_SUCCEEDED(hr);
     }
     if (FAILED(hr)) {
-        setErrorAndEmit(QAbstractSocket::SslInvalidUserDataError, qt_error_string(hr));
+        q->setErrorString(qt_error_string(hr));
+        q->setSocketError(QAbstractSocket::SslInvalidUserDataError);
+        emit q->error(QAbstractSocket::SslInvalidUserDataError);
         return;
     }
 
@@ -434,8 +440,10 @@ void QSslSocketBackendPrivate::continueHandshake()
     ComPtr<IAsyncAction> op;
     hr = socket->UpgradeToSslAsync(protectionLevel, hostName.Get(), &op);
     if (FAILED(hr)) {
-        setErrorAndEmit(QAbstractSocket::SslInternalError,
-                        QSslSocket::tr("Error creating SSL session: %1").arg(qt_error_string(hr)));
+        q->setErrorString(QSslSocket::tr("Error creating SSL session: %1")
+                          .arg(qt_error_string(hr)));
+        q->setSocketError(QAbstractSocket::SslInternalError);
+        emit q->error(QAbstractSocket::SslInternalError);
         return;
     }
 
@@ -459,7 +467,9 @@ HRESULT QSslSocketBackendPrivate::onSslUpgrade(IAsyncAction *action, AsyncStatus
     QSet<QSslError> errors;
     switch (hr) {
     case SEC_E_INVALID_TOKEN: // Occurs when the server doesn't support the requested protocol
-        setErrorAndEmit(QAbstractSocket::SslHandshakeFailedError, qt_error_string(hr));
+        q->setErrorString(qt_error_string(hr));
+        q->setSocketError(QAbstractSocket::SslHandshakeFailedError);
+        emit q->error(QAbstractSocket::SslHandshakeFailedError);
         q->disconnectFromHost();
         return S_OK;
     default:
@@ -618,7 +628,9 @@ HRESULT QSslSocketBackendPrivate::onSslUpgrade(IAsyncAction *action, AsyncStatus
 
     if (!sslErrors.isEmpty()) {
         emit q->sslErrors(sslErrors);
-        setErrorAndEmit(QAbstractSocket::SslHandshakeFailedError, sslErrors.first().errorString());
+        q->setErrorString(sslErrors.first().errorString());
+        q->setSocketError(QAbstractSocket::SslHandshakeFailedError);
+        emit q->error(QAbstractSocket::SslHandshakeFailedError);
 
         // Disconnect if there are any non-ignorable errors
         foreach (const QSslError &error, sslErrors) {

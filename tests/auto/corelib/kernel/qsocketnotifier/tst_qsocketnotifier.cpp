@@ -131,10 +131,6 @@ signals:
 
 void tst_QSocketNotifier::unexpectedDisconnection()
 {
-#ifdef Q_OS_WINRT
-    // WinRT does not allow a connection to the localhost
-    QSKIP("Local connection not allowed", SkipAll);
-#else
     /*
       Given two sockets and two QSocketNotifiers registered on each
       their socket. If both sockets receive data, and the first slot
@@ -200,7 +196,6 @@ void tst_QSocketNotifier::unexpectedDisconnection()
     writeEnd1->close();
     writeEnd2->close();
     server.close();
-#endif // !Q_OS_WINRT
 }
 
 class MixingWithTimersHelper : public QObject
@@ -239,9 +234,6 @@ void MixingWithTimersHelper::socketFired()
 
 void tst_QSocketNotifier::mixingWithTimers()
 {
-#ifdef Q_OS_WINRT
-    QSKIP("WinRT does not allow connection to localhost", SkipAll);
-#else
     QTimer timer;
     timer.setInterval(0);
     timer.start();
@@ -266,7 +258,6 @@ void tst_QSocketNotifier::mixingWithTimers()
 
     QCOMPARE(helper.timerActivated, true);
     QTRY_COMPARE(helper.socketActivated, true);
-#endif // !Q_OS_WINRT
 }
 
 #ifdef Q_OS_UNIX

@@ -427,9 +427,9 @@ void tst_QListWidget::currentItem()
     // actual test
     QModelIndex currentIndex = testWidget->selectionModel()->currentIndex();
     if (currentIndex.isValid())
-        QCOMPARE(testWidget->currentItem(), testWidget->item(currentIndex.row()));
+        QVERIFY(testWidget->currentItem() == testWidget->item(currentIndex.row()));
     else
-        QCOMPARE(testWidget->currentItem(), (QListWidgetItem*)0);
+        QVERIFY(testWidget->currentItem() == (QListWidgetItem*)0);
 }
 
 void tst_QListWidget::currentRow()
@@ -742,7 +742,7 @@ void tst_QListWidget::selectedItems()
     QFETCH(IntList, selectedRows);
     QFETCH(IntList, expectedRows);
 
-    QCOMPARE(testWidget->count(), 0);
+    QVERIFY(testWidget->count() == 0);
 
     //insert items
     for (int i=0; i<itemCount; ++i)
@@ -1159,7 +1159,7 @@ void tst_QListWidget::setData()
     QFETCH(int, expectedSignalCount);
     qRegisterMetaType<QListWidgetItem *>("QListWidgetItem*");
 
-    QCOMPARE(roles.count(), values.count());
+    QVERIFY(roles.count() == values.count());
 
     for (int manipulateModel=0; manipulateModel<2; ++manipulateModel) {
         testWidget->clear();
@@ -1711,7 +1711,7 @@ void tst_QListWidget::mimeData()
 
     QVERIFY(data->hasFormat(format));
     QVERIFY(data2->hasFormat(format));
-    QCOMPARE(data->data(format), data2->data(format));
+    QVERIFY(data->data(format) == data2->data(format));
 
     delete data;
     delete data2;

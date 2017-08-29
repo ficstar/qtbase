@@ -43,10 +43,6 @@
 #include <QtDBus/qdbusextratypes.h>
 #include <QtDBus/qdbusconnection.h>
 
-#ifdef interface
-#undef interface
-#endif
-
 #ifndef QT_NO_DBUS
 
 QT_BEGIN_NAMESPACE

@@ -55,10 +55,6 @@ public:
 
     // override from BHandler to catch change notifications from Haiku clipboard
     void MessageReceived(BMessage* message) Q_DECL_OVERRIDE;
-
-private:
-    QMimeData *m_systemMimeData;
-    QMimeData *m_userMimeData;
 };
 
 QT_END_NAMESPACE

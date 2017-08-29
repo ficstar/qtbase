@@ -535,6 +535,4 @@ void QWidgetResizeHandler::doMove()
 
 QT_END_NAMESPACE
 
-#include "moc_qwidgetresizehandler_p.cpp"
-
 #endif //QT_NO_RESIZEHANDLER

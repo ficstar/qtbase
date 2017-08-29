@@ -77,13 +77,15 @@ static inline int qt_safe_socket(int domain, int type, int protocol, int flags =
     Q_ASSERT((flags & ~O_NONBLOCK) == 0);
 
     int fd;
-#ifdef QT_THREADSAFE_CLOEXEC
+#if defined(SOCK_CLOEXEC) && defined(SOCK_NONBLOCK)
     int newtype = type | SOCK_CLOEXEC;
     if (flags & O_NONBLOCK)
         newtype |= SOCK_NONBLOCK;
     fd = ::socket(domain, newtype, protocol);
-    return fd;
-#else
+    if (fd != -1 || errno != EINVAL)
+        return fd;
+#endif
+
     fd = ::socket(domain, type, protocol);
     if (fd == -1)
         return -1;
@@ -95,7 +97,6 @@ static inline int qt_safe_socket(int domain, int type, int protocol, int flags =
         ::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL) | O_NONBLOCK);
 
     return fd;
-#endif
 }
 
 // Tru64 redefines accept -> _accept with _XOPEN_SOURCE_EXTENDED
@@ -104,18 +105,16 @@ static inline int qt_safe_accept(int s, struct sockaddr *addr, QT_SOCKLEN_T *add
     Q_ASSERT((flags & ~O_NONBLOCK) == 0);
 
     int fd;
-#ifdef QT_THREADSAFE_CLOEXEC
+#if QT_UNIX_SUPPORTS_THREADSAFE_CLOEXEC && defined(SOCK_CLOEXEC) && defined(SOCK_NONBLOCK)
     // use accept4
     int sockflags = SOCK_CLOEXEC;
     if (flags & O_NONBLOCK)
         sockflags |= SOCK_NONBLOCK;
-# if defined(Q_OS_NETBSD)
-    fd = ::paccept(s, addr, static_cast<QT_SOCKLEN_T *>(addrlen), NULL, sockflags);
-# else
     fd = ::accept4(s, addr, static_cast<QT_SOCKLEN_T *>(addrlen), sockflags);
-# endif
-    return fd;
-#else
+    if (fd != -1 || !(errno == ENOSYS || errno == EINVAL))
+        return fd;
+#endif
+
     fd = ::accept(s, addr, static_cast<QT_SOCKLEN_T *>(addrlen));
     if (fd == -1)
         return -1;
@@ -127,7 +126,6 @@ static inline int qt_safe_accept(int s, struct sockaddr *addr, QT_SOCKLEN_T *add
         ::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL) | O_NONBLOCK);
 
     return fd;
-#endif
 }
 
 // UnixWare 7 redefines listen -> _listen
@@ -177,7 +175,8 @@ static inline in_addr_t qt_safe_inet_addr(const char *cp)
 #endif
 }
 
-static inline int qt_safe_sendmsg(int sockfd, const struct msghdr *msg, int flags)
+// VxWorks' headers do not specify any const modifiers
+static inline int qt_safe_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *to, QT_SOCKLEN_T tolen)
 {
 #ifdef MSG_NOSIGNAL
     flags |= MSG_NOSIGNAL;
@@ -186,15 +185,11 @@ static inline int qt_safe_sendmsg(int sockfd, const struct msghdr *msg, int flag
 #endif
 
     int ret;
-    EINTR_LOOP(ret, ::sendmsg(sockfd, msg, flags));
-    return ret;
-}
-
-static inline int qt_safe_recvmsg(int sockfd, struct msghdr *msg, int flags)
-{
-    int ret;
-
-    EINTR_LOOP(ret, ::recvmsg(sockfd, msg, flags));
+#ifdef Q_OS_VXWORKS
+    EINTR_LOOP(ret, ::sendto(sockfd, (char *) buf, len, flags, (struct sockaddr *) to, tolen));
+#else
+    EINTR_LOOP(ret, ::sendto(sockfd, buf, len, flags, to, tolen));
+#endif
     return ret;
 }
 

@@ -86,7 +86,6 @@ static QByteArray msgProcessStartFailed(const QString &command, const QString &w
 
 void tst_uic::initTestCase()
 {
-    QVERIFY2(m_generated.isValid(), qPrintable(m_generated.errorString()));
     QVERIFY(m_versionRegexp.isValid());
     m_baseline = QFINDTESTDATA("baseline");
     QVERIFY2(!m_baseline.isEmpty(), "Could not find 'baseline'.");

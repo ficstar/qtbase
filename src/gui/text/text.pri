@@ -21,7 +21,6 @@ HEADERS += \
     text/qtextdocument_p.h \
     text/qtexthtmlparser_p.h \
     text/qabstracttextdocumentlayout.h \
-    text/qabstracttextdocumentlayout_p.h \
     text/qtextdocumentlayout_p.h \
     text/qtextcursor.h \
     text/qtextcursor_p.h \
@@ -48,7 +47,6 @@ HEADERS += \
 SOURCES += \
     text/qfont.cpp \
     text/qfontengine.cpp \
-    text/qfontengineglyphcache.cpp \
     text/qfontsubset.cpp \
     text/qfontmetrics.cpp \
     text/qfontdatabase.cpp \

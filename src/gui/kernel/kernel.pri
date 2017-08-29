@@ -75,9 +75,7 @@ HEADERS += \
         kernel/qplatformgraphicsbuffer.h \
         kernel/qplatformgraphicsbufferhelper.h \
         kernel/qinputdevicemanager_p.h \
-        kernel/qinputdevicemanager_p_p.h \
-        kernel/qhighdpiscaling_p.h
-
+        kernel/qinputdevicemanager_p_p.h
 
 SOURCES += \
         kernel/qgenericpluginfactory.cpp \
@@ -133,9 +131,7 @@ SOURCES += \
         kernel/qrasterwindow.cpp \
         kernel/qplatformgraphicsbuffer.cpp \
         kernel/qplatformgraphicsbufferhelper.cpp \
-        kernel/qinputdevicemanager.cpp \
-        kernel/qhighdpiscaling.cpp
-
+        kernel/qinputdevicemanager.cpp
 
 contains(QT_CONFIG, opengl)|contains(QT_CONFIG, opengles2) {
     HEADERS += \

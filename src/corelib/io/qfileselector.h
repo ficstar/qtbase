@@ -44,7 +44,7 @@ class Q_CORE_EXPORT QFileSelector : public QObject
 {
     Q_OBJECT
 public:
-    explicit QFileSelector(QObject *parent = Q_NULLPTR);
+    explicit QFileSelector(QObject *parent = 0);
     ~QFileSelector();
 
     QString select(const QString &filePath) const;

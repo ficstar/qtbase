@@ -78,9 +78,6 @@ public:
     QList<test> tests;
 
     static void setupDatabase();
-
-private:
-    QScopedPointer<QTemporaryDir> m_dirModelTempDir;
 };
 
 
@@ -309,20 +306,18 @@ QModelIndex ModelsToTest::populateTestArea(QAbstractItemModel *model)
     }
 
     if (QDirModel *dirModel = qobject_cast<QDirModel *>(model)) {
-        m_dirModelTempDir.reset(new QTemporaryDir);
-        if (!m_dirModelTempDir->isValid())
-            qFatal("Cannot create temporary directory \"%s\": %s",
-                   qPrintable(QDir::toNativeSeparators(m_dirModelTempDir->path())),
-                   qPrintable(m_dirModelTempDir->errorString()));
-
-        QDir tempDir(m_dirModelTempDir->path());
+        if (!QDir::current().mkdir("test"))
+            qFatal("%s: cannot create directory %s",
+                   Q_FUNC_INFO,
+                   qPrintable(QDir::toNativeSeparators(QDir::currentPath()+"/test")));
         for (int i = 0; i < 26; ++i) {
-            const QString subdir = QString("foo_") + QString::number(i);
-            if (!tempDir.mkdir(subdir))
-                qFatal("Cannot create directory %s",
-                       qPrintable(QDir::toNativeSeparators(tempDir.path() + QLatin1Char('/') +subdir)));
+            QString subdir = QString("test/foo_%1").arg(i);
+            if (!QDir::current().mkdir(subdir))
+                qFatal("%s: cannot create directory %s",
+                       Q_FUNC_INFO,
+                       qPrintable(QDir::toNativeSeparators(QDir::currentPath()+"/"+subdir)));
         }
-        return dirModel->index(tempDir.path());
+        return dirModel->index(QDir::currentPath()+"/test");
     }
 
     if (QSqlQueryModel *queryModel = qobject_cast<QSqlQueryModel *>(model)) {
@@ -387,8 +382,22 @@ QModelIndex ModelsToTest::populateTestArea(QAbstractItemModel *model)
  */
 void ModelsToTest::cleanupTestArea(QAbstractItemModel *model)
 {
-    if (qobject_cast<QDirModel *>(model)) {
-        m_dirModelTempDir.reset();
+    if (qobject_cast<QDirModel *>(model))
+    {
+        if (QDir(QDir::currentPath()+"/test").exists())
+        {
+            for (int i = 0; i < 26; ++i) {
+                QString subdir(QString("test/foo_%1").arg(i));
+                if (!QDir::current().rmdir(subdir))
+                    qFatal("%s: cannot remove directory %s",
+                           Q_FUNC_INFO,
+                           qPrintable(QDir::toNativeSeparators(QDir::currentPath()+"/"+subdir)));
+            }
+            if (!QDir::current().rmdir("test"))
+                qFatal("%s: cannot remove directory %s",
+                       Q_FUNC_INFO,
+                       qPrintable(QDir::toNativeSeparators(QDir::currentPath()+"/test")));
+        }
     } else if (qobject_cast<QSqlQueryModel *>(model)) {
         QSqlQuery q("DROP TABLE test");
     }

@@ -63,6 +63,7 @@ public:
                        QueryType queryType = TcpSocket);
     explicit QNetworkProxyQuery(quint16 bindPort, const QString &protocolTag = QString(),
                        QueryType queryType = TcpServer);
+    QNetworkProxyQuery(const QNetworkProxyQuery &other);
 #ifndef QT_NO_BEARERMANAGEMENT
     QNetworkProxyQuery(const QNetworkConfiguration &networkConfiguration,
                        const QUrl &requestUrl, QueryType queryType = UrlRequest);
@@ -73,14 +74,10 @@ public:
                        quint16 bindPort, const QString &protocolTag = QString(),
                        QueryType queryType = TcpServer);
 #endif
-    QNetworkProxyQuery(const QNetworkProxyQuery &other);
-#ifdef Q_COMPILER_RVALUE_REFS
-    QNetworkProxyQuery &operator=(QNetworkProxyQuery &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
-    QNetworkProxyQuery &operator=(const QNetworkProxyQuery &other);
     ~QNetworkProxyQuery();
+    QNetworkProxyQuery &operator=(const QNetworkProxyQuery &other);
 
-    void swap(QNetworkProxyQuery &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    void swap(QNetworkProxyQuery &other) { qSwap(d, other.d); }
 
     bool operator==(const QNetworkProxyQuery &other) const;
     inline bool operator!=(const QNetworkProxyQuery &other) const
@@ -142,13 +139,10 @@ public:
     QNetworkProxy(ProxyType type, const QString &hostName = QString(), quint16 port = 0,
                   const QString &user = QString(), const QString &password = QString());
     QNetworkProxy(const QNetworkProxy &other);
-#ifdef Q_COMPILER_RVALUE_REFS
-    QNetworkProxy &operator=(QNetworkProxy &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
     QNetworkProxy &operator=(const QNetworkProxy &other);
     ~QNetworkProxy();
 
-    void swap(QNetworkProxy &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    void swap(QNetworkProxy &other) { qSwap(d, other.d); }
 
     bool operator==(const QNetworkProxy &other) const;
     inline bool operator!=(const QNetworkProxy &other) const

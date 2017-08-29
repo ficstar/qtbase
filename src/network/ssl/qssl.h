@@ -95,8 +95,7 @@ namespace QSsl {
         SslOptionDisableServerNameIndication = 0x08,
         SslOptionDisableLegacyRenegotiation = 0x10,
         SslOptionDisableSessionSharing = 0x20,
-        SslOptionDisableSessionPersistence = 0x40,
-        SslOptionDisableServerCipherPreference = 0x80
+        SslOptionDisableSessionPersistence = 0x40
     };
     Q_DECLARE_FLAGS(SslOptions, SslOption)
 }

@@ -230,8 +230,10 @@ MakefileGenerator
         build_proj->setExtraVars(basevars);
         build_proj->setExtraConfigs(basecfgs);
 
-        if (build_proj->read(project->projectFile()))
-            return createMakefileGenerator(build_proj);
+        build_proj->read(project->projectFile());
+
+        //done
+        return createMakefileGenerator(build_proj);
     }
     return 0;
 }

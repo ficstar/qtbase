@@ -42,6 +42,7 @@
 #include "qscreen.h"
 #include "qpainter.h"
 #include "qtimer.h"
+#include "qhash.h"
 #include "qaction.h"
 #include "qcursor.h"
 #include "qbitmap.h"
@@ -459,7 +460,7 @@ bool QWhatsThisPrivate::eventFilter(QObject *o, QEvent *e)
     {
         QKeyEvent* kev = (QKeyEvent*)e;
 
-        if (kev->matches(QKeySequence::Cancel)) {
+        if (kev->key() == Qt::Key_Escape) {
             QWhatsThis::leaveWhatsThisMode();
             return true;
         } else if (customWhatsThis) {

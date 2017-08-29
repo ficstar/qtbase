@@ -1081,16 +1081,25 @@ int QMetaType::registerNormalizedType(const NS(QByteArray) &normalizedTypeName,
             normalizedTypeName.constData(), idx, previousSize, size);
     }
 
-    // these flags cannot change in a binary compatible way:
-    const int binaryCompatibilityFlag = PointerToQObject | IsEnumeration | SharedPointerToQObject
-                                                | WeakPointerToQObject | TrackingPointerToQObject;
-    if ((previousFlags ^ flags) & binaryCompatibilityFlag) {
-
+    // Do not compare types higher than 0x100:
+    // Ignore WasDeclaredAsMetaType inconsitency, to many users were hitting the problem
+    // Ignore IsGadget as it was added in Qt 5.5
+    // Ignore all the future flags as well
+    if ((previousFlags ^ flags) & 0xff) {
+        const int maskForTypeInfo = NeedsConstruction | NeedsDestruction | MovableType;
         const char *msg = "QMetaType::registerType: Binary compatibility break. "
                 "\nType flags for type '%s' [%i] don't match. Previously "
-                "registered TypeFlags(0x%x), now registering TypeFlags(0x%x). ";
-
-        qFatal(msg, normalizedTypeName.constData(), idx, previousFlags, int(flags));
+                "registered TypeFlags(0x%x), now registering TypeFlags(0x%x). "
+                "This is an ODR break, which means that your application depends on a C++ undefined behavior."
+                "\nHint: %s";
+        QT_PREPEND_NAMESPACE(QByteArray) hint;
+        if ((previousFlags & maskForTypeInfo) != (flags & maskForTypeInfo)) {
+            hint += "\nIt seems that the type was registered at least twice in a different translation units, "
+                    "but Q_DECLARE_TYPEINFO is not visible from all the translations unit or different flags were used."
+                    "Remember that Q_DECLARE_TYPEINFO should be declared before QMetaType registration, "
+                    "preferably it should be placed just after the type declaration and before Q_DECLARE_METATYPE";
+        }
+        qFatal(msg, normalizedTypeName.constData(), idx, previousFlags, int(flags), hint.constData());
     }
 
     return idx;
@@ -1179,6 +1188,9 @@ bool QMetaType::isRegistered(int type)
     return ((type >= User) && (ct && ct->count() > type - User) && !ct->at(type - User).typeName.isEmpty());
 }
 
+/*!
+    \internal
+*/
 template <bool tryNormalizedType>
 static inline int qMetaTypeTypeImpl(const char *typeName, int length)
 {
@@ -1698,9 +1710,8 @@ bool QMetaType::load(QDataStream &stream, int type, void *data)
 void *QMetaType::create(int type, const void *copy)
 {
     QMetaType info(type);
-    if (int size = info.sizeOf())
-        return info.construct(operator new(size), copy);
-    return 0;
+    int size = info.sizeOf();
+    return info.construct(operator new(size), copy);
 }
 
 /*!
@@ -2099,7 +2110,7 @@ const QMetaObject *QMetaType::metaObjectForType(int type)
     \warning This function is useful only for registering an alias (typedef)
     for every other use case Q_DECLARE_METATYPE and qMetaTypeId() should be used instead.
 
-    \sa {QMetaType::}{qRegisterMetaTypeStreamOperators()}, {QMetaType::}{isRegistered()},
+    \sa qRegisterMetaTypeStreamOperators(), QMetaType::isRegistered(),
         Q_DECLARE_METATYPE()
 */
 

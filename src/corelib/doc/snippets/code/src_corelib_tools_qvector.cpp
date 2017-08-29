@@ -84,25 +84,12 @@ for (int i = 0; i < 10; ++i)
 
 
 //! [7]
-QVector<QString> vector;
+QVector<QString> vector(0);
 vector.append("one");
 vector.append("two");
-QString three = "three";
-vector.append(three);
+vector.append("three");
 // vector: ["one", "two", "three"]
-// three: "three"
 //! [7]
-
-
-//! [move-append]
-QVector<QString> vector;
-vector.append("one");
-vector.append("two");
-QString three = "three";
-vector.append(std::move(three));
-// vector: ["one", "two", "three"]
-// three: ""
-//! [move-append]
 
 
 //! [8]

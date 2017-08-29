@@ -44,10 +44,7 @@
 
 QT_BEGIN_NAMESPACE
 
-extern QString qt_findAtNxFile(const QString &baseFileName, qreal targetDevicePixelRatio,
-                               qreal *sourceDevicePixelRatio);
-static QString resolveFileName(QString fileName, QUrl *url, qreal targetDevicePixelRatio,
-                               qreal *sourceDevicePixelRatio)
+static QString resolveFileName(QString fileName, QUrl *url, qreal targetDevicePixelRatio)
 {
     // We might use the fileName for loading if url loading fails
     // try to make sure it is a valid file path.
@@ -65,8 +62,19 @@ static QString resolveFileName(QString fileName, QUrl *url, qreal targetDevicePi
     if (targetDevicePixelRatio <= 1.0)
         return fileName;
 
-    // try to find a Nx version
-    return qt_findAtNxFile(fileName, targetDevicePixelRatio, sourceDevicePixelRatio);
+    // try to find a 2x version
+
+    const int dotIndex = fileName.lastIndexOf(QLatin1Char('.'));
+    if (dotIndex != -1) {
+        QString at2xfileName = fileName;
+        at2xfileName.insert(dotIndex, QStringLiteral("@2x"));
+        if (QFile::exists(at2xfileName))  {
+            fileName = at2xfileName;
+            *url = QUrl(fileName);
+        }
+    }
+
+    return fileName;
 }
 
 
@@ -78,8 +86,7 @@ static QPixmap getPixmap(QTextDocument *doc, const QTextImageFormat &format, con
     if (name.startsWith(QLatin1String(":/"))) // auto-detect resources and convert them to url
         name.prepend(QLatin1String("qrc"));
     QUrl url = QUrl(name);
-    qreal sourcePixelRatio = 1.0;
-    name = resolveFileName(name, &url, devicePixelRatio, &sourcePixelRatio);
+    name = resolveFileName(name, &url, devicePixelRatio);
     const QVariant data = doc->resource(QTextDocument::ImageResource, url);
     if (data.type() == QVariant::Pixmap || data.type() == QVariant::Image) {
         pm = qvariant_cast<QPixmap>(data);
@@ -105,7 +112,7 @@ static QPixmap getPixmap(QTextDocument *doc, const QTextImageFormat &format, con
     }
 
     if (name.contains(QStringLiteral("@2x")))
-        pm.setDevicePixelRatio(sourcePixelRatio);
+        pm.setDevicePixelRatio(2.0);
 
     return pm;
 }
@@ -160,8 +167,7 @@ static QImage getImage(QTextDocument *doc, const QTextImageFormat &format, const
     if (name.startsWith(QLatin1String(":/"))) // auto-detect resources
         name.prepend(QLatin1String("qrc"));
     QUrl url = QUrl(name);
-    qreal sourcePixelRatio = 1.0;
-    name = resolveFileName(name, &url, devicePixelRatio, &sourcePixelRatio);
+    name = resolveFileName(name, &url, devicePixelRatio);
     const QVariant data = doc->resource(QTextDocument::ImageResource, url);
     if (data.type() == QVariant::Image) {
         image = qvariant_cast<QImage>(data);
@@ -185,8 +191,8 @@ static QImage getImage(QTextDocument *doc, const QTextImageFormat &format, const
         doc->addResource(QTextDocument::ImageResource, url, image);
     }
 
-    if (sourcePixelRatio != 1.0)
-        image.setDevicePixelRatio(sourcePixelRatio);
+    if (name.contains(QStringLiteral("@2x")))
+        image.setDevicePixelRatio(2.0);
 
     return image;
 }
@@ -250,10 +256,10 @@ void QTextImageHandler::drawObject(QPainter *p, const QRectF &rect, QTextDocumen
         const QTextImageFormat imageFormat = format.toImageFormat();
 
     if (QCoreApplication::instance()->thread() != QThread::currentThread()) {
-        const QImage image = getImage(doc, imageFormat, p->device()->devicePixelRatioF());
+        const QImage image = getImage(doc, imageFormat, p->device()->devicePixelRatio());
         p->drawImage(rect, image, image.rect());
     } else {
-        const QPixmap pixmap = getPixmap(doc, imageFormat, p->device()->devicePixelRatioF());
+        const QPixmap pixmap = getPixmap(doc, imageFormat, p->device()->devicePixelRatio());
         p->drawPixmap(rect, pixmap, pixmap.rect());
     }
 }

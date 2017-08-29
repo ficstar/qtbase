@@ -248,7 +248,7 @@ public:
 
         GLuint fbo = 0xFFFF;
         QOpenGLContext::currentContext()->functions()->glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *) &fbo);
-        QCOMPARE(fbo, GLuint(0));
+        QVERIFY(fbo == 0);
     }
 
     void paintGL() Q_DECL_OVERRIDE {
@@ -272,7 +272,7 @@ public:
 
         GLuint fbo = 0xFFFF;
         QOpenGLContext::currentContext()->functions()->glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *) &fbo);
-        QCOMPARE(fbo, GLuint(0));
+        QVERIFY(fbo == 0);
     }
 };
 

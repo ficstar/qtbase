@@ -99,5 +99,3 @@ QStylePlugin::~QStylePlugin()
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qstyleplugin.cpp"

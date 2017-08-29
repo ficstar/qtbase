@@ -55,13 +55,10 @@ public:
     QDBusUnixFileDescriptor();
     explicit QDBusUnixFileDescriptor(int fileDescriptor);
     QDBusUnixFileDescriptor(const QDBusUnixFileDescriptor &other);
-#if defined(Q_COMPILER_RVALUE_REFS)
-    QDBusUnixFileDescriptor &operator=(QDBusUnixFileDescriptor &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
     QDBusUnixFileDescriptor &operator=(const QDBusUnixFileDescriptor &other);
     ~QDBusUnixFileDescriptor();
 
-    void swap(QDBusUnixFileDescriptor &other) Q_DECL_NOTHROW
+    void swap(QDBusUnixFileDescriptor &other)
     { qSwap(d, other.d); }
 
     bool isValid() const;
@@ -73,6 +70,11 @@ public:
     int takeFileDescriptor();
 
     static bool isSupported();
+
+#if defined(Q_COMPILER_RVALUE_REFS)
+    inline QDBusUnixFileDescriptor &operator=(QDBusUnixFileDescriptor &&other)
+    { d.swap(other.d); return *this; }
+#endif
 
 protected:
     typedef QExplicitlySharedDataPointer<QDBusUnixFileDescriptorPrivate>  Data;

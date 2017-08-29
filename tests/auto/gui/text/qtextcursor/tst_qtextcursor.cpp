@@ -34,6 +34,7 @@
 
 #include <QtTest/QtTest>
 
+
 #include <qtextdocument.h>
 #include <qtexttable.h>
 #include <qvariant.h>
@@ -43,8 +44,6 @@
 #include <qtextcursor.h>
 #include <qtextobject.h>
 #include <qdebug.h>
-
-#include <private/qtextcursor_p.h>
 
 QT_FORWARD_DECLARE_CLASS(QTextDocument)
 
@@ -179,15 +178,15 @@ void tst_QTextCursor::navigation1()
     QVERIFY(doc->toPlainText() == "Hello World");
 
     cursor.movePosition(QTextCursor::End);
-    QCOMPARE(cursor.position(), 11);
+    QVERIFY(cursor.position() == 11);
     cursor.deletePreviousChar();
-    QCOMPARE(cursor.position(), 10);
-    cursor.deletePreviousChar();
-    cursor.deletePreviousChar();
+    QVERIFY(cursor.position() == 10);
     cursor.deletePreviousChar();
     cursor.deletePreviousChar();
     cursor.deletePreviousChar();
-    QCOMPARE(doc->toPlainText(), QLatin1String("Hello"));
+    cursor.deletePreviousChar();
+    cursor.deletePreviousChar();
+    QVERIFY(doc->toPlainText() == "Hello");
 
     QTextCursor otherCursor(doc);
     otherCursor.movePosition(QTextCursor::Start);
@@ -196,12 +195,12 @@ void tst_QTextCursor::navigation1()
     cursor.movePosition(QTextCursor::Right);
     QVERIFY(cursor != otherCursor);
     otherCursor.insertText("Hey");
-    QCOMPARE(cursor.position(), 5);
+    QVERIFY(cursor.position() == 5);
 
     doc->undo();
-    QCOMPARE(cursor.position(), 2);
+    QVERIFY(cursor.position() == 2);
     doc->redo();
-    QCOMPARE(cursor.position(), 5);
+    QVERIFY(cursor.position() == 5);
 
     doc->undo();
 
@@ -210,29 +209,29 @@ void tst_QTextCursor::navigation1()
 
     cursor.movePosition(QTextCursor::Start);
     cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 6);
-    QCOMPARE(cursor.position(), 6);
+    QVERIFY(cursor.position() == 6);
     otherCursor = cursor;
     otherCursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 2);
     otherCursor.deletePreviousChar();
     otherCursor.deletePreviousChar();
     otherCursor.deletePreviousChar();
-    QCOMPARE(cursor.position(), 5);
+    QVERIFY(cursor.position() == 5);
 
     cursor.movePosition(QTextCursor::End);
     cursor.insertBlock();
     {
         int oldPos = cursor.position();
         cursor.movePosition(QTextCursor::End);
-        QCOMPARE(cursor.position(), oldPos);
+        QVERIFY(cursor.position() == oldPos);
     }
     QVERIFY(cursor.atBlockStart());
-    QCOMPARE(cursor.position(), 9);
+    QVERIFY(cursor.position() == 9);
 
     QTextCharFormat fmt;
     fmt.setForeground(Qt::blue);
     cursor.insertText("Test", fmt);
-    QCOMPARE(fmt, cursor.charFormat());
-    QCOMPARE(cursor.position(), 13);
+    QVERIFY(fmt == cursor.charFormat());
+    QVERIFY(cursor.position() == 13);
 }
 
 void tst_QTextCursor::navigation2_data()
@@ -498,7 +497,7 @@ void tst_QTextCursor::navigation10()
     QVERIFY(ok);
     QCOMPARE(cursor.position(), 99);
     ok = cursor.movePosition(QTextCursor::NextCell);
-    QVERIFY(!ok);
+    QVERIFY(ok == false);
     QCOMPARE(cursor.position(), 99); // didn't move.
     QVERIFY(cursor.currentTable());
 
@@ -574,8 +573,8 @@ void tst_QTextCursor::insertBlock()
     QTextBlockFormat fmt;
     fmt.setTopMargin(100);
     cursor.insertBlock(fmt);
-    QCOMPARE(cursor.position(), 1);
-    QCOMPARE(cursor.blockFormat(), fmt);
+    QVERIFY(cursor.position() == 1);
+    QVERIFY(cursor.blockFormat() == fmt);
 }
 
 void tst_QTextCursor::insertWithBlockSeparator1()
@@ -585,28 +584,28 @@ void tst_QTextCursor::insertWithBlockSeparator1()
     cursor.insertText(text);
 
     cursor.movePosition(QTextCursor::PreviousBlock);
-    QCOMPARE(cursor.position(), 0);
+    QVERIFY(cursor.position() == 0);
 
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.position(), 6);
+    QVERIFY(cursor.position() == 6);
 }
 
 void tst_QTextCursor::insertWithBlockSeparator2()
 {
     cursor.insertText(QString(QChar::ParagraphSeparator));
-    QCOMPARE(cursor.position(), 1);
+    QVERIFY(cursor.position() == 1);
 }
 
 void tst_QTextCursor::insertWithBlockSeparator3()
 {
     cursor.insertText(QString(QChar::ParagraphSeparator) + "Hi" + QString(QChar::ParagraphSeparator));
-    QCOMPARE(cursor.position(), 4);
+    QVERIFY(cursor.position() == 4);
 }
 
 void tst_QTextCursor::insertWithBlockSeparator4()
 {
     cursor.insertText(QString(QChar::ParagraphSeparator) + QString(QChar::ParagraphSeparator));
-    QCOMPARE(cursor.position(), 2);
+    QVERIFY(cursor.position() == 2);
 }
 
 void tst_QTextCursor::clearObjectType1()
@@ -657,7 +656,7 @@ void tst_QTextCursor::comparisonOperators1()
     midCursor.movePosition(QTextCursor::NextWord);
 
     QVERIFY(midCursor <= cursor);
-    QCOMPARE(midCursor, cursor);
+    QVERIFY(midCursor == cursor);
     QVERIFY(midCursor >= cursor);
 
     QVERIFY(midCursor > startCursor);
@@ -691,7 +690,7 @@ void tst_QTextCursor::comparisonOperators2()
     QTextCursor cursor2(&doc2);
 
     QVERIFY(cursor1 != cursor2);
-    QCOMPARE(cursor1, QTextCursor(&doc1));
+    QVERIFY(cursor1 == QTextCursor(&doc1));
 }
 
 void tst_QTextCursor::selection1()
@@ -719,97 +718,97 @@ void tst_QTextCursor::dontCopyTableAttributes()
 
 void tst_QTextCursor::checkFrame1()
 {
-    QCOMPARE(cursor.position(), 0);
+    QVERIFY(cursor.position() == 0);
     QPointer<QTextFrame> frame = cursor.insertFrame(QTextFrameFormat());
     QVERIFY(frame != 0);
 
     QTextFrame *root = frame->parentFrame();
     QVERIFY(root != 0);
 
-    QCOMPARE(frame->firstPosition(), 1);
-    QCOMPARE(frame->lastPosition(), 1);
+    QVERIFY(frame->firstPosition() == 1);
+    QVERIFY(frame->lastPosition() == 1);
     QVERIFY(frame->parentFrame() != 0);
-    QCOMPARE(root->childFrames().size(), 1);
+    QVERIFY(root->childFrames().size() == 1);
 
-    QCOMPARE(cursor.position(), 1);
-    QCOMPARE(cursor.selectionStart(), 1);
-    QCOMPARE(cursor.selectionEnd(), 1);
+    QVERIFY(cursor.position() == 1);
+    QVERIFY(cursor.selectionStart() == 1);
+    QVERIFY(cursor.selectionEnd() == 1);
 
     doc->undo();
 
     QVERIFY(!frame);
-    QCOMPARE(root->childFrames().size(), 0);
+    QVERIFY(root->childFrames().size() == 0);
 
-    QCOMPARE(cursor.position(), 0);
-    QCOMPARE(cursor.selectionStart(), 0);
-    QCOMPARE(cursor.selectionEnd(), 0);
+    QVERIFY(cursor.position() == 0);
+    QVERIFY(cursor.selectionStart() == 0);
+    QVERIFY(cursor.selectionEnd() == 0);
 
     doc->redo();
 
     frame = doc->frameAt(1);
 
     QVERIFY(frame);
-    QCOMPARE(frame->firstPosition(), 1);
-    QCOMPARE(frame->lastPosition(), 1);
+    QVERIFY(frame->firstPosition() == 1);
+    QVERIFY(frame->lastPosition() == 1);
     QVERIFY(frame->parentFrame() != 0);
-    QCOMPARE(root->childFrames().size(), 1);
+    QVERIFY(root->childFrames().size() == 1);
 
-    QCOMPARE(cursor.position(), 1);
-    QCOMPARE(cursor.selectionStart(), 1);
-    QCOMPARE(cursor.selectionEnd(), 1);
+    QVERIFY(cursor.position() == 1);
+    QVERIFY(cursor.selectionStart() == 1);
+    QVERIFY(cursor.selectionEnd() == 1);
 
 //     cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor);
-//     QCOMPARE(cursor.position(), 2);
-//     QCOMPARE(cursor.selectionStart(), 0);
-//     QCOMPARE(cursor.selectionEnd(), 2);
+//     QVERIFY(cursor.position() == 2);
+//     QVERIFY(cursor.selectionStart() == 0);
+//     QVERIFY(cursor.selectionEnd() == 2);
 }
 
 void tst_QTextCursor::checkFrame2()
 {
-    QCOMPARE(cursor.position(), 0);
+    QVERIFY(cursor.position() == 0);
     cursor.insertText("A");
-    QCOMPARE(cursor.position(), 1);
+    QVERIFY(cursor.position() == 1);
     cursor.movePosition(QTextCursor::Start, QTextCursor::KeepAnchor);
 
     QPointer<QTextFrame> frame = cursor.insertFrame(QTextFrameFormat());
     QTextFrame *root = frame->parentFrame();
 
-    QCOMPARE(frame->firstPosition(), 1);
-    QCOMPARE(frame->lastPosition(), 2);
+    QVERIFY(frame->firstPosition() == 1);
+    QVERIFY(frame->lastPosition() == 2);
     QVERIFY(frame->parentFrame() != 0);
-    QCOMPARE(root->childFrames().size(), 1);
+    QVERIFY(root->childFrames().size() == 1);
 
-    QCOMPARE(cursor.position(), 1);
-    QCOMPARE(cursor.selectionStart(), 1);
-    QCOMPARE(cursor.selectionEnd(), 2);
+    QVERIFY(cursor.position() == 1);
+    QVERIFY(cursor.selectionStart() == 1);
+    QVERIFY(cursor.selectionEnd() == 2);
 
     doc->undo();
 
     QVERIFY(!frame);
-    QCOMPARE(root->childFrames().size(), 0);
+    QVERIFY(root->childFrames().size() == 0);
 
-    QCOMPARE(cursor.position(), 0);
-    QCOMPARE(cursor.selectionStart(), 0);
-    QCOMPARE(cursor.selectionEnd(), 1);
+    QVERIFY(cursor.position() == 0);
+    QVERIFY(cursor.selectionStart() == 0);
+    QVERIFY(cursor.selectionEnd() == 1);
 
     doc->redo();
 
     frame = doc->frameAt(1);
 
     QVERIFY(frame);
-    QCOMPARE(frame->firstPosition(), 1);
-    QCOMPARE(frame->lastPosition(), 2);
+    QVERIFY(frame->firstPosition() == 1);
+    QVERIFY(frame->lastPosition() == 2);
     QVERIFY(frame->parentFrame() != 0);
-    QCOMPARE(root->childFrames().size(), 1);
+    QVERIFY(root->childFrames().size() == 1);
 
-    QCOMPARE(cursor.position(), 1);
-    QCOMPARE(cursor.selectionStart(), 1);
-    QCOMPARE(cursor.selectionEnd(), 2);
+    QVERIFY(cursor.position() == 1);
+    QVERIFY(cursor.selectionStart() == 1);
+    QVERIFY(cursor.selectionEnd() == 2);
 
     cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor);
-    QCOMPARE(cursor.position(), 0);
-    QCOMPARE(cursor.selectionStart(), 0);
-    QCOMPARE(cursor.selectionEnd(), 3);
+    QVERIFY(cursor.position() == 0);
+    QVERIFY(cursor.selectionStart() == 0);
+    QVERIFY(cursor.selectionEnd() == 3);
 }
 
 void tst_QTextCursor::insertBlockToUseCharFormat()
@@ -834,9 +833,9 @@ void tst_QTextCursor::insertBlockToUseCharFormat()
 
 void tst_QTextCursor::tableMovement()
 {
-    QCOMPARE(cursor.position(), 0);
+    QVERIFY(cursor.position() == 0);
     cursor.insertText("AA");
-    QCOMPARE(cursor.position(), 2);
+    QVERIFY(cursor.position() == 2);
     cursor.movePosition(QTextCursor::Left);
 
     cursor.insertTable(3, 3);
@@ -1031,7 +1030,7 @@ void tst_QTextCursor::insertBlockShouldRemoveSelection()
     cursor.insertBlock();
 
     QVERIFY(!cursor.hasSelection());
-    QCOMPARE(doc->toPlainText().indexOf("Hello"), -1);
+    QVERIFY(doc->toPlainText().indexOf("Hello") == -1);
 }
 
 void tst_QTextCursor::insertBlockShouldRemoveSelection2()
@@ -1047,7 +1046,7 @@ void tst_QTextCursor::insertBlockShouldRemoveSelection2()
     cursor.insertBlock(fmt);
 
     QVERIFY(!cursor.hasSelection());
-    QCOMPARE(doc->toPlainText().indexOf("Hello"), -1);
+    QVERIFY(doc->toPlainText().indexOf("Hello") == -1);
 }
 
 void tst_QTextCursor::mergeCellShouldUpdateSelection()
@@ -1160,7 +1159,7 @@ void tst_QTextCursor::setBlockFormatInTable()
     cursor.setBlockFormat(fmt);
 
     cursor.movePosition(QTextCursor::Start);
-    QCOMPARE(cursor.blockFormat().background().color(), QColor(Qt::blue));
+    QVERIFY(cursor.blockFormat().background().color() == Qt::blue);
 }
 
 void tst_QTextCursor::blockCharFormat2()
@@ -1175,7 +1174,7 @@ void tst_QTextCursor::blockCharFormat2()
     cursor.movePosition(QTextCursor::Start);
     cursor.insertText("Red");
     cursor.movePosition(QTextCursor::PreviousCharacter);
-    QCOMPARE(cursor.charFormat().foreground().color(), QColor(Qt::red));
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::red);
 }
 
 void tst_QTextCursor::blockCharFormat3()
@@ -1190,23 +1189,21 @@ void tst_QTextCursor::blockCharFormat3()
     cursor.insertText("Test");
     cursor.movePosition(QTextCursor::Start);
     cursor.movePosition(QTextCursor::NextCharacter);
-    const QColor red(Qt::red);
-    const QColor green(Qt::green);
-    QCOMPARE(cursor.charFormat().foreground().color(), green);
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::green);
 
     cursor.movePosition(QTextCursor::Start);
-    QCOMPARE(cursor.charFormat().foreground().color(), green);
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::green);
 
     fmt.setForeground(Qt::red);
     cursor.setBlockCharFormat(fmt);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), red);
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::red);
 
     cursor.movePosition(QTextCursor::End);
     cursor.movePosition(QTextCursor::Start);
-    QCOMPARE(cursor.charFormat().foreground().color(), green);
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::green);
 
     cursor.insertText("Test");
-    QCOMPARE(cursor.charFormat().foreground().color(), green);
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::green);
 
     cursor.select(QTextCursor::Document);
     cursor.removeSelectedText();
@@ -1215,7 +1212,7 @@ void tst_QTextCursor::blockCharFormat3()
     QVERIFY(cursor.atStart());
 
     cursor.insertText("Test");
-    QCOMPARE(cursor.charFormat().foreground().color(), red);
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::red);
 }
 
 void tst_QTextCursor::blockCharFormat()
@@ -1225,12 +1222,12 @@ void tst_QTextCursor::blockCharFormat()
     cursor.insertBlock(QTextBlockFormat(), fmt);
     cursor.insertText("Hm");
 
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::blue));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::blue);
 
     fmt.setForeground(Qt::red);
 
     cursor.setBlockCharFormat(fmt);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::red));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::red);
 }
 
 void tst_QTextCursor::blockCharFormatOnSelection()
@@ -1252,11 +1249,11 @@ void tst_QTextCursor::blockCharFormatOnSelection()
 
     cursor.movePosition(QTextCursor::Start);
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::blue));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::blue);
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::red));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::red);
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::white));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::white);
 
     cursor.movePosition(QTextCursor::Start);
     cursor.movePosition(QTextCursor::NextBlock);
@@ -1267,17 +1264,17 @@ void tst_QTextCursor::blockCharFormatOnSelection()
 
     cursor.movePosition(QTextCursor::Start);
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::cyan));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::cyan);
 
     cursor.movePosition(QTextCursor::Right);
     cursor.movePosition(QTextCursor::Right);
-    QCOMPARE(cursor.charFormat().foreground().color(), QColor(Qt::green));
+    QVERIFY(cursor.charFormat().foreground().color() == Qt::green);
 
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::cyan));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::cyan);
 
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.blockCharFormat().foreground().color(), QColor(Qt::white));
+    QVERIFY(cursor.blockCharFormat().foreground().color() == Qt::white);
 }
 
 void tst_QTextCursor::anchorInitialized1()
@@ -1293,7 +1290,7 @@ void tst_QTextCursor::anchorInitialized1()
 void tst_QTextCursor::anchorInitialized2()
 {
     cursor.insertBlock();
-    cursor = QTextCursorPrivate::fromPosition(cursor.block().docHandle(), 1);
+    cursor = QTextCursor(cursor.block().docHandle(), 1);
     QCOMPARE(cursor.position(), 1);
     QCOMPARE(cursor.anchor(), 1);
     QCOMPARE(cursor.selectionStart(), 1);
@@ -1407,7 +1404,7 @@ void tst_QTextCursor::selectBlock()
 
     cursor.movePosition(QTextCursor::Start);
     cursor.movePosition(QTextCursor::NextBlock);
-    QCOMPARE(cursor.blockFormat().alignment(), Qt::AlignHCenter);
+    QVERIFY(cursor.blockFormat().alignment() == Qt::AlignHCenter);
     QCOMPARE(cursor.block().text(), QString("blah"));
 }
 
@@ -1452,7 +1449,7 @@ void tst_QTextCursor::insertFragmentShouldUseCurrentCharFormat()
     cursor.insertFragment(fragment);
     cursor.movePosition(QTextCursor::Start);
     cursor.movePosition(QTextCursor::NextCharacter);
-    QCOMPARE(cursor.charFormat(), fmt);
+    QVERIFY(cursor.charFormat() == fmt);
 }
 
 int tst_QTextCursor::blockCount()
@@ -1913,15 +1910,15 @@ void tst_QTextCursor::cursorPositionWithBlockUndoAndRedo()
     int cursorPositionAfter = cursor.position();
     cursor.endEditBlock();
 
-    QCOMPARE(doc->toPlainText(), QLatin1String("*AAAA*BBBB*CCCC*DDDD"));
+    QVERIFY(doc->toPlainText() == "*AAAA*BBBB*CCCC*DDDD");
     QCOMPARE(12, cursorPositionBefore);
     QCOMPARE(1, cursorPositionAfter);
 
     doc->undo(&cursor);
-    QCOMPARE(doc->toPlainText(), QLatin1String("AAAABBBBCCCCDDDD"));
+    QVERIFY(doc->toPlainText() == "AAAABBBBCCCCDDDD");
     QCOMPARE(cursor.position(), cursorPositionBefore);
     doc->redo(&cursor);
-    QCOMPARE(doc->toPlainText(), QLatin1String("*AAAA*BBBB*CCCC*DDDD"));
+    QVERIFY(doc->toPlainText() == "*AAAA*BBBB*CCCC*DDDD");
     QCOMPARE(cursor.position(), cursorPositionAfter);
 }
 
@@ -1935,11 +1932,11 @@ void tst_QTextCursor::cursorPositionWithBlockUndoAndRedo2()
     cursor.insertText("AAAABBBBCCCCDDDD");
     cursor.endEditBlock();
     doc->undo(&cursor);
-    QCOMPARE(doc->toPlainText(), QLatin1String("AAAABBBB"));
+    QVERIFY(doc->toPlainText() == "AAAABBBB");
     QCOMPARE(cursor.position(), cursorPositionBefore);
 
     cursor.insertText("CCCC");
-    QCOMPARE(doc->toPlainText(), QLatin1String("AAAABBBBCCCC"));
+    QVERIFY(doc->toPlainText() == "AAAABBBBCCCC");
 
     cursorPositionBefore = cursor.position();
     cursor.setPosition(0, QTextCursor::KeepAnchor);
@@ -1954,7 +1951,7 @@ void tst_QTextCursor::cursorPositionWithBlockUndoAndRedo2()
     doc->undo(&cursor);
 
 
-    QCOMPARE(doc->toPlainText(), QLatin1String("AAAABBBBCCCC"));
+    QVERIFY(doc->toPlainText() == "AAAABBBBCCCC");
     QCOMPARE(cursor.position(), cursorPositionBefore);
 }
 

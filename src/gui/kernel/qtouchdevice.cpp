@@ -195,7 +195,7 @@ void QTouchDevice::setName(const QString &name)
     d->name = name;
 }
 
-typedef QList<const QTouchDevice *> TouchDevices;
+typedef QList<QTouchDevice *> TouchDevices;
 Q_GLOBAL_STATIC(TouchDevices, deviceList)
 static QBasicMutex devicesMutex;
 
@@ -214,38 +214,31 @@ static void cleanupDevicesList()
 QList<const QTouchDevice *> QTouchDevice::devices()
 {
     QMutexLocker lock(&devicesMutex);
-    return *deviceList();
+    QList<QTouchDevice *> *devList = deviceList();
+    QList<const QTouchDevice *> constDevList;
+    for (int i = 0, count = devList->count(); i != count; ++i)
+        constDevList.append(devList->at(i));
+    return constDevList;
 }
 
 /*!
   \internal
   */
-bool QTouchDevicePrivate::isRegistered(const QTouchDevice *dev)
+bool QTouchDevicePrivate::isRegistered(QTouchDevice *dev)
 {
-    QMutexLocker locker(&devicesMutex);
+    QMutexLocker lock(&devicesMutex);
     return deviceList()->contains(dev);
 }
 
 /*!
   \internal
   */
-void QTouchDevicePrivate::registerDevice(const QTouchDevice *dev)
+void QTouchDevicePrivate::registerDevice(QTouchDevice *dev)
 {
     QMutexLocker lock(&devicesMutex);
     if (deviceList()->isEmpty())
         qAddPostRoutine(cleanupDevicesList);
     deviceList()->append(dev);
-}
-
-/*!
-  \internal
-  */
-void QTouchDevicePrivate::unregisterDevice(const QTouchDevice *dev)
-{
-    QMutexLocker lock(&devicesMutex);
-    bool wasRemoved = deviceList()->removeOne(dev);
-    if (wasRemoved && deviceList()->isEmpty())
-        qRemovePostRoutine(cleanupDevicesList);
 }
 
 #ifndef QT_NO_DEBUG_STREAM

@@ -1,7 +1,6 @@
 /****************************************************************************
 **
 ** Copyright (C) 2015 The Qt Company Ltd.
-** Copyright (C) 2015 Intel Corporation.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the QtDBus module of the Qt Toolkit.
@@ -54,17 +53,22 @@ QT_BEGIN_NAMESPACE
     \a parent.
 */
 QDBusServer::QDBusServer(const QString &address, QObject *parent)
-    : QObject(parent), d(0)
+    : QObject(parent)
 {
     if (address.isEmpty())
         return;
 
-    if (!qdbus_loadLibDBus())
+    if (!qdbus_loadLibDBus()) {
+        d = 0;
         return;
+    }
+    d = new QDBusConnectionPrivate(this);
 
-    emit QDBusConnectionManager::instance()->serverRequested(address, this);
-    QObject::connect(d, SIGNAL(newServerConnection(QDBusConnectionPrivate*)),
-                     this, SLOT(_q_newConnection(QDBusConnectionPrivate*)), Qt::QueuedConnection);
+    QObject::connect(d, SIGNAL(newServerConnection(QDBusConnection)),
+                     this, SIGNAL(newConnection(QDBusConnection)));
+
+    QDBusErrorInternal error;
+    d->setServer(q_dbus_server_listen(address.toUtf8().constData(), error), error);
 }
 
 /*!
@@ -77,19 +81,22 @@ QDBusServer::QDBusServer(QObject *parent)
 {
 #ifdef Q_OS_UNIX
     // Use Unix sockets on Unix systems only
-    const QString address = QStringLiteral("unix:tmpdir=/tmp");
+    static const char address[] = "unix:tmpdir=/tmp";
 #else
-    const QString address = QStringLiteral("tcp:");
+    static const char address[] = "tcp:";
 #endif
 
     if (!qdbus_loadLibDBus()) {
         d = 0;
         return;
     }
+    d = new QDBusConnectionPrivate(this);
 
-    emit QDBusConnectionManager::instance()->serverRequested(address, this);
-    QObject::connect(d, SIGNAL(newServerConnection(QDBusConnectionPrivate*)),
-                     this, SLOT(_q_newConnection(QDBusConnectionPrivate*)), Qt::QueuedConnection);
+    QObject::connect(d, SIGNAL(newServerConnection(QDBusConnection)),
+                     this, SIGNAL(newConnection(QDBusConnection)));
+
+    QDBusErrorInternal error;
+    d->setServer(q_dbus_server_listen(address, error), error);
 }
 
 /*!
@@ -178,7 +185,5 @@ bool QDBusServer::isAnonymousAuthenticationAllowed() const
  */
 
 QT_END_NAMESPACE
-
-#include "moc_qdbusserver.cpp"
 
 #endif // QT_NO_DBUS

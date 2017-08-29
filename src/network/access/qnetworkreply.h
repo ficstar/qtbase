@@ -69,8 +69,6 @@ public:
         TemporaryNetworkFailureError,
         NetworkSessionFailedError,
         BackgroundRequestNotAllowedError,
-        TooManyRedirectsError,
-        InsecureRedirectError,
         UnknownNetworkError = 99,
 
         // proxy errors (101-199):
@@ -155,13 +153,12 @@ Q_SIGNALS:
     void sslErrors(const QList<QSslError> &errors);
     void preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator);
 #endif
-    void redirected(const QUrl &url);
 
     void uploadProgress(qint64 bytesSent, qint64 bytesTotal);
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
 
 protected:
-    explicit QNetworkReply(QObject *parent = Q_NULLPTR);
+    explicit QNetworkReply(QObject *parent = 0);
     QNetworkReply(QNetworkReplyPrivate &dd, QObject *parent);
     virtual qint64 writeData(const char *data, qint64 len) Q_DECL_OVERRIDE;
 

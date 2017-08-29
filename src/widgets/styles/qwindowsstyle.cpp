@@ -59,12 +59,8 @@
 #include "qlistview.h"
 #include <private/qmath_p.h>
 #include <qmath.h>
-#include <QtGui/qscreen.h>
-#include <QtGui/qwindow.h>
 #include <qpa/qplatformtheme.h>
-#include <qpa/qplatformscreen.h>
 #include <private/qguiapplication_p.h>
-#include <private/qhighdpiscaling_p.h>
 
 #include <private/qstylehelper_p.h>
 #include <private/qstyleanimation_p.h>
@@ -115,6 +111,8 @@ enum QSliderDirection { SlUp, SlDown, SlLeft, SlRight };
     \internal
 */
 
+int QWindowsStylePrivate::m_appDevicePixelRatio = 0;
+
 QWindowsStylePrivate::QWindowsStylePrivate()
     : alt_down(false), menuBarTimer(0)
 {
@@ -127,9 +125,11 @@ QWindowsStylePrivate::QWindowsStylePrivate()
 #endif
 }
 
-qreal QWindowsStylePrivate::appDevicePixelRatio()
+int QWindowsStylePrivate::appDevicePixelRatio()
 {
-    return qApp->devicePixelRatio();
+    if (!QWindowsStylePrivate::m_appDevicePixelRatio)
+        QWindowsStylePrivate::m_appDevicePixelRatio = qRound(qApp->devicePixelRatio());
+    return QWindowsStylePrivate::m_appDevicePixelRatio;
 }
 
 // Returns \c true if the toplevel parent of \a widget has seen the Alt-key
@@ -399,47 +399,6 @@ int QWindowsStylePrivate::fixedPixelMetric(QStyle::PixelMetric pm)
     return QWindowsStylePrivate::InvalidMetric;
 }
 
-static QWindow *windowOf(const QWidget *w)
-{
-    QWindow *result = Q_NULLPTR;
-    if (w) {
-        result = w->windowHandle();
-        if (!result) {
-            if (const QWidget *np = w->nativeParentWidget())
-                result = np->windowHandle();
-        }
-    }
-    return result;
-}
-
-static QScreen *screenOf(const QWidget *w)
-{
-    if (const QWindow *window = windowOf(w))
-        return window->screen();
-    return QGuiApplication::primaryScreen();
-}
-
-// Calculate the overall scale factor to obtain Qt Device Independent
-// Pixels from a native Windows size. Divide by devicePixelRatio
-// and account for secondary screens with differing logical DPI.
-qreal QWindowsStylePrivate::nativeMetricScaleFactor(const QWidget *widget)
-{
-    if (!QHighDpiScaling::isActive())
-        return 1;
-    qreal result = qreal(1) / QWindowsStylePrivate::devicePixelRatio(widget);
-    if (QGuiApplicationPrivate::screen_list.size() > 1) {
-        const QScreen *primaryScreen = QGuiApplication::primaryScreen();
-        const QScreen *screen = screenOf(widget);
-        if (screen != primaryScreen) {
-            const qreal primaryLogicalDpi = primaryScreen->handle()->logicalDpi().first;
-            const qreal logicalDpi = screen->handle()->logicalDpi().first;
-            if (!qFuzzyCompare(primaryLogicalDpi, logicalDpi))
-                result *= logicalDpi / primaryLogicalDpi;
-        }
-    }
-    return result;
-}
-
 /*!
   \reimp
 */
@@ -447,7 +406,7 @@ int QWindowsStyle::pixelMetric(PixelMetric pm, const QStyleOption *opt, const QW
 {
     int ret = QWindowsStylePrivate::pixelMetricFromSystemDp(pm, opt, widget);
     if (ret != QWindowsStylePrivate::InvalidMetric)
-        return qRound(qreal(ret) * QWindowsStylePrivate::nativeMetricScaleFactor(widget));
+        return ret / QWindowsStylePrivate::devicePixelRatio(widget);
 
     ret = QWindowsStylePrivate::fixedPixelMetric(pm);
     if (ret != QWindowsStylePrivate::InvalidMetric)
@@ -1065,9 +1024,9 @@ void QWindowsStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt, 
     case PE_IndicatorProgressChunk:
         {
             bool vertical = false, inverted = false;
-            if (const QStyleOptionProgressBar *pb = qstyleoption_cast<const QStyleOptionProgressBar *>(opt)) {
-                vertical = pb->orientation == Qt::Vertical;
-                inverted = pb->invertedAppearance;
+            if (const QStyleOptionProgressBarV2 *pb2 = qstyleoption_cast<const QStyleOptionProgressBarV2 *>(opt)) {
+                vertical = (pb2->orientation == Qt::Vertical);
+                inverted = pb2->invertedAppearance;
             }
 
             int space = 2;
@@ -1730,9 +1689,15 @@ void QWindowsStyle::drawControl(ControlElement ce, const QStyleOption *opt, QPai
             if (!rect.isValid())
                 return;
 
-            const bool vertical = pb->orientation == Qt::Vertical;
-            const bool inverted = pb->invertedAppearance;
+            bool vertical = false;
+            bool inverted = false;
 
+            // Get extra style options if version 2
+            const QStyleOptionProgressBarV2 *pb2 = qstyleoption_cast<const QStyleOptionProgressBarV2 *>(opt);
+            if (pb2) {
+                vertical = (pb2->orientation == Qt::Vertical);
+                inverted = pb2->invertedAppearance;
+            }
             QMatrix m;
             if (vertical) {
                 rect = QRect(rect.y(), rect.x(), rect.height(), rect.width()); // flip width and height
@@ -1751,7 +1716,7 @@ void QWindowsStyle::drawControl(ControlElement ce, const QStyleOption *opt, QPai
             Q_D(const QWindowsStyle);
             if (pb->minimum == 0 && pb->maximum == 0) {
                 const int unit_width = proxy()->pixelMetric(PM_ProgressBarChunkWidth, pb, widget);
-                QStyleOptionProgressBar pbBits = *pb;
+                QStyleOptionProgressBarV2 pbBits = *pb;
                 Q_ASSERT(unit_width >0);
 
                 pbBits.rect = rect;
@@ -1808,7 +1773,9 @@ void QWindowsStyle::drawControl(ControlElement ce, const QStyleOption *opt, QPai
         if (const QStyleOptionDockWidget *dwOpt = qstyleoption_cast<const QStyleOptionDockWidget *>(opt)) {
             Q_D(const QWindowsStyle);
 
-            const bool verticalTitleBar = dwOpt->verticalTitleBar;
+            const QStyleOptionDockWidgetV2 *v2
+                = qstyleoption_cast<const QStyleOptionDockWidgetV2*>(opt);
+            bool verticalTitleBar = v2 == 0 ? false : v2->verticalTitleBar;
 
             QRect rect = dwOpt->rect;
             QRect r = rect;
@@ -1829,7 +1796,7 @@ void QWindowsStyle::drawControl(ControlElement ce, const QStyleOption *opt, QPai
                 QColor left, right;
 
                 //Titlebar gradient
-                if (opt->state & QStyle::State_Window) {
+                if (widget && widget->isWindow()) {
                     floating = true;
                     if (active) {
                         left = d->activeCaptionColor;
@@ -1907,9 +1874,9 @@ QRect QWindowsStyle::subElementRect(SubElement sr, const QStyleOption *opt, cons
         break;
     case SE_DockWidgetTitleBarText: {
         r = QCommonStyle::subElementRect(sr, opt, w);
-        const QStyleOptionDockWidget *dwOpt
-            = qstyleoption_cast<const QStyleOptionDockWidget*>(opt);
-        const bool verticalTitleBar = dwOpt && dwOpt->verticalTitleBar;
+        const QStyleOptionDockWidgetV2 *v2
+            = qstyleoption_cast<const QStyleOptionDockWidgetV2*>(opt);
+        bool verticalTitleBar = v2 == 0 ? false : v2->verticalTitleBar;
         int m = proxy()->pixelMetric(PM_DockWidgetTitleMargin, opt, w);
         if (verticalTitleBar) {
             r.adjust(0, 0, 0, -m);
@@ -2209,8 +2176,9 @@ void QWindowsStyle::drawComplexControl(ComplexControl cc, const QStyleOptionComp
 
                 if (sunkenArrow)
                     flags |= State_Sunken;
-                QStyleOption arrowOpt = *cmb;
+                QStyleOption arrowOpt(0);
                 arrowOpt.rect = ar.adjusted(1, 1, -1, -1);
+                arrowOpt.palette = cmb->palette;
                 arrowOpt.state = flags;
                 proxy()->drawPrimitive(PE_IndicatorArrowDown, &arrowOpt, p, widget);
             }
@@ -2436,7 +2404,5 @@ QIcon QWindowsStyle::standardIcon(StandardPixmap standardIcon, const QStyleOptio
 
 
 QT_END_NAMESPACE
-
-#include "moc_qwindowsstyle_p.cpp"
 
 #endif // QT_NO_STYLE_WINDOWS

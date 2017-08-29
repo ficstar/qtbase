@@ -31,10 +31,11 @@
 **
 ****************************************************************************/
 
-#include "qstate_p.h"
+#include "qstate.h"
 
 #ifndef QT_NO_STATEMACHINE
 
+#include "qstate_p.h"
 #include "qhistorystate.h"
 #include "qhistorystate_p.h"
 #include "qabstracttransition.h"
@@ -319,7 +320,7 @@ void QState::addTransition(QAbstractTransition *transition)
     }
 
     transition->setParent(this);
-    const QVector<QPointer<QAbstractState> > &targets = QAbstractTransitionPrivate::get(transition)->targetStates;
+    const QList<QPointer<QAbstractState> > &targets = QAbstractTransitionPrivate::get(transition)->targetStates;
     for (int i = 0; i < targets.size(); ++i) {
         QAbstractState *t = targets.at(i).data();
         if (!t) {
@@ -517,14 +518,6 @@ QState::ChildMode QState::childMode() const
 void QState::setChildMode(ChildMode mode)
 {
     Q_D(QState);
-
-    if (mode == QState::ParallelStates && d->initialState) {
-        qWarning("QState::setChildMode: setting the child-mode of state %p to "
-                 "parallel removes the initial state", this);
-        d->initialState = Q_NULLPTR;
-        emit initialStateChanged(QState::QPrivateSignal());
-    }
-
     if (d->childMode != mode) {
         d->childMode = mode;
         emit childModeChanged(QState::QPrivateSignal());

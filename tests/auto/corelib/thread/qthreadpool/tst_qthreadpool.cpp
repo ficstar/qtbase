@@ -821,7 +821,7 @@ void tst_QThreadPool::tryStartCount()
             ++count;
         QCOMPARE(count, QThread::idealThreadCount());
 
-        QTRY_COMPARE(threadPool.activeThreadCount(), 0);
+        QTest::qWait(100);
     }
 }
 

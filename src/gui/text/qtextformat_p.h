@@ -47,6 +47,7 @@
 
 #include "QtGui/qtextformat.h"
 #include "QtCore/qvector.h"
+#include "QtCore/qhash.h"
 
 QT_BEGIN_NAMESPACE
 

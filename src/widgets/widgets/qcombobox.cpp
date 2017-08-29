@@ -546,8 +546,7 @@ void QComboBoxPrivateContainer::setItemView(QAbstractItemView *itemView)
         disconnect(view, SIGNAL(destroyed()),
                    this, SLOT(viewDestroyed()));
 
-        if (isAncestorOf(view))
-            delete view;
+        delete view;
         view = 0;
     }
 
@@ -654,9 +653,8 @@ void QComboBoxPrivateContainer::changeEvent(QEvent *e)
 bool QComboBoxPrivateContainer::eventFilter(QObject *o, QEvent *e)
 {
     switch (e->type()) {
-    case QEvent::ShortcutOverride: {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(e);
-        switch (keyEvent->key()) {
+    case QEvent::ShortcutOverride:
+        switch (static_cast<QKeyEvent*>(e)->key()) {
         case Qt::Key_Enter:
         case Qt::Key_Return:
 #ifdef QT_KEYPAD_NAVIGATION
@@ -668,21 +666,17 @@ bool QComboBoxPrivateContainer::eventFilter(QObject *o, QEvent *e)
             }
             return true;
         case Qt::Key_Down:
-            if (!(keyEvent->modifiers() & Qt::AltModifier))
+            if (!(static_cast<QKeyEvent*>(e)->modifiers() & Qt::AltModifier))
                 break;
             // fall through
         case Qt::Key_F4:
+        case Qt::Key_Escape:
             combo->hidePopup();
             return true;
         default:
-            if (keyEvent->matches(QKeySequence::Cancel)) {
-                combo->hidePopup();
-                return true;
-            }
             break;
         }
-        break;
-    }
+    break;
     case QEvent::MouseMove:
         if (isVisible()) {
             QMouseEvent *m = static_cast<QMouseEvent *>(e);
@@ -1311,8 +1305,8 @@ void QComboBoxPrivate::_q_emitCurrentIndexChanged(const QModelIndex &index)
     if (!lineEdit)
         emit q->currentTextChanged(text);
 #ifndef QT_NO_ACCESSIBILITY
-    QAccessibleValueChangeEvent event(q, text);
-    QAccessible::updateAccessibility(&event);
+        QAccessibleValueChangeEvent event(q, text);
+        QAccessible::updateAccessibility(&event);
 #endif
 }
 
@@ -2100,9 +2094,9 @@ void QComboBoxPrivate::setCurrentIndex(const QModelIndex &mi)
     if (lineEdit) {
         const QString newText = itemText(normalized);
         if (lineEdit->text() != newText) {
-            lineEdit->setText(newText); // may cause lineEdit -> nullptr (QTBUG-54191)
+            lineEdit->setText(newText);
 #ifndef QT_NO_COMPLETER
-            if (lineEdit && lineEdit->completer())
+            if (lineEdit->completer())
                 lineEdit->completer()->setCompletionPrefix(newText);
 #endif
         }
@@ -2274,7 +2268,6 @@ void QComboBox::insertItems(int index, const QStringList &list)
     // construct a QStandardItem, reducing the number of expensive signals from the model
     if (QStandardItemModel *m = qobject_cast<QStandardItemModel*>(d->model)) {
         QList<QStandardItem *> items;
-        items.reserve(insertCount);
         QStandardItem *hiddenRoot = m->invisibleRootItem();
         for (int i = 0; i < insertCount; ++i)
             items.append(new QStandardItem(list.at(i)));
@@ -2432,12 +2425,7 @@ struct IndexSetter {
     int index;
     QComboBox *cb;
 
-    void operator()(void)
-    {
-        cb->setCurrentIndex(index);
-        emit cb->activated(index);
-        emit cb->activated(cb->itemText(index));
-    }
+    void operator()(void) { cb->setCurrentIndex(index); }
 };
 }
 
@@ -2831,8 +2819,8 @@ void QComboBox::clear()
     Q_D(QComboBox);
     d->model->removeRows(0, d->model->rowCount(d->root), d->root);
 #ifndef QT_NO_ACCESSIBILITY
-    QAccessibleValueChangeEvent event(this, QString());
-    QAccessible::updateAccessibility(&event);
+        QAccessibleValueChangeEvent event(this, QString());
+        QAccessible::updateAccessibility(&event);
 #endif
 }
 
@@ -2845,8 +2833,8 @@ void QComboBox::clearEditText()
     if (d->lineEdit)
         d->lineEdit->clear();
 #ifndef QT_NO_ACCESSIBILITY
-    QAccessibleValueChangeEvent event(this, QString());
-    QAccessible::updateAccessibility(&event);
+        QAccessibleValueChangeEvent event(this, QString());
+        QAccessible::updateAccessibility(&event);
 #endif
 }
 
@@ -2859,8 +2847,8 @@ void QComboBox::setEditText(const QString &text)
     if (d->lineEdit)
         d->lineEdit->setText(text);
 #ifndef QT_NO_ACCESSIBILITY
-    QAccessibleValueChangeEvent event(this, text);
-    QAccessible::updateAccessibility(&event);
+        QAccessibleValueChangeEvent event(this, text);
+        QAccessible::updateAccessibility(&event);
 #endif
 }
 
@@ -3005,8 +2993,8 @@ bool QComboBox::event(QEvent *event)
     case QEvent::HoverEnter:
     case QEvent::HoverLeave:
     case QEvent::HoverMove:
-        if (const QHoverEvent *he = static_cast<const QHoverEvent *>(event))
-            d->updateHoverControl(he->pos());
+    if (const QHoverEvent *he = static_cast<const QHoverEvent *>(event))
+        d->updateHoverControl(he->pos());
         break;
     case QEvent::ShortcutOverride:
         if (d->lineEdit)
@@ -3040,6 +3028,9 @@ void QComboBox::mousePressEvent(QMouseEvent *e)
         d->showPopupFromMouseEvent(e);
 }
 
+/*!
+    \reimp
+*/
 void QComboBoxPrivate::showPopupFromMouseEvent(QMouseEvent *e)
 {
     Q_Q(QComboBox);
@@ -3247,9 +3238,6 @@ void QComboBox::keyReleaseEvent(QKeyEvent *e)
 #ifndef QT_NO_WHEELEVENT
 void QComboBox::wheelEvent(QWheelEvent *e)
 {
-#ifdef Q_OS_DARWIN
-    Q_UNUSED(e);
-#else
     Q_D(QComboBox);
     if (!d->viewContainer()->isVisible()) {
         int newIndex = currentIndex();
@@ -3270,7 +3258,6 @@ void QComboBox::wheelEvent(QWheelEvent *e)
         }
         e->accept();
     }
-#endif
 }
 #endif
 
@@ -3429,6 +3416,5 @@ void QComboBox::setModelColumn(int visibleColumn)
 QT_END_NAMESPACE
 
 #include "moc_qcombobox.cpp"
-#include "moc_qcombobox_p.cpp"
 
 #endif // QT_NO_COMBOBOX

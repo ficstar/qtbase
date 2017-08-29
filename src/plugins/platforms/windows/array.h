@@ -79,8 +79,7 @@ public:
             const T *oldData = data;
             data = new T[capacity];
             if (oldData) {
-                std::copy(oldData, oldData + m_size,
-                          QT_MAKE_CHECKED_ARRAY_ITERATOR(data, capacity));
+                std::copy(oldData, oldData + m_size, data);
                 delete [] oldData;
             }
             m_capacity = capacity;

@@ -39,6 +39,9 @@
 class tst_QZip : public QObject
 {
     Q_OBJECT
+public slots:
+    void init();
+    void cleanup();
 
 private slots:
     void basicUnpack();
@@ -47,10 +50,18 @@ private slots:
     void createArchive();
 };
 
+void tst_QZip::init()
+{
+}
+
+void tst_QZip::cleanup()
+{
+}
+
 void tst_QZip::basicUnpack()
 {
     QZipReader zip(QFINDTESTDATA("/testdata/test.zip"), QIODevice::ReadOnly);
-    QVector<QZipReader::FileInfo> files = zip.fileInfoList();
+    QList<QZipReader::FileInfo> files = zip.fileInfoList();
     QCOMPARE(files.count(), 2);
 
     QZipReader::FileInfo fi = files.at(0);
@@ -86,7 +97,7 @@ void tst_QZip::basicUnpack()
 void tst_QZip::symlinks()
 {
     QZipReader zip(QFINDTESTDATA("/testdata/symlink.zip"), QIODevice::ReadOnly);
-    QVector<QZipReader::FileInfo> files = zip.fileInfoList();
+    QList<QZipReader::FileInfo> files = zip.fileInfoList();
     QCOMPARE(files.count(), 2);
 
     QZipReader::FileInfo fi = files.at(0);
@@ -109,7 +120,7 @@ void tst_QZip::symlinks()
 void tst_QZip::readTest()
 {
     QZipReader zip("foobar.zip", QIODevice::ReadOnly); // non existing file.
-    QVector<QZipReader::FileInfo> files = zip.fileInfoList();
+    QList<QZipReader::FileInfo> files = zip.fileInfoList();
     QCOMPARE(files.count(), 0);
     QByteArray b = zip.fileData("foobar");
     QCOMPARE(b.size(), 0);
@@ -128,7 +139,7 @@ void tst_QZip::createArchive()
 
     QBuffer buffer2(&zipFile);
     QZipReader zip2(&buffer2);
-    QVector<QZipReader::FileInfo> files = zip2.fileInfoList();
+    QList<QZipReader::FileInfo> files = zip2.fileInfoList();
     QCOMPARE(files.count(), 1);
     QZipReader::FileInfo file = files.at(0);
     QCOMPARE(file.filePath, QString("My Filename"));

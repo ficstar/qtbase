@@ -83,7 +83,7 @@ void tst_QNetworkCookie::getterSetter()
     QNetworkCookie cookie;
     QNetworkCookie otherCookie;
 
-    QCOMPARE(cookie, otherCookie);
+    QVERIFY(cookie == otherCookie);
     QCOMPARE(cookie, otherCookie);
     QVERIFY(!(cookie != otherCookie));
 
@@ -133,7 +133,7 @@ void tst_QNetworkCookie::getterSetter()
     cookie.setSecure(false);
     QVERIFY(!cookie.isSecure());
 
-    QCOMPARE(cookie, otherCookie);
+    QVERIFY(cookie == otherCookie);
 }
 
 void tst_QNetworkCookie::parseSingleCookie_data()

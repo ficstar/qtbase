@@ -61,8 +61,8 @@ public:
 
     Q_DECLARE_FLAGS(ColorDialogOptions, ColorDialogOption)
 
-    explicit QColorDialog(QWidget *parent = Q_NULLPTR);
-    explicit QColorDialog(const QColor &initial, QWidget *parent = Q_NULLPTR);
+    explicit QColorDialog(QWidget *parent = 0);
+    explicit QColorDialog(const QColor &initial, QWidget *parent = 0);
     ~QColorDialog();
 
     void setCurrentColor(const QColor &color);
@@ -81,12 +81,12 @@ public:
     void setVisible(bool visible) Q_DECL_OVERRIDE;
 
     static QColor getColor(const QColor &initial = Qt::white,
-                           QWidget *parent = Q_NULLPTR,
+                           QWidget *parent = 0,
                            const QString &title = QString(),
-                           ColorDialogOptions options = ColorDialogOptions());
+                           ColorDialogOptions options = 0);
 
     // obsolete
-    static QRgb getRgba(QRgb rgba = 0xffffffff, bool *ok = Q_NULLPTR, QWidget *parent = Q_NULLPTR);
+    static QRgb getRgba(QRgb rgba = 0xffffffff, bool *ok = 0, QWidget *parent = 0);
 
     static int customCount();
     static QColor customColor(int index);
@@ -113,6 +113,7 @@ private:
     Q_PRIVATE_SLOT(d_func(), void _q_newStandard(int, int))
     Q_PRIVATE_SLOT(d_func(), void _q_pickScreenColor())
     Q_PRIVATE_SLOT(d_func(), void _q_updateColorPicking())
+    friend class QColorShower;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QColorDialog::ColorDialogOptions)

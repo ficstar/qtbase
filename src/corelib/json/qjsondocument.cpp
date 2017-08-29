@@ -351,14 +351,16 @@ QByteArray QJsonDocument::toJson(JsonFormat format) const
 #endif
 
 /*!
- Parses \a json as a UTF-8 encoded JSON document, and creates a QJsonDocument
+ Parses a UTF-8 encoded JSON document and creates a QJsonDocument
  from it.
 
- Returns a valid (non-null) QJsonDocument if the parsing succeeds. If it fails,
- the returned document will be null, and the optional \a error variable will contain
- further details about the error.
+ \a json contains the json document to be parsed.
 
- \sa toJson(), QJsonParseError, isNull()
+ The optional \a error variable can be used to pass in a QJsonParseError data
+ structure that will contain information about possible errors encountered during
+ parsing.
+
+ \sa toJson(), QJsonParseError
  */
 QJsonDocument QJsonDocument::fromJson(const QByteArray &json, QJsonParseError *error)
 {
@@ -480,7 +482,7 @@ void QJsonDocument::setObject(const QJsonObject &object)
         if (d->compactionCounter)
             o.compact();
         else
-            o.detach2();
+            o.detach();
         d = o.d;
         d->ref.ref();
         return;
@@ -507,7 +509,7 @@ void QJsonDocument::setArray(const QJsonArray &array)
         if (d->compactionCounter)
             a.compact();
         else
-            a.detach2();
+            a.detach();
         d = a.d;
         d->ref.ref();
         return;
@@ -572,7 +574,7 @@ QDebug operator<<(QDebug dbg, const QJsonDocument &o)
         QJsonPrivate::Writer::objectToJson(static_cast<QJsonPrivate::Object *>(o.d->header->root()), json, 0, true);
     dbg.nospace() << "QJsonDocument("
                   << json.constData() // print as utf-8 string without extra quotation marks
-                  << ')';
+                  << ")";
     return dbg;
 }
 #endif

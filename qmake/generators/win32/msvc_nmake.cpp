@@ -53,7 +53,7 @@ static QString nmakePathList(const QStringList &list)
         pathList.append(QDir::cleanPath(path));
 
     return QDir::toNativeSeparators(pathList.join(QLatin1Char(';')))
-            .replace('#', QLatin1String("^#")).replace('$', QLatin1String("$$"));
+            .replace('#', QStringLiteral("^#")).replace('$', QStringLiteral("$$"));
 }
 
 NmakeMakefileGenerator::NmakeMakefileGenerator() : Win32MakefileGenerator(), usePCH(false)
@@ -110,10 +110,10 @@ NmakeMakefileGenerator::writeMakefile(QTextStream &t)
                 QString arch = project->first("VCPROJ_ARCH").toQString().toLower();
                 QString compiler;
                 QString compilerArch;
-                if (arch == QLatin1String("arm")) {
+                if (arch == QStringLiteral("arm")) {
                     compiler = QStringLiteral("x86_arm");
                     compilerArch = QStringLiteral("arm");
-                } else if (arch == QLatin1String("x64")) {
+                } else if (arch == QStringLiteral("x64")) {
                     const ProStringList hostArch = project->values("QMAKE_TARGET.arch");
                     if (hostArch.contains("x86_64"))
                         compiler = QStringLiteral("amd64");
@@ -142,8 +142,18 @@ NmakeMakefileGenerator::writeMakefile(QTextStream &t)
 
                 const bool isPhone = project->isActiveConfig(QStringLiteral("winphone"));
 #ifdef Q_OS_WIN
-                QString regKey = QStringLiteral("Software\\Microsoft\\VisualStudio\\") + msvcVer + ("\\Setup\\VC\\ProductDir");
-                const QString vcInstallDir = qt_readRegistryKey(HKEY_LOCAL_MACHINE, regKey, KEY_WOW64_32KEY);
+                QString regKeyPrefix;
+#if !defined(Q_OS_WIN64) && _WIN32_WINNT >= 0x0501
+                BOOL isWow64;
+                IsWow64Process(GetCurrentProcess(), &isWow64);
+                if (!isWow64)
+                    regKeyPrefix = QStringLiteral("Software\\");
+                else
+#endif
+                    regKeyPrefix = QStringLiteral("Software\\Wow6432Node\\");
+
+                QString regKey = regKeyPrefix + QStringLiteral("Microsoft\\VisualStudio\\") + msvcVer + ("\\Setup\\VC\\ProductDir");
+                const QString vcInstallDir = qt_readRegistryKey(HKEY_LOCAL_MACHINE, regKey);
                 if (vcInstallDir.isEmpty()) {
                     fprintf(stderr, "Failed to find the Visual Studio installation directory.\n");
                     return false;
@@ -151,13 +161,13 @@ NmakeMakefileGenerator::writeMakefile(QTextStream &t)
 
                 QString windowsPath;
                 if (isPhone) {
-                    windowsPath = "Software\\Microsoft\\Microsoft SDKs\\WindowsPhoneApp\\v";
+                    windowsPath = "Microsoft\\Microsoft SDKs\\WindowsPhoneApp\\v";
                 } else {
-                    windowsPath = "Software\\Microsoft\\Microsoft SDKs\\Windows\\v";
+                    windowsPath = "Microsoft\\Microsoft SDKs\\Windows\\v";
                 }
 
-                regKey = windowsPath + winsdkVer + QStringLiteral("\\InstallationFolder");
-                const QString kitDir = qt_readRegistryKey(HKEY_LOCAL_MACHINE, regKey, KEY_WOW64_32KEY);
+                regKey = regKeyPrefix + windowsPath + winsdkVer + QStringLiteral("\\InstallationFolder");
+                const QString kitDir = qt_readRegistryKey(HKEY_LOCAL_MACHINE, regKey);
                 if (kitDir.isEmpty()) {
                     fprintf(stderr, "Failed to find the Windows Kit installation directory.\n");
                     return false;
@@ -192,9 +202,6 @@ NmakeMakefileGenerator::writeMakefile(QTextStream &t)
                     incDirs << crtInclude + QStringLiteral("/um");
                     incDirs << crtInclude + QStringLiteral("/shared");
                     incDirs << crtInclude + QStringLiteral("/winrt");
-
-                    incDirs << kitDir + QStringLiteral("Extension SDKs/WindowsMobile/")
-                                      + crtVersion + QStringLiteral("/Include/WinRT");
 
                     libDirs << vcInstallDir + QStringLiteral("lib/store/") + compilerArch;
                     libDirs << vcInstallDir + QStringLiteral("atlmfc/lib") + compilerArch;
@@ -259,13 +266,21 @@ void NmakeMakefileGenerator::writeSubMakeCall(QTextStream &t, const QString &cal
     Win32MakefileGenerator::writeSubMakeCall(t, callPrefix, makeArguments);
 }
 
+QString NmakeMakefileGenerator::getPdbTarget()
+{
+    return QString(project->first("TARGET") + project->first("TARGET_VERSION_EXT") + ".pdb");
+}
+
 QString NmakeMakefileGenerator::defaultInstall(const QString &t)
 {
-    QString ret = Win32MakefileGenerator::defaultInstall(t);
-    if (ret.isEmpty())
-        return ret;
+    if((t != "target" && t != "dlltarget") ||
+       (t == "dlltarget" && (project->first("TEMPLATE") != "lib" || !project->isActiveConfig("shared"))) ||
+        project->first("TEMPLATE") == "subdirs")
+       return QString();
 
-    const QString root = installRoot();
+    QString ret = Win32MakefileGenerator::defaultInstall(t);
+
+    const QString root = "$(INSTALL_ROOT)";
     ProStringList &uninst = project->values(ProKey(t + ".uninstall"));
     QString targetdir = fileFixify(project->first(ProKey(t + ".path")).toQString(), FileFixifyAbsolute);
     if(targetdir.right(1) != Option::dir_sep)
@@ -273,7 +288,7 @@ QString NmakeMakefileGenerator::defaultInstall(const QString &t)
 
     if (project->isActiveConfig("debug_info")) {
         if (t == "dlltarget" || project->values(ProKey(t + ".CONFIG")).indexOf("no_dll") == -1) {
-            QString pdb_target = project->first("TARGET") + project->first("TARGET_VERSION_EXT") + ".pdb";
+            QString pdb_target = getPdbTarget();
             QString src_targ = (project->isEmpty("DESTDIR") ? QString("$(DESTDIR)") : project->first("DESTDIR")) + pdb_target;
             QString dst_targ = filePrefixRoot(root, fileFixify(targetdir + pdb_target, FileFixifyAbsolute));
             if(!ret.isEmpty())
@@ -327,7 +342,7 @@ QString NmakeMakefileGenerator::var(const ProKey &value) const
             QString precompRule = QString("-c -FI%1 -Yu%2 -Fp%3")
                     .arg(precompH_f, precompH_f, escapeFilePath(precompPch));
             QString p = MakefileGenerator::var(value);
-            p.replace(QLatin1String("-c"), precompRule);
+            p.replace("-c", precompRule);
             // Cannot use -Gm with -FI & -Yu, as this gives an
             // internal compiler error, on the newer compilers
             // ### work-around for a VS 2003 bug. Move to some prf file or remove completely.
@@ -357,6 +372,8 @@ void NmakeMakefileGenerator::init()
             project->values("MAKEFILE").append("Makefile");
         return;
     }
+
+    project->values("QMAKE_L_FLAG") << "/LIBPATH:";
 
     processVars();
 
@@ -402,35 +419,25 @@ void NmakeMakefileGenerator::init()
         project->values("PRECOMPILED_PCH")    = ProStringList(precompPch);
     }
 
-    ProString tgt = project->first("DESTDIR")
-                    + project->first("TARGET") + project->first("TARGET_VERSION_EXT");
+    ProString version = project->first("TARGET_VERSION_EXT");
     if(project->isActiveConfig("shared")) {
-        project->values("QMAKE_CLEAN").append(tgt + ".exp");
-        project->values("QMAKE_DISTCLEAN").append(tgt + ".lib");
+        project->values("QMAKE_CLEAN").append(project->first("DESTDIR") + project->first("TARGET") + version + ".exp");
+        project->values("QMAKE_DISTCLEAN").append(project->first("DESTDIR") + project->first("TARGET") + version + ".lib");
     }
     if (project->isActiveConfig("debug_info")) {
-        // Add the compiler's PDB file.
-        QString pdbfile = var("OBJECTS_DIR") + project->first("TARGET") + ".vc.pdb";
+        QString pdbfile = project->first("DESTDIR") + project->first("TARGET") + version + ".pdb";
         QString escapedPdbFile = escapeFilePath(pdbfile);
         project->values("QMAKE_CFLAGS").append("/Fd" + escapedPdbFile);
         project->values("QMAKE_CXXFLAGS").append("/Fd" + escapedPdbFile);
-        project->values("QMAKE_CLEAN").append(pdbfile);
-        // Add the linker's PDB file to the distclean target.
-        project->values("QMAKE_DISTCLEAN").append(tgt + ".pdb");
+        project->values("QMAKE_DISTCLEAN").append(pdbfile);
     }
     if (project->isActiveConfig("debug")) {
-        project->values("QMAKE_CLEAN").append(tgt + ".ilk");
-        project->values("QMAKE_CLEAN").append(tgt + ".idb");
+        project->values("QMAKE_CLEAN").append(project->first("DESTDIR") + project->first("TARGET") + version + ".ilk");
+        project->values("QMAKE_CLEAN").append(project->first("DESTDIR") + project->first("TARGET") + version + ".idb");
     } else {
         ProStringList &defines = project->values("DEFINES");
         if (!defines.contains("NDEBUG"))
             defines.append("NDEBUG");
-    }
-
-    if (project->values("QMAKE_APP_FLAG").isEmpty() && project->isActiveConfig("dll")) {
-        ProStringList &defines = project->values("DEFINES");
-        if (!defines.contains("_WINDLL"))
-            defines.append("_WINDLL");
     }
 }
 
@@ -447,8 +454,6 @@ QStringList NmakeMakefileGenerator::sourceFilesForImplicitRulesFilter()
 
 void NmakeMakefileGenerator::writeImplicitRulesPart(QTextStream &t)
 {
-    t << "####### Implicit rules\n\n";
-
     t << ".SUFFIXES:";
     for(QStringList::Iterator cit = Option::c_ext.begin(); cit != Option::c_ext.end(); ++cit)
         t << " " << (*cit);

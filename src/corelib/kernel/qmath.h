@@ -40,17 +40,7 @@
 
 #include <QtCore/qglobal.h>
 
-#ifndef _USE_MATH_DEFINES
-#  define _USE_MATH_DEFINES
-#  define undef_USE_MATH_DEFINES
-#endif
-
 #include <cmath>
-
-#ifdef undef_USE_MATH_DEFINES
-#  undef _USE_MATH_DEFINES
-#  undef undef_USE_MATH_DEFINES
-#endif
 
 QT_BEGIN_NAMESPACE
 

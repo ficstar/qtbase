@@ -219,18 +219,18 @@ QTransform QPainterPrivate::viewTransform() const
     return QTransform();
 }
 
-qreal QPainterPrivate::effectiveDevicePixelRatio() const
+int QPainterPrivate::effectiveDevicePixelRatio() const
 {
     // Special cases for devices that does not support PdmDevicePixelRatio go here:
     if (device->devType() == QInternal::Printer)
-        return qreal(1);
+        return 1;
 
-    return qMax(qreal(1), device->devicePixelRatioF());
+    return qMax(1, device->metric(QPaintDevice::PdmDevicePixelRatio));
 }
 
 QTransform QPainterPrivate::hidpiScaleTransform() const
 {
-    const qreal devicePixelRatio = effectiveDevicePixelRatio();
+    int devicePixelRatio = effectiveDevicePixelRatio();
     return QTransform::fromScale(devicePixelRatio, devicePixelRatio);
 }
 
@@ -2182,10 +2182,11 @@ void QPainter::setBrushOrigin(const QPointF &p)
     destination pixel in such a way that the alpha component of the
     source defines the translucency of the pixel.
 
-    Several composition modes require an alpha channel in the source or
-    target images to have an effect. For optimal performance the
-    image format \l {QImage::Format}{Format_ARGB32_Premultiplied} is
-    preferred.
+    When the paint device is a QImage, the image format must be set to
+    \l {QImage::Format}{Format_ARGB32_Premultiplied} or
+    \l {QImage::Format}{Format_ARGB32} for the composition modes to have
+    any effect. For performance the premultiplied version is the preferred
+    format.
 
     When a composition mode is set it applies to all painting
     operator, pens, brushes, gradients and pixmap/image drawing.
@@ -3153,7 +3154,7 @@ void QPainter::shear(qreal sh, qreal sv)
 /*!
     \fn void QPainter::rotate(qreal angle)
 
-    Rotates the coordinate system clockwise. The given \a angle parameter is in degrees.
+    Rotates the coordinate system clockwise. The given \a angle parameter uses degree unit.
 
     \sa setWorldTransform(), {QPainter#Coordinate Transformations}{Coordinate Transformations}
 */
@@ -5109,7 +5110,7 @@ void QPainter::drawPixmap(const QPointF &p, const QPixmap &pm)
             x += d->state->matrix.dx();
             y += d->state->matrix.dy();
         }
-        qreal scale = pm.devicePixelRatio();
+        int scale = pm.devicePixelRatio();
         d->engine->drawPixmap(QRectF(x, y, w / scale, h / scale), pm, QRectF(0, 0, w, h));
     }
 }
@@ -6178,8 +6179,7 @@ static QPixmap generateWavyPixmap(qreal maxRadius, const QPen &pen)
 
     QString key = QLatin1String("WaveUnderline-")
                   % pen.color().name()
-                  % HexString<qreal>(radiusBase)
-                  % HexString<qreal>(pen.widthF());
+                  % HexString<qreal>(radiusBase);
 
     QPixmap pixmap;
     if (QPixmapCache::find(key, pixmap))
@@ -6187,7 +6187,7 @@ static QPixmap generateWavyPixmap(qreal maxRadius, const QPen &pen)
 
     const qreal halfPeriod = qMax(qreal(2), qreal(radiusBase * 1.61803399)); // the golden ratio
     const int width = qCeil(100 / (2 * halfPeriod)) * (2 * halfPeriod);
-    const qreal radius = qFloor(radiusBase * 2) / 2.;
+    const int radius = qFloor(radiusBase);
 
     QPainterPath path;
 
@@ -6210,7 +6210,7 @@ static QPixmap generateWavyPixmap(qreal maxRadius, const QPen &pen)
         // due to it having a rather thick width for the regular underline.
         const qreal maxPenWidth = .8 * radius;
         if (wavePen.widthF() > maxPenWidth)
-            wavePen.setWidthF(maxPenWidth);
+            wavePen.setWidth(maxPenWidth);
 
         QPainter imgPainter(&pixmap);
         imgPainter.setPen(wavePen);
@@ -6250,6 +6250,9 @@ static void drawTextItemDecoration(QPainter *painter, const QPointF &pos, const 
         painter->setRenderHint(QPainter::Qt4CompatiblePainting, false);
 
     const qreal underlineOffset = fe->underlinePosition().toReal();
+    // deliberately ceil the offset to avoid the underline coming too close to
+    // the text above it.
+    const qreal underlinePos = pos.y() + qCeil(underlineOffset) + 0.5;
 
     if (underlineStyle == QTextCharFormat::SpellCheckUnderline) {
         QPlatformTheme *theme = QGuiApplicationPrivate::platformTheme();
@@ -6260,26 +6263,19 @@ static void drawTextItemDecoration(QPainter *painter, const QPointF &pos, const 
     if (underlineStyle == QTextCharFormat::WaveUnderline) {
         painter->save();
         painter->translate(0, pos.y() + 1);
-        qreal maxHeight = fe->descent().toReal() - qreal(1);
 
         QColor uc = charFormat.underlineColor();
         if (uc.isValid())
             pen.setColor(uc);
 
         // Adapt wave to underlineOffset or pen width, whatever is larger, to make it work on all platforms
-        const QPixmap wave = generateWavyPixmap(qMin(qMax(underlineOffset, pen.widthF()), maxHeight / qreal(2.)), pen);
-        const int descent = qFloor(maxHeight);
+        const QPixmap wave = generateWavyPixmap(qMax(underlineOffset, pen.widthF()), pen);
+        const int descent = (int) fe->descent().toReal();
 
         painter->setBrushOrigin(painter->brushOrigin().x(), 0);
         painter->fillRect(pos.x(), 0, qCeil(width), qMin(wave.height(), descent), wave);
         painter->restore();
     } else if (underlineStyle != QTextCharFormat::NoUnderline) {
-        // Deliberately ceil the offset to avoid the underline coming too close to
-        // the text above it, but limit it to stay within descent.
-        qreal adjustedUnderlineOffset = std::ceil(underlineOffset) + 0.5;
-        if (underlineOffset <= fe->descent().toReal())
-            adjustedUnderlineOffset = qMin(adjustedUnderlineOffset, fe->descent().toReal() - qreal(0.5));
-        const qreal underlinePos = pos.y() + adjustedUnderlineOffset;
         QColor uc = charFormat.underlineColor();
         if (uc.isValid())
             pen.setColor(uc);
@@ -7474,7 +7470,7 @@ start_lengthVariant:
         }
     }
 
-    QVector<QTextLayout::FormatRange> underlineFormats;
+    QList<QTextLayout::FormatRange> underlineFormats;
     int length = offset - old_offset;
     if ((hidemnmemonic || showmnemonic) && maxUnderlines > 0) {
         QChar *cout = text.data() + old_offset;
@@ -7530,7 +7526,6 @@ start_lengthVariant:
 
     if (engine.option.tabs().isEmpty() && ta) {
         QList<qreal> tabs;
-        tabs.reserve(tabarraylen);
         for (int i = 0; i < tabarraylen; i++)
             tabs.append(qreal(ta[i]));
         engine.option.setTabArray(tabs);
@@ -7549,7 +7544,7 @@ start_lengthVariant:
         engine.forceJustification = true;
     QTextLayout textLayout(&engine);
     textLayout.setCacheEnabled(true);
-    textLayout.setFormats(underlineFormats);
+    textLayout.setAdditionalFormats(underlineFormats);
 
     if (finalText.isEmpty()) {
         height = fm.height();

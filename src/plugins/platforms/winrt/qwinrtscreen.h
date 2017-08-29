@@ -40,6 +40,8 @@
 #include <qpa/qplatformscreen.h>
 #include <qpa/qwindowsysteminterface.h>
 
+#include <EGL/egl.h>
+
 namespace ABI {
     namespace Windows {
         namespace ApplicationModel {
@@ -57,19 +59,21 @@ namespace ABI {
                 struct IWindowActivatedEventArgs;
                 struct IWindowSizeChangedEventArgs;
             }
-            namespace Xaml {
-                struct IDependencyObject;
-                struct IWindow;
-            }
-            namespace ViewManagement {
-                struct IApplicationView;
-            }
         }
         namespace Graphics {
             namespace Display {
                 struct IDisplayInformation;
             }
         }
+#ifdef Q_OS_WINPHONE
+        namespace Phone {
+            namespace UI {
+                namespace Input {
+                    struct IBackPressedEventArgs;
+                }
+            }
+        }
+#endif
     }
 }
 struct IInspectable;
@@ -77,6 +81,7 @@ struct IInspectable;
 QT_BEGIN_NAMESPACE
 
 class QTouchDevice;
+class QWinRTEGLContext;
 class QWinRTCursor;
 class QWinRTInputContext;
 class QWinRTScreenPrivate;
@@ -85,20 +90,19 @@ class QWinRTScreen : public QPlatformScreen
 public:
     explicit QWinRTScreen();
     ~QWinRTScreen();
-
-    QRect geometry() const Q_DECL_OVERRIDE;
-    QRect availableGeometry() const Q_DECL_OVERRIDE;
-    int depth() const Q_DECL_OVERRIDE;
-    QImage::Format format() const Q_DECL_OVERRIDE;
+    QRect geometry() const;
+    int depth() const;
+    QImage::Format format() const;
+    QSurfaceFormat surfaceFormat() const;
     QSizeF physicalSize() const Q_DECL_OVERRIDE;
     QDpi logicalDpi() const Q_DECL_OVERRIDE;
-    qreal pixelDensity() const Q_DECL_OVERRIDE;
     qreal scaleFactor() const;
-    QPlatformCursor *cursor() const Q_DECL_OVERRIDE;
+    QWinRTInputContext *inputContext() const;
+    QPlatformCursor *cursor() const;
     Qt::KeyboardModifiers keyboardModifiers() const;
 
-    Qt::ScreenOrientation nativeOrientation() const Q_DECL_OVERRIDE;
-    Qt::ScreenOrientation orientation() const Q_DECL_OVERRIDE;
+    Qt::ScreenOrientation nativeOrientation() const;
+    Qt::ScreenOrientation orientation() const;
 
     QWindow *topWindow() const;
     void addWindow(QWindow *window);
@@ -106,12 +110,10 @@ public:
     void raise(QWindow *window);
     void lower(QWindow *window);
 
-    void updateWindowTitle(const QString &title);
-
     ABI::Windows::UI::Core::ICoreWindow *coreWindow() const;
-    ABI::Windows::UI::Xaml::IDependencyObject *canvas() const;
-
-    void initialize();
+    EGLDisplay eglDisplay() const; // To opengl context
+    EGLSurface eglSurface() const; // To window
+    EGLConfig eglConfig() const;
 
 private:
     void handleExpose();
@@ -122,18 +124,21 @@ private:
     HRESULT onPointerEntered(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IPointerEventArgs *);
     HRESULT onPointerExited(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IPointerEventArgs *);
     HRESULT onPointerUpdated(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IPointerEventArgs *);
+    HRESULT onSizeChanged(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IWindowSizeChangedEventArgs *);
 
     HRESULT onActivated(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IWindowActivatedEventArgs *);
+    HRESULT onSuspended(IInspectable *, ABI::Windows::ApplicationModel::ISuspendingEventArgs *);
+    HRESULT onResume(IInspectable *, IInspectable *);
 
     HRESULT onClosed(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::ICoreWindowEventArgs *);
     HRESULT onVisibilityChanged(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IVisibilityChangedEventArgs *);
+    HRESULT onAutomationProviderRequested(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IAutomationProviderRequestedEventArgs *);
 
     HRESULT onOrientationChanged(ABI::Windows::Graphics::Display::IDisplayInformation *, IInspectable *);
     HRESULT onDpiChanged(ABI::Windows::Graphics::Display::IDisplayInformation *, IInspectable *);
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
-    HRESULT onWindowSizeChanged(ABI::Windows::UI::ViewManagement::IApplicationView *, IInspectable *);
-#else
-    HRESULT onWindowSizeChanged(ABI::Windows::UI::Core::ICoreWindow *, ABI::Windows::UI::Core::IWindowSizeChangedEventArgs *);
+
+#ifdef Q_OS_WINPHONE
+    HRESULT onBackButtonPressed(IInspectable *, ABI::Windows::Phone::UI::Input::IBackPressedEventArgs *args);
 #endif
 
     QScopedPointer<QWinRTScreenPrivate> d_ptr;

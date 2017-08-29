@@ -1,6 +1,6 @@
 /****************************************************************************
  **
- ** Copyright (C) 2016 BogDan Vatra <bogdan@kde.org>
+ ** Copyright (C) 2013 BogDan Vatra <bogdan@kde.org>
  ** Contact: http://www.qt.io/licensing/
  **
  ** This file is part of the Android port of the Qt Toolkit.
@@ -172,6 +172,30 @@ public class QtMessageDialogHelper
         m_buttonsList.add(new ButtonStruct(this, id, text));
     }
 
+    private void setTextAppearance(TextView view, String attr, String style)
+    {
+        try {
+            int[] attrs = (int[]) Class.forName("android.R$styleable").getDeclaredField("TextAppearance").get(null);
+            final TypedArray a = m_theme.obtainStyledAttributes(null,
+                    attrs,
+                    Class.forName("android.R$attr").getDeclaredField(attr).getInt(null),
+                    Class.forName("android.R$style").getDeclaredField(style).getInt(null));
+            final int textSize = a.getDimensionPixelSize(
+                    Class.forName("android.R$styleable").getDeclaredField("TextAppearance_textSize").getInt(null), 0);
+            if (textSize != 0)
+                view.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize);
+
+            final int textColor = a.getColor(
+                    Class.forName("android.R$styleable").getDeclaredField("TextAppearance_textColor").getInt(null), 0x3138);
+            if (textColor != 0x3138)
+                view.setTextColor(textColor);
+
+            a.recycle();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private Drawable getStyledDrawable(String drawable) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException
     {
         int[] attrs = {Class.forName("android.R$attr").getDeclaredField(drawable).getInt(null)};
@@ -228,7 +252,7 @@ public class QtMessageDialogHelper
                     view.setLongClickable(true);
 
                     view.setText(m_text);
-                    view.setTextAppearance(m_activity, android.R.style.TextAppearance_Medium);
+                    setTextAppearance(view, "textAppearanceMedium", "TextAppearance_Medium");
 
                     RelativeLayout.LayoutParams layout = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
                     layout.setMargins(16, 8, 16, 8);
@@ -245,7 +269,7 @@ public class QtMessageDialogHelper
                     view.setLongClickable(true);
 
                     view.setText(m_informativeText);
-                    view.setTextAppearance(m_activity, android.R.style.TextAppearance_Medium);
+                    setTextAppearance(view, "textAppearanceMedium", "TextAppearance_Medium");
 
                     RelativeLayout.LayoutParams layout = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
                     layout.setMargins(16, 8, 16, 8);
@@ -265,7 +289,7 @@ public class QtMessageDialogHelper
                     view.setLongClickable(true);
 
                     view.setText(m_detailedText);
-                    view.setTextAppearance(m_activity, android.R.style.TextAppearance_Small);
+                    setTextAppearance(view, "textAppearanceSmall", "TextAppearance_Small");
 
                     RelativeLayout.LayoutParams layout = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
                     layout.setMargins(16, 8, 16, 8);

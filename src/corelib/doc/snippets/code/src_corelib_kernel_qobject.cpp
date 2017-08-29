@@ -418,17 +418,17 @@ QString example = tr("Example");
 //! [40]
 
 //! [41]
-QPushButton *button = parentWidget->findChild<QPushButton *>("button1", Qt::FindDirectChildrenOnly);
+QPushButton *button = parentWidget->findChild<QPushButton *>("button1", Qt::FindDirectChildOnly);
 //! [41]
 
 
 //! [42]
-QListWidget *list = parentWidget->findChild<QListWidget *>(QString(), Qt::FindDirectChildrenOnly);
+QListWidget *list = parentWidget->findChild<QListWidget *>(QString(), Qt::FindDirectChildOnly);
 //! [42]
 
 
 //! [43]
-QList<QPushButton *> childButtons = parentWidget.findChildren<QPushButton *>(QString(), Qt::FindDirectChildrenOnly);
+QList<QPushButton *> childButtons = parentWidget.findChildren<QPushButton *>(QString(), Qt::FindDirectChildOnly);
 //! [43]
 
 //! [44]
@@ -485,33 +485,6 @@ QObject::connect(socket, &QTcpSocket::connected, this, [=] () {
         socket->write("GET " + page + "\r\n");
     }, Qt::AutoConnection);
 //! [51]
-
-//! [52]
-class MyClass : public QWidget
-{
-    Q_OBJECT
-
-public:
-    MyClass(QWidget *parent = 0);
-    ~MyClass();
-
-    bool event(QEvent* ev)
-    {
-        if (ev->type() == QEvent::PolishRequest) {
-            // overwrite handling of PolishRequest if any
-            doThings();
-            return true;
-        } else  if (ev->type() == QEvent::Show) {
-            // complement handling of Show if any
-            doThings2();
-            QWidget::event(ev);
-            return true;
-        }
-        // Make sure the rest of events are handled
-        return QWidget::event(ev);
-    }
-};
-//! [52]
 
 //! [meta data]
 //: This is a comment for the translator.

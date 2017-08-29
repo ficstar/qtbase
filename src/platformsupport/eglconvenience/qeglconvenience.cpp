@@ -578,10 +578,6 @@ int q_screenDepthFromFb(int framebufferDevice)
 
 qreal q_refreshRateFromFb(int framebufferDevice)
 {
-#ifndef Q_OS_LINUX
-    Q_UNUSED(framebufferDevice)
-#endif
-
     static qreal rate = 0;
 
 #ifdef Q_OS_LINUX

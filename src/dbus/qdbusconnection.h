@@ -99,12 +99,11 @@ public:
         ExportChildObjects = 0x1000
         // Reserved = 0xff000000
     };
-    Q_DECLARE_FLAGS(RegisterOptions, RegisterOption)
-
     enum UnregisterMode {
         UnregisterNode,
         UnregisterTree
     };
+    Q_DECLARE_FLAGS(RegisterOptions, RegisterOption)
 
     enum VirtualObjectRegisterOption {
         SingleNode = 0x0,
@@ -122,14 +121,9 @@ public:
 
     explicit QDBusConnection(const QString &name);
     QDBusConnection(const QDBusConnection &other);
-#ifdef Q_COMPILER_RVALUE_REFS
-    QDBusConnection(QDBusConnection &&other) Q_DECL_NOTHROW : d(other.d) { other.d = Q_NULLPTR; }
-    QDBusConnection &operator=(QDBusConnection &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
-    QDBusConnection &operator=(const QDBusConnection &other);
     ~QDBusConnection();
 
-    void swap(QDBusConnection &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    QDBusConnection &operator=(const QDBusConnection &other);
 
     bool isConnected() const;
     QString baseService() const;
@@ -205,11 +199,9 @@ private:
     friend class QDBusConnectionPrivate;
     QDBusConnectionPrivate *d;
 };
-Q_DECLARE_SHARED_NOT_MOVABLE_UNTIL_QT6(QDBusConnection)
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(QDBusConnection::RegisterOptions)
 Q_DECLARE_OPERATORS_FOR_FLAGS(QDBusConnection::VirtualObjectRegisterOptions)
-Q_DECLARE_OPERATORS_FOR_FLAGS(QDBusConnection::ConnectionCapabilities)
 
 QT_END_NAMESPACE
 

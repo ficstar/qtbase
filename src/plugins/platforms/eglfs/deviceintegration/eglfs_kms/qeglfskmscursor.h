@@ -37,29 +37,12 @@
 #include <qpa/qplatformcursor.h>
 #include <QtCore/QList>
 #include <QtGui/QImage>
-#include <QtGui/private/qinputdevicemanager_p.h>
 
 #include <gbm.h>
 
 QT_BEGIN_NAMESPACE
 
 class QEglFSKmsScreen;
-class QEglFSKmsCursor;
-
-class QEglFSKmsCursorDeviceListener : public QObject
-{
-    Q_OBJECT
-
-public:
-    QEglFSKmsCursorDeviceListener(QEglFSKmsCursor *cursor) : m_cursor(cursor) { }
-    bool hasMouse() const;
-
-public slots:
-    void onDeviceListChanged(QInputDeviceManager::DeviceType type);
-
-private:
-    QEglFSKmsCursor *m_cursor;
-};
 
 class QEglFSKmsCursor : public QPlatformCursor
 {
@@ -77,26 +60,15 @@ public:
     QPoint pos() const Q_DECL_OVERRIDE;
     void setPos(const QPoint &pos) Q_DECL_OVERRIDE;
 
-    void updateMouseStatus();
-
 private:
     void initCursorAtlas();
-
-    enum CursorState {
-        CursorDisabled,
-        CursorPendingHidden,
-        CursorHidden,
-        CursorPendingVisible,
-        CursorVisible
-    };
 
     QEglFSKmsScreen *m_screen;
     QSize m_cursorSize;
     gbm_bo *m_bo;
     QPoint m_pos;
     QPlatformCursorImage m_cursorImage;
-    CursorState m_state;
-    QEglFSKmsCursorDeviceListener *m_deviceListener;
+    bool m_visible;
 
     // cursor atlas information
     struct CursorAtlas {

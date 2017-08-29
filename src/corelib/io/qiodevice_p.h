@@ -102,17 +102,14 @@ public:
     }
     qint64 read(char* target, qint64 size) {
         qint64 r = qMin(size, len);
-        if (r) {
-            memcpy(target, first, r);
-            len -= r;
-            first += r;
-        }
+        memcpy(target, first, r);
+        len -= r;
+        first += r;
         return r;
     }
     qint64 peek(char* target, qint64 size) {
         qint64 r = qMin(size, len);
-        if (r)
-            memcpy(target, first, r);
+        memcpy(target, first, r);
         return r;
     }
     char* reserve(qint64 size) {
@@ -144,7 +141,7 @@ public:
         return r;
     }
     bool canReadLine() const {
-        return first && memchr(first, '\n', len);
+        return memchr(first, '\n', len);
     }
     void ungetChar(char c) {
         if (first == buf) {
@@ -175,8 +172,7 @@ private:
         if (newCapacity > capacity) {
             // allocate more space
             char* newBuf = new char[newCapacity];
-            if (first)
-                memmove(newBuf + moveOffset, first, len);
+            memmove(newBuf + moveOffset, first, len);
             delete [] buf;
             buf = newBuf;
             capacity = newCapacity;
@@ -216,6 +212,7 @@ public:
     qint64 pos;
     qint64 devicePos;
     bool baseReadLineDataCalled;
+    bool firstRead;
 
     virtual bool putCharHelper(char c);
 

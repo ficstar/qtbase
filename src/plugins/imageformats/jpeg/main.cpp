@@ -33,6 +33,8 @@
 
 #include "main.h"
 
+#ifndef QT_NO_IMAGEFORMATPLUGIN
+
 #ifdef QT_NO_IMAGEFORMAT_JPEG
 #undef QT_NO_IMAGEFORMAT_JPEG
 #endif
@@ -66,3 +68,5 @@ QImageIOHandler *QJpegPlugin::create(QIODevice *device, const QByteArray &format
 }
 
 QT_END_NAMESPACE
+
+#endif // QT_NO_IMAGEFORMATPLUGIN

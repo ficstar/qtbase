@@ -73,7 +73,7 @@ bool QQnxNavigatorPps::openPpsConnection()
         return false;
     }
 
-    qNavigatorDebug() << "successfully connected to Navigator. fd=" << m_fd;
+    qNavigatorDebug() << Q_FUNC_INFO << "successfully connected to Navigator. fd=" << m_fd;
 
     return true;
 }
@@ -95,7 +95,7 @@ bool QQnxNavigatorPps::sendPpsMessage(const QByteArray &message, const QByteArra
 
     ppsMessage += "\n";
 
-    qNavigatorDebug() << "sending PPS message:\n" << ppsMessage;
+    qNavigatorDebug() << Q_FUNC_INFO << "sending PPS message:\n" << ppsMessage;
 
     // send pps message to navigator
     errno = 0;
@@ -117,7 +117,7 @@ bool QQnxNavigatorPps::sendPpsMessage(const QByteArray &message, const QByteArra
     // ensure data is null terminated
     buffer[bytes] = '\0';
 
-    qNavigatorDebug() << "received PPS message:\n" << buffer;
+    qNavigatorDebug() << Q_FUNC_INFO << "received PPS message:\n" << buffer;
 
     // process received message
     QByteArray ppsData(buffer);
@@ -136,7 +136,7 @@ bool QQnxNavigatorPps::sendPpsMessage(const QByteArray &message, const QByteArra
 
 void QQnxNavigatorPps::parsePPS(const QByteArray &ppsData, QHash<QByteArray, QByteArray> &messageFields)
 {
-    qNavigatorDebug() << "data=" << ppsData;
+    qNavigatorDebug() << Q_FUNC_INFO << "data=" << ppsData;
 
     // tokenize pps data into lines
     QList<QByteArray> lines = ppsData.split('\n');
@@ -151,7 +151,7 @@ void QQnxNavigatorPps::parsePPS(const QByteArray &ppsData, QHash<QByteArray, QBy
         // tokenize current attribute
         const QByteArray &attr = lines.at(i);
 
-        qNavigatorDebug() << "attr=" << attr;
+        qNavigatorDebug() << Q_FUNC_INFO << "attr=" << attr;
 
         int firstColon = attr.indexOf(':');
         if (firstColon == -1) {
@@ -168,8 +168,8 @@ void QQnxNavigatorPps::parsePPS(const QByteArray &ppsData, QHash<QByteArray, QBy
         QByteArray key = attr.left(firstColon);
         QByteArray value = attr.mid(secondColon + 1);
 
-        qNavigatorDebug() << "key=" << key;
-        qNavigatorDebug() << "val=" << value;
+        qNavigatorDebug() << Q_FUNC_INFO << "key=" << key;
+        qNavigatorDebug() << Q_FUNC_INFO << "val=" << value;
         messageFields[key] = value;
     }
 }

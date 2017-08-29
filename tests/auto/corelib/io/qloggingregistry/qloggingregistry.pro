@@ -5,7 +5,7 @@ CONFIG += testcase
 QT = core core-private testlib
 
 SOURCES += tst_qloggingregistry.cpp
-TESTDATA += qtlogging.ini
+OTHER_FILES += qtlogging.ini
 
 android:!android-no-sdk: {
     RESOURCES += \

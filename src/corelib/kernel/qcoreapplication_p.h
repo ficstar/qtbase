@@ -74,8 +74,6 @@ public:
     QCoreApplicationPrivate(int &aargc,  char **aargv, uint flags);
     ~QCoreApplicationPrivate();
 
-    void init();
-
     QString appName() const;
 
 #ifdef Q_OS_MAC
@@ -88,8 +86,8 @@ public:
 
 #ifndef QT_NO_QOBJECT
     bool sendThroughApplicationEventFilters(QObject *, QEvent *);
-    static bool sendThroughObjectEventFilters(QObject *, QEvent *);
-    static bool notify_helper(QObject *, QEvent *);
+    bool sendThroughObjectEventFilters(QObject *, QEvent *);
+    bool notify_helper(QObject *, QEvent *);
     static inline void setEventSpontaneous(QEvent *e, bool spontaneous) { e->spont = spontaneous; }
 
     virtual void createEventDispatcher();
@@ -107,13 +105,11 @@ public:
     }
     void maybeQuit();
 
-    static QBasicAtomicPointer<QThread> theMainThread;
+    static QThread *theMainThread;
     static QThread *mainThread();
-    static bool threadRequiresCoreApplication();
-
     static void sendPostedEvents(QObject *receiver, int event_type, QThreadData *data);
 
-    static void checkReceiverThread(QObject *receiver);
+    void checkReceiverThread(QObject *receiver);
     void cleanupThreadData();
 #endif // QT_NO_QOBJECT
 

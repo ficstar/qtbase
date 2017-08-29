@@ -175,8 +175,7 @@ static bool convert(const QVariant::Private *d, int t,
     switch (t) {
     case QVariant::ByteArray:
         if (d->type == QVariant::Color) {
-            const QColor *c = v_cast<QColor>(d);
-            *static_cast<QByteArray *>(result) = c->name(c->alpha() != 255 ? QColor::HexArgb : QColor::HexRgb).toLatin1();
+            *static_cast<QByteArray *>(result) = v_cast<QColor>(d)->name().toLatin1();
             return true;
         }
         break;
@@ -191,11 +190,9 @@ static bool convert(const QVariant::Private *d, int t,
         case QVariant::Font:
             *str = v_cast<QFont>(d)->toString();
             return true;
-        case QVariant::Color: {
-            const QColor *c = v_cast<QColor>(d);
-            *str = c->name(c->alpha() != 255 ? QColor::HexArgb : QColor::HexRgb);
+        case QVariant::Color:
+            *str = v_cast<QColor>(d)->name();
             return true;
-        }
         default:
             break;
         }

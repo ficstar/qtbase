@@ -2,7 +2,6 @@
 
 HEADERS += \
         widgets/qbuttongroup.h \
-        widgets/qbuttongroup_p.h \
         widgets/qabstractbutton.h \
         widgets/qabstractbutton_p.h \
         widgets/qabstractslider.h \
@@ -85,7 +84,6 @@ HEADERS += \
         widgets/qplaintextedit_p.h
 
 SOURCES += \
-        widgets/qbuttongroup.cpp \
         widgets/qabstractbutton.cpp \
         widgets/qabstractslider.cpp \
         widgets/qabstractspinbox.cpp \

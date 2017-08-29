@@ -70,7 +70,7 @@ public:
         LeftJoin
     };
 
-    explicit QSqlRelationalTableModel(QObject *parent = Q_NULLPTR,
+    explicit QSqlRelationalTableModel(QObject *parent = 0,
                                       QSqlDatabase db = QSqlDatabase());
     virtual ~QSqlRelationalTableModel();
 

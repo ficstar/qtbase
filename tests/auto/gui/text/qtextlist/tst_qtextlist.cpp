@@ -113,11 +113,11 @@ void tst_QTextList::autoNumbering()
     for (int i = 0; i < 27; ++i)
         cursor.insertBlock();
 
-    QCOMPARE(list->count(), 28);
+    QVERIFY(list->count() == 28);
 
     QVERIFY(cursor.currentList());
-    QCOMPARE(cursor.currentList()->itemNumber(cursor.block()), 27);
-    QCOMPARE(cursor.currentList()->itemText(cursor.block()), QLatin1String("ab."));
+    QVERIFY(cursor.currentList()->itemNumber(cursor.block()) == 27);
+    QVERIFY(cursor.currentList()->itemText(cursor.block()) == "ab.");
 }
 
 void tst_QTextList::autoNumberingPrefixAndSuffix()
@@ -132,11 +132,11 @@ void tst_QTextList::autoNumberingPrefixAndSuffix()
     for (int i = 0; i < 27; ++i)
         cursor.insertBlock();
 
-    QCOMPARE(list->count(), 28);
+    QVERIFY(list->count() == 28);
 
     QVERIFY(cursor.currentList());
-    QCOMPARE(cursor.currentList()->itemNumber(cursor.block()), 27);
-    QCOMPARE(cursor.currentList()->itemText(cursor.block()), QLatin1String("-ab)"));
+    QVERIFY(cursor.currentList()->itemNumber(cursor.block()) == 27);
+    QVERIFY(cursor.currentList()->itemText(cursor.block()) == "-ab)");
 }
 
 void tst_QTextList::autoNumberingPrefixAndSuffixRTL()
@@ -154,9 +154,9 @@ void tst_QTextList::autoNumberingPrefixAndSuffixRTL()
 
     cursor.insertBlock();
 
-    QCOMPARE(list->count(), 2);
+    QVERIFY(list->count() == 2);
 
-    QCOMPARE(cursor.currentList()->itemText(cursor.block()), QLatin1String("*B-"));
+    QVERIFY(cursor.currentList()->itemText(cursor.block()) == "*B-");
 }
 
 void tst_QTextList::autoNumberingPrefixAndSuffixHtmlExportImport()
@@ -174,7 +174,7 @@ void tst_QTextList::autoNumberingPrefixAndSuffixHtmlExportImport()
     for (int i = 0; i < 27; ++i)
         cursor.insertBlock();
 
-    QCOMPARE(list->count(), 28);
+    QVERIFY(list->count() == 28);
 
     QString htmlExport = doc->toHtml();
     QTextDocument importDoc;
@@ -185,9 +185,9 @@ void tst_QTextList::autoNumberingPrefixAndSuffixHtmlExportImport()
         importCursor.movePosition(QTextCursor::NextBlock);
 
     QVERIFY(importCursor.currentList());
-    QCOMPARE(importCursor.currentList()->itemNumber(importCursor.block()), 27);
-    QCOMPARE(importCursor.currentList()->itemText(importCursor.block()), QLatin1String("\"ab#"));
-    QCOMPARE(importCursor.currentList()->format().indent(), 10);
+    QVERIFY(importCursor.currentList()->itemNumber(importCursor.block()) == 27);
+    QVERIFY(importCursor.currentList()->itemText(importCursor.block()) == "\"ab#");
+    QVERIFY(importCursor.currentList()->format().indent() == 10);
 }
 
 void tst_QTextList::autoNumberingRTL()
@@ -203,9 +203,9 @@ void tst_QTextList::autoNumberingRTL()
 
     cursor.insertBlock();
 
-    QCOMPARE(list->count(), 2);
+    QVERIFY(list->count() == 2);
 
-    QCOMPARE(cursor.currentList()->itemText(cursor.block()), QLatin1String(".B"));
+    QVERIFY(cursor.currentList()->itemText(cursor.block()) == ".B");
 }
 
 void tst_QTextList::romanNumbering()
@@ -218,11 +218,11 @@ void tst_QTextList::romanNumbering()
     for (int i = 0; i < 4998; ++i)
       cursor.insertBlock();
 
-    QCOMPARE(list->count(), 4999);
+    QVERIFY(list->count() == 4999);
 
     QVERIFY(cursor.currentList());
-    QCOMPARE(cursor.currentList()->itemNumber(cursor.block()), 4998);
-    QCOMPARE(cursor.currentList()->itemText(cursor.block()), QLatin1String("MMMMCMXCIX."));
+    QVERIFY(cursor.currentList()->itemNumber(cursor.block()) == 4998);
+    QVERIFY(cursor.currentList()->itemText(cursor.block()) == "MMMMCMXCIX.");
 }
 
 void tst_QTextList::romanNumberingLimit()
@@ -235,11 +235,11 @@ void tst_QTextList::romanNumberingLimit()
     for (int i = 0; i < 4999; ++i)
       cursor.insertBlock();
 
-    QCOMPARE(list->count(), 5000);
+    QVERIFY(list->count() == 5000);
 
     QVERIFY(cursor.currentList());
-    QCOMPARE(cursor.currentList()->itemNumber(cursor.block()), 4999);
-    QCOMPARE(cursor.currentList()->itemText(cursor.block()), QLatin1String("?."));
+    QVERIFY(cursor.currentList()->itemNumber(cursor.block()) == 4999);
+    QVERIFY(cursor.currentList()->itemText(cursor.block()) == "?.");
 }
 
 void tst_QTextList::formatChange()
@@ -257,12 +257,12 @@ void tst_QTextList::formatChange()
     QVERIFY(list && list->count() == 2);
 
     QTextBlockFormat bfmt = cursor.blockFormat();
-//     QCOMPARE(bfmt.object(), list);
+//     QVERIFY(bfmt.object() == list);
 
     bfmt.setObjectIndex(-1);
     cursor.setBlockFormat(bfmt);
 
-    QCOMPARE(firstList->count(), 1);
+    QVERIFY(firstList->count() == 1);
 }
 
 void tst_QTextList::cursorNavigation()
@@ -282,7 +282,7 @@ void tst_QTextList::cursorNavigation()
     QVERIFY(cursor.currentList());
     cursor.movePosition(QTextCursor::PreviousBlock);
     QVERIFY(cursor.currentList());
-    QCOMPARE(cursor.currentList()->itemNumber(cursor.block()), 0);
+    QVERIFY(cursor.currentList()->itemNumber(cursor.block()) == 0);
 }
 
 void tst_QTextList::partialRemoval()

@@ -33,9 +33,8 @@
 
 #include "qeglfsdeviceintegration.h"
 #include "qeglfsintegration.h"
-#include "qeglfscursor.h"
-#include "qeglfswindow.h"
 #include <QtPlatformSupport/private/qeglconvenience_p.h>
+#include <QtPlatformSupport/private/qeglplatformcursor_p.h>
 #include <QGuiApplication>
 #include <private/qguiapplication_p.h>
 #include <QScreen>
@@ -100,7 +99,6 @@ QStringList QEGLDeviceIntegrationFactory::keys(const QString &pluginPath)
     qCDebug(qLcEglDevDebug) << "EGL device integration plugin keys:" << list;
     return list;
 #else
-    Q_UNUSED(pluginPath);
     return QStringList();
 #endif
 }
@@ -119,9 +117,6 @@ QEGLDeviceIntegration *QEGLDeviceIntegrationFactory::create(const QString &key, 
         qCDebug(qLcEglDevDebug) << "Using EGL device integration" << key;
     else
         qCWarning(qLcEglDevDebug) << "Failed to load EGL device integration" << key;
-#else
-    Q_UNUSED(key);
-    Q_UNUSED(pluginPath);
 #endif
     return integration;
 }
@@ -176,11 +171,6 @@ EGLNativeDisplayType QEGLDeviceIntegration::platformDisplay() const
     return EGL_DEFAULT_DISPLAY;
 }
 
-EGLDisplay QEGLDeviceIntegration::createDisplay(EGLNativeDisplayType nativeDisplay)
-{
-    return eglGetDisplay(nativeDisplay);
-}
-
 bool QEGLDeviceIntegration::usesDefaultScreen()
 {
     return true;
@@ -212,19 +202,11 @@ QSize QEGLDeviceIntegration::screenSize() const
 
 QDpi QEGLDeviceIntegration::logicalDpi() const
 {
-    const QSizeF ps = physicalScreenSize();
-    const QSize s = screenSize();
+    QSizeF ps = physicalScreenSize();
+    QSize s = screenSize();
 
-    if (!ps.isEmpty() && !s.isEmpty())
-        return QDpi(25.4 * s.width() / ps.width(),
-                    25.4 * s.height() / ps.height());
-    else
-        return QDpi(100, 100);
-}
-
-qreal QEGLDeviceIntegration::pixelDensity() const
-{
-    return qRound(logicalDpi().first / qreal(100));
+    return QDpi(25.4 * s.width() / ps.width(),
+                25.4 * s.height() / ps.height());
 }
 
 Qt::ScreenOrientation QEGLDeviceIntegration::nativeOrientation() const
@@ -252,11 +234,6 @@ qreal QEGLDeviceIntegration::refreshRate() const
     return q_refreshRateFromFb(framebuffer);
 }
 
-EGLint QEGLDeviceIntegration::surfaceType() const
-{
-    return EGL_WINDOW_BIT;
-}
-
 QSurfaceFormat QEGLDeviceIntegration::surfaceFormatFor(const QSurfaceFormat &inputFormat) const
 {
     QSurfaceFormat format = inputFormat;
@@ -274,11 +251,6 @@ QSurfaceFormat QEGLDeviceIntegration::surfaceFormatFor(const QSurfaceFormat &inp
 bool QEGLDeviceIntegration::filterConfig(EGLDisplay, EGLConfig) const
 {
     return true;
-}
-
-QEglFSWindow *QEGLDeviceIntegration::createWindow(QWindow *window) const
-{
-    return new QEglFSWindow(window);
 }
 
 EGLNativeWindowType QEGLDeviceIntegration::createNativeWindow(QPlatformWindow *platformWindow,
@@ -310,7 +282,7 @@ bool QEGLDeviceIntegration::hasCapability(QPlatformIntegration::Capability cap) 
 
 QPlatformCursor *QEGLDeviceIntegration::createCursor(QPlatformScreen *screen) const
 {
-    return new QEglFSCursor(screen);
+    return new QEGLPlatformCursor(screen);
 }
 
 void QEGLDeviceIntegration::waitForVSync(QPlatformSurface *surface) const
@@ -335,16 +307,6 @@ void QEGLDeviceIntegration::presentBuffer(QPlatformSurface *surface)
 bool QEGLDeviceIntegration::supportsPBuffers() const
 {
     return true;
-}
-
-bool QEGLDeviceIntegration::supportsSurfacelessContexts() const
-{
-    return true;
-}
-
-void *QEGLDeviceIntegration::wlDisplay() const
-{
-    return Q_NULLPTR;
 }
 
 QT_END_NAMESPACE

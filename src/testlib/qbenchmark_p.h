@@ -91,7 +91,6 @@ struct QBenchmarkContext
 
     QBenchmarkContext() : checkpointIndex(-1) {}
 };
-Q_DECLARE_TYPEINFO(QBenchmarkContext, Q_MOVABLE_TYPE);
 
 class QBenchmarkResult
 {
@@ -127,7 +126,6 @@ public:
         return (value / iterations) < (other.value / other.iterations);
     }
 };
-Q_DECLARE_TYPEINFO(QBenchmarkResult, Q_MOVABLE_TYPE);
 
 /*
     The QBenchmarkGlobalData class stores global benchmark-related data.

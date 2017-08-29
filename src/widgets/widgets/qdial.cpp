@@ -481,6 +481,4 @@ bool QDial::event(QEvent *e)
 
 QT_END_NAMESPACE
 
-#include "moc_qdial.cpp"
-
 #endif // QT_NO_DIAL

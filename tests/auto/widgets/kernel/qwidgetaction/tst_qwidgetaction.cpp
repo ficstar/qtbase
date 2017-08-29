@@ -55,8 +55,6 @@ class tst_QWidgetAction : public QObject
 {
     Q_OBJECT
 private slots:
-    void initTestCase();
-    void cleanup();
     void defaultWidget();
     void visibilityUpdate();
     void customWidget();
@@ -66,19 +64,6 @@ private slots:
     void popup();
     void releaseWidgetCrash();
 };
-
-void tst_QWidgetAction::initTestCase()
-{
-    // Disable menu/combo animations to prevent the alpha widgets from getting in the
-    // way in popup(), failing the top level leak check in cleanup().
-    QApplication::setEffectEnabled(Qt::UI_AnimateMenu, false);
-    QApplication::setEffectEnabled(Qt::UI_AnimateCombo, false);
-}
-
-void tst_QWidgetAction::cleanup()
-{
-    QVERIFY(QApplication::topLevelWidgets().isEmpty());
-}
 
 void tst_QWidgetAction::defaultWidget()
 {
@@ -138,14 +123,14 @@ void tst_QWidgetAction::defaultWidget()
         action->setDefaultWidget(combo);
 
         tb1.addAction(action);
-        QCOMPARE(combo->parent(), &tb1);
+        QVERIFY(combo->parent() == &tb1);
         qApp->processEvents();
         qApp->processEvents();
         QVERIFY(combo->isVisible());
 
         // not supported, not supposed to work, hence the parent() check
         tb2.addAction(action);
-        QCOMPARE(combo->parent(), &tb1);
+        QVERIFY(combo->parent() == &tb1);
 
         tb2.removeAction(action);
         tb1.removeAction(action);
@@ -156,11 +141,11 @@ void tst_QWidgetAction::defaultWidget()
         tb2.addAction(action);
         qApp->processEvents(); //the call to hide is delayd by the toolbar layout
         qApp->processEvents();
-        QCOMPARE(combo->parent(), &tb2);
+        QVERIFY(combo->parent() == &tb2);
         QVERIFY(combo->isVisible());
 
         tb1.addAction(action);
-        QCOMPARE(combo->parent(), &tb2);
+        QVERIFY(combo->parent() == &tb2);
 
         delete action;
         QVERIFY(!combo);
@@ -171,17 +156,17 @@ void tst_QWidgetAction::defaultWidget()
 
         QPointer<QComboBox> combo1 = new QComboBox;
         a->setDefaultWidget(combo1);
-        QCOMPARE(a->defaultWidget(), combo1.data());
+        QVERIFY(a->defaultWidget() == combo1);
         a->setDefaultWidget(combo1);
         QVERIFY(combo1);
-        QCOMPARE(a->defaultWidget(), combo1.data());
+        QVERIFY(a->defaultWidget() == combo1);
 
         QPointer<QComboBox> combo2 = new QComboBox;
         QVERIFY(combo1 != combo2);
 
         a->setDefaultWidget(combo2);
         QVERIFY(!combo1);
-        QCOMPARE(a->defaultWidget(), combo2.data());
+        QVERIFY(a->defaultWidget() == combo2);
 
         delete a;
         QVERIFY(!combo2);
@@ -253,7 +238,7 @@ void tst_QWidgetAction::customWidget()
     combos = action->createdWidgets();
     QCOMPARE(combos.count(), 2);
 
-    QCOMPARE(combos.at(0), combo1.data());
+    QVERIFY(combos.at(0) == combo1);
     QPointer<QComboBox> combo2 = qobject_cast<QComboBox *>(combos.at(1));
     QVERIFY(combo2);
 
@@ -277,7 +262,7 @@ void tst_QWidgetAction::keepOwnership()
     {
         QToolBar *tb = new QToolBar;
         tb->addAction(action);
-        QCOMPARE(combo->parent(), tb);
+        QVERIFY(combo->parent() == tb);
         delete tb;
     }
 

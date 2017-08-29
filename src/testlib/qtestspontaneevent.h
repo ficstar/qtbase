@@ -76,10 +76,17 @@ public:
     }
 #endif
 
-    // ### Qt 6: remove everything except this function:
     static inline void setSpontaneous(QEvent *ev)
     {
-        ev->setSpontaneous();
+        // use a union instead of a reinterpret_cast to prevent alignment warnings
+        union
+        {
+            QSpontaneKeyEvent *skePtr;
+            QEvent *evPtr;
+        } helper;
+
+        helper.evPtr = ev;
+        helper.skePtr->setSpontaneous();
     }
 
 protected:

@@ -45,17 +45,13 @@
 QT_BEGIN_NAMESPACE
 
 QFramePrivate::QFramePrivate()
-    : frect(0, 0, 0, 0),
+    : frect(QRect(0, 0, 0, 0)),
       frameStyle(QFrame::NoFrame | QFrame::Plain),
       lineWidth(1),
       midLineWidth(0),
       frameWidth(0),
       leftFrameWidth(0), rightFrameWidth(0),
       topFrameWidth(0), bottomFrameWidth(0)
-{
-}
-
-QFramePrivate::~QFramePrivate()
 {
 }
 
@@ -549,5 +545,3 @@ bool QFrame::event(QEvent *e)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qframe.cpp"

@@ -54,8 +54,7 @@ void QAndroidPlatformFontDatabase::populateFontDatabase()
 
     QStringList nameFilters;
     nameFilters << QLatin1String("*.ttf")
-                << QLatin1String("*.otf")
-                << QLatin1String("*.ttc");
+                << QLatin1String("*.otf");
 
     foreach (const QFileInfo &fi, dir.entryInfoList(nameFilters, QDir::Files)) {
         const QByteArray file = QFile::encodeName(fi.absoluteFilePath());
@@ -70,12 +69,12 @@ QStringList QAndroidPlatformFontDatabase::fallbacksForFamily(const QString &fami
 {
     QStringList result;
     if (styleHint == QFont::Monospace || styleHint == QFont::Courier)
-        result.append(QString(qgetenv("QT_ANDROID_FONTS_MONOSPACE")).split(QLatin1Char(';')));
+        result.append(QString(qgetenv("QT_ANDROID_FONTS_MONOSPACE")).split(";"));
     else if (styleHint == QFont::Serif)
-        result.append(QString(qgetenv("QT_ANDROID_FONTS_SERIF")).split(QLatin1Char(';')));
+        result.append(QString(qgetenv("QT_ANDROID_FONTS_SERIF")).split(";"));
     else
-        result.append(QString(qgetenv("QT_ANDROID_FONTS")).split(QLatin1Char(';')));
-    result.append(QBasicFontDatabase::fallbacksForFamily(family, style, styleHint, script));
+        result.append(QString(qgetenv("QT_ANDROID_FONTS")).split(";"));
+    result.append(QPlatformFontDatabase::fallbacksForFamily(family, style, styleHint, script));
 
     return result;
 }

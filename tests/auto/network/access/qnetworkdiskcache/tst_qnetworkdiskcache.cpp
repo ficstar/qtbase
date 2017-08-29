@@ -563,7 +563,7 @@ void tst_QNetworkDiskCache::oldCacheVersionFile()
         {
         QTemporaryFile file(cache.cacheDirectory() + "/XXXXXX.d");
         file.setAutoRemove(false);
-        QVERIFY2(file.open(), qPrintable(file.errorString()));
+        QVERIFY(file.open());
         QDataStream out(&file);
         out << qint32(0xe8);
         out << qint32(2);

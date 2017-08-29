@@ -123,8 +123,7 @@ QString QStandardPaths::writableLocation(StandardLocation type)
 
 QStringList QStandardPaths::standardLocations(StandardLocation type)
 {
-    const QString writable = writableLocation(type);
-    return writable.isEmpty() ? QStringList() : QStringList(writable);
+    return QStringList(writableLocation(type));
 }
 
 QT_END_NAMESPACE

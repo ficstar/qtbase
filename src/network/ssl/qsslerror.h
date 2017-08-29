@@ -84,13 +84,10 @@ public:
 
     QSslError(const QSslError &other);
 
-    void swap(QSslError &other) Q_DECL_NOTHROW
+    inline void swap(QSslError &other)
     { qSwap(d, other.d); }
 
     ~QSslError();
-#ifdef Q_COMPILER_RVALUE_REFS
-    QSslError &operator=(QSslError &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
     QSslError &operator=(const QSslError &other);
     bool operator==(const QSslError &other) const;
     inline bool operator!=(const QSslError &other) const

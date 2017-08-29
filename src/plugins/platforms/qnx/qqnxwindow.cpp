@@ -156,7 +156,7 @@ QQnxWindow::QQnxWindow(QWindow *window, screen_context_t context, bool needRootW
       m_windowState(Qt::WindowNoState),
       m_mmRendererWindow(0)
 {
-    qWindowDebug() << "window =" << window << ", size =" << window->size();
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window << ", size =" << window->size();
 
     QQnxScreen *platformScreen = static_cast<QQnxScreen *>(window->screen()->handle());
 
@@ -215,7 +215,7 @@ QQnxWindow::QQnxWindow(QWindow *window, screen_context_t context, bool needRootW
 
 QQnxWindow::~QQnxWindow()
 {
-    qWindowDebug() << "window =" << window();
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window();
 
     // Qt should have already deleted the children before deleting the parent.
     Q_ASSERT(m_childWindows.size() == 0);
@@ -247,7 +247,7 @@ void QQnxWindow::setGeometry(const QRect &rect)
 
 void QQnxWindow::setGeometryHelper(const QRect &rect)
 {
-    qWindowDebug() << "window =" << window()
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window()
                    << ", (" << rect.x() << "," << rect.y()
                    << "," << rect.width() << "," << rect.height() << ")";
 
@@ -277,7 +277,7 @@ void QQnxWindow::setGeometryHelper(const QRect &rect)
 
 void QQnxWindow::setVisible(bool visible)
 {
-    qWindowDebug() << "window =" << window() << "visible =" << visible;
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window() << "visible =" << visible;
 
     if (m_visible == visible || window()->type() == Qt::Desktop)
         return;
@@ -308,7 +308,7 @@ void QQnxWindow::setVisible(bool visible)
 
 void QQnxWindow::updateVisibility(bool parentVisible)
 {
-    qWindowDebug() << "parentVisible =" << parentVisible << "window =" << window();
+    qWindowDebug() << Q_FUNC_INFO << "parentVisible =" << parentVisible << "window =" << window();
     // Set window visibility
     int val = (m_visible && parentVisible) ? 1 : 0;
     Q_SCREEN_CHECKERROR(screen_set_window_property_iv(m_window, SCREEN_PROPERTY_VISIBLE, &val),
@@ -320,7 +320,7 @@ void QQnxWindow::updateVisibility(bool parentVisible)
 
 void QQnxWindow::setOpacity(qreal level)
 {
-    qWindowDebug() << "window =" << window() << "opacity =" << level;
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window() << "opacity =" << level;
     // Set window global alpha
     int val = (int)(level * 255);
     Q_SCREEN_CHECKERROR(screen_set_window_property_iv(m_window, SCREEN_PROPERTY_GLOBAL_ALPHA, &val),
@@ -331,7 +331,7 @@ void QQnxWindow::setOpacity(qreal level)
 
 void QQnxWindow::setExposed(bool exposed)
 {
-    qWindowDebug() << "window =" << window() << "expose =" << exposed;
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window() << "expose =" << exposed;
 
     if (m_exposed != exposed) {
         m_exposed = exposed;
@@ -346,7 +346,7 @@ bool QQnxWindow::isExposed() const
 
 void QQnxWindow::setBufferSize(const QSize &size)
 {
-    qWindowDebug() << "window =" << window() << "size =" << size;
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window() << "size =" << size;
 
     // libscreen fails when creating empty buffers
     const QSize nonEmptySize = size.isEmpty() ? QSize(1, 1) : size;
@@ -386,12 +386,7 @@ void QQnxWindow::setBufferSize(const QSize &size)
     // Set the transparency. According to QNX technical support, setting the window
     // transparency property should always be done *after* creating the window
     // buffers in order to guarantee the property is paid attention to.
-    if (size.isEmpty()) {
-        // We can't create 0x0 buffers and instead make them 1x1.  But to allow these windows to
-        // still be 'visible' (thus allowing their children to be visible), we need to allow
-        // them to be posted but still not show up.
-        val[0] = SCREEN_TRANSPARENCY_DISCARD;
-    } else if (window()->requestedFormat().alphaBufferSize() == 0) {
+    if (window()->requestedFormat().alphaBufferSize() == 0) {
         // To avoid overhead in the composition manager, disable blending
         // when the underlying window buffer doesn't have an alpha channel.
         val[0] = SCREEN_TRANSPARENCY_NONE;
@@ -413,7 +408,7 @@ void QQnxWindow::setBufferSize(const QSize &size)
 
 void QQnxWindow::setScreen(QQnxScreen *platformScreen)
 {
-    qWindowDebug() << "window =" << window() << "platformScreen =" << platformScreen;
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window() << "platformScreen =" << platformScreen;
 
     if (platformScreen == 0) { // The screen has been destroyed
         m_screen = 0;
@@ -427,7 +422,7 @@ void QQnxWindow::setScreen(QQnxScreen *platformScreen)
         return;
 
     if (m_screen) {
-        qWindowDebug("Moving window to different screen");
+        qWindowDebug() << Q_FUNC_INFO << "Moving window to different screen";
         m_screen->removeWindow(this);
 
         if ((QQnxIntegration::options() & QQnxIntegration::RootWindow)) {
@@ -458,7 +453,7 @@ void QQnxWindow::setScreen(QQnxScreen *platformScreen)
 
 void QQnxWindow::removeFromParent()
 {
-    qWindowDebug() << "window =" << window();
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window();
     // Remove from old Hierarchy position
     if (m_parentWindow) {
         if (m_parentWindow->m_childWindows.removeAll(this))
@@ -472,7 +467,7 @@ void QQnxWindow::removeFromParent()
 
 void QQnxWindow::setParent(const QPlatformWindow *window)
 {
-    qWindowDebug() << "window =" << this->window() << "platformWindow =" << window;
+    qWindowDebug() << Q_FUNC_INFO << "window =" << this->window() << "platformWindow =" << window;
     // Cast away the const, we need to modify the hierarchy.
     QQnxWindow* const newParent = static_cast<QQnxWindow*>(const_cast<QPlatformWindow*>(window));
 
@@ -504,7 +499,7 @@ void QQnxWindow::setParent(const QPlatformWindow *window)
 
 void QQnxWindow::raise()
 {
-    qWindowDebug() << "window =" << window();
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window();
 
     if (m_parentWindow) {
         m_parentWindow->m_childWindows.removeAll(this);
@@ -518,7 +513,7 @@ void QQnxWindow::raise()
 
 void QQnxWindow::lower()
 {
-    qWindowDebug() << "window =" << window();
+    qWindowDebug() << Q_FUNC_INFO << "window =" << window();
 
     if (m_parentWindow) {
         m_parentWindow->m_childWindows.removeAll(this);
@@ -588,7 +583,7 @@ void QQnxWindow::setFocus(screen_window_t newFocusWindow)
 
 void QQnxWindow::setWindowState(Qt::WindowState state)
 {
-    qWindowDebug() << "state =" << state;
+    qWindowDebug() << Q_FUNC_INFO << "state =" << state;
 
     // Prevent two calls with Qt::WindowFullScreen from changing m_unmaximizedGeometry
     if (m_windowState == state)
@@ -603,7 +598,7 @@ void QQnxWindow::setWindowState(Qt::WindowState state)
 void QQnxWindow::propagateSizeHints()
 {
     // nothing to do; silence base class warning
-    qWindowDebug("ignored");
+    qWindowDebug() << Q_FUNC_INFO << ": ignored";
 }
 
 void QQnxWindow::setMMRendererWindowName(const QString &name)
@@ -639,7 +634,7 @@ QQnxWindow *QQnxWindow::findWindow(screen_window_t windowHandle)
 void QQnxWindow::minimize()
 {
 #if defined(Q_OS_BLACKBERRY)
-    qWindowDebug();
+    qWindowDebug() << Q_FUNC_INFO;
 
     pps_encoder_t encoder;
 
@@ -648,7 +643,7 @@ void QQnxWindow::minimize()
 
     if (navigator_raw_write(pps_encoder_buffer(&encoder),
                 pps_encoder_length(&encoder)) != BPS_SUCCESS) {
-        qWindowDebug() << "navigator_raw_write failed:" << strerror(errno);
+        qWindowDebug() << Q_FUNC_INFO << "navigator_raw_write failed:" << strerror(errno);
     }
 
     pps_encoder_cleanup(&encoder);
@@ -659,7 +654,7 @@ void QQnxWindow::minimize()
 
 void QQnxWindow::setRotation(int rotation)
 {
-    qWindowDebug() << "angle =" << rotation;
+    qWindowDebug() << Q_FUNC_INFO << "angle =" << rotation;
     Q_SCREEN_CHECKERROR(
             screen_set_window_property_iv(m_window, SCREEN_PROPERTY_ROTATION, &rotation),
             "Failed to set window rotation");
@@ -731,7 +726,7 @@ void QQnxWindow::joinWindowGroup(const QByteArray &groupName)
 {
     bool changed = false;
 
-    qWindowDebug() << "group:" << groupName;
+    qWindowDebug() << Q_FUNC_INFO << "group:" << groupName;
 
     if (!groupName.isEmpty()) {
         if (groupName != m_parentGroupName) {

@@ -47,6 +47,7 @@
 #include "qcocoamenu.h"
 #include "qcocoamenubar.h"
 #include "qcocoahelpers.h"
+#include "qcocoaautoreleasepool.h"
 
 #include <QtCore/qfileinfo.h>
 #include <QtGui/private/qguiapplication_p.h>
@@ -214,12 +215,32 @@ QPixmap QCocoaTheme::standardPixmap(StandardPixmap sp, const QSizeF &size) const
     }
     if (iconType != 0) {
         QPixmap pixmap;
-        IconRef icon = Q_NULLPTR;
-        GetIconRef(kOnSystemDisk, kSystemIconsCreator, iconType, &icon);
+        IconRef icon;
+        IconRef overlayIcon = 0;
+        if (iconType != kGenericApplicationIcon) {
+            GetIconRef(kOnSystemDisk, kSystemIconsCreator, iconType, &icon);
+        } else {
+            FSRef fsRef;
+            ProcessSerialNumber psn = { 0, kCurrentProcess };
+            GetProcessBundleLocation(&psn, &fsRef);
+            GetIconRefFromFileInfo(&fsRef, 0, 0, 0, 0, kIconServicesNormalUsageFlag, &icon, 0);
+            if (sp == MessageBoxCritical) {
+                overlayIcon = icon;
+                GetIconRef(kOnSystemDisk, kSystemIconsCreator, kAlertCautionIcon, &icon);
+            }
+        }
 
         if (icon) {
             pixmap = qt_mac_convert_iconref(icon, size.width(), size.height());
             ReleaseIconRef(icon);
+        }
+
+        if (overlayIcon) {
+            QSizeF littleSize = size / 2;
+            QPixmap overlayPix = qt_mac_convert_iconref(overlayIcon, littleSize.width(), littleSize.height());
+            QPainter painter(&pixmap);
+            painter.drawPixmap(littleSize.width(), littleSize.height(), overlayPix);
+            ReleaseIconRef(overlayIcon);
         }
 
         return pixmap;
@@ -232,7 +253,7 @@ QPixmap QCocoaTheme::fileIconPixmap(const QFileInfo &fileInfo, const QSizeF &siz
                                     QPlatformTheme::IconOptions iconOptions) const
 {
     Q_UNUSED(iconOptions);
-    QMacAutoReleasePool pool;
+    QCocoaAutoReleasePool pool;
 
     NSImage *iconImage = [[NSWorkspace sharedWorkspace] iconForFile:QCFString::toNSString(fileInfo.canonicalFilePath())];
     if (!iconImage)

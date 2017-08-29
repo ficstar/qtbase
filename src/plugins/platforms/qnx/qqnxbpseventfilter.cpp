@@ -78,7 +78,7 @@ QQnxBpsEventFilter::~QQnxBpsEventFilter()
 
 void QQnxBpsEventFilter::installOnEventDispatcher(QAbstractEventDispatcher *dispatcher)
 {
-    qBpsEventFilterDebug() << "dispatcher=" << dispatcher;
+    qBpsEventFilterDebug() << Q_FUNC_INFO << "dispatcher=" << dispatcher;
 
     if (navigator_request_events(NAVIGATOR_EXTENDED_DATA) != BPS_SUCCESS)
         qWarning("QQNX: failed to register for navigator events");
@@ -125,7 +125,7 @@ bool QQnxBpsEventFilter::nativeEventFilter(const QByteArray &eventType, void *me
     Q_UNUSED(result);
     bps_event_t *event = static_cast<bps_event_t *>(message);
     const int eventDomain = bps_event_get_domain(event);
-    qBpsEventFilterDebug() << "event=" << event << "domain=" << eventDomain;
+    qBpsEventFilterDebug() << Q_FUNC_INFO << "event=" << event << "domain=" << eventDomain;
 
     if (eventDomain == screen_get_domain()) {
         if (!m_screenEventHandler) {
@@ -151,10 +151,10 @@ bool QQnxBpsEventFilter::handleNavigatorEvent(bps_event_t *event)
     switch (bps_event_get_code(event)) {
     case NAVIGATOR_ORIENTATION_CHECK: {
         const int angle = navigator_event_get_orientation_angle(event);
-        qBpsEventFilterDebug() << "ORIENTATION CHECK event. angle=" << angle;
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "ORIENTATION CHECK event. angle=" << angle;
 
         const bool result = m_navigatorEventHandler->handleOrientationCheck(angle);
-        qBpsEventFilterDebug() << "ORIENTATION CHECK event. result=" << result;
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "ORIENTATION CHECK event. result=" << result;
 
         // reply to navigator whether orientation is acceptable
         navigator_orientation_check_response(event, result);
@@ -163,7 +163,7 @@ bool QQnxBpsEventFilter::handleNavigatorEvent(bps_event_t *event)
 
     case NAVIGATOR_ORIENTATION: {
         const int angle = navigator_event_get_orientation_angle(event);
-        qBpsEventFilterDebug() << "ORIENTATION event. angle=" << angle;
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "ORIENTATION event. angle=" << angle;
         m_navigatorEventHandler->handleOrientationChange(angle);
 
         navigator_done_orientation(event);
@@ -171,17 +171,17 @@ bool QQnxBpsEventFilter::handleNavigatorEvent(bps_event_t *event)
     }
 
     case NAVIGATOR_SWIPE_DOWN:
-        qBpsEventFilterDebug("SWIPE DOWN event");
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "SWIPE DOWN event";
         m_navigatorEventHandler->handleSwipeDown();
         break;
 
     case NAVIGATOR_EXIT:
-        qBpsEventFilterDebug("EXIT event");
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "EXIT event";
         m_navigatorEventHandler->handleExit();
         break;
 
     case NAVIGATOR_WINDOW_STATE: {
-        qBpsEventFilterDebug("WINDOW STATE event");
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "WINDOW STATE event";
         const navigator_window_state_t state = navigator_event_get_window_state(event);
         const QByteArray id(navigator_event_get_groupid(event));
 
@@ -200,14 +200,14 @@ bool QQnxBpsEventFilter::handleNavigatorEvent(bps_event_t *event)
     }
 
     case NAVIGATOR_WINDOW_ACTIVE: {
-        qBpsEventFilterDebug("WINDOW ACTIVE event");
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "WINDOW ACTIVE event";
         const QByteArray id(navigator_event_get_groupid(event));
         m_navigatorEventHandler->handleWindowGroupActivated(id);
         break;
     }
 
     case NAVIGATOR_WINDOW_INACTIVE: {
-        qBpsEventFilterDebug("WINDOW INACTIVE event");
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "WINDOW INACTIVE event";
         const QByteArray id(navigator_event_get_groupid(event));
         m_navigatorEventHandler->handleWindowGroupDeactivated(id);
         break;
@@ -219,7 +219,7 @@ bool QQnxBpsEventFilter::handleNavigatorEvent(bps_event_t *event)
         return false;
 
     default:
-        qBpsEventFilterDebug() << "Unhandled navigator event. code=" << bps_event_get_code(event);
+        qBpsEventFilterDebug() << Q_FUNC_INFO << "Unhandled navigator event. code=" << bps_event_get_code(event);
         return false;
     }
 

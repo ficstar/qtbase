@@ -43,12 +43,11 @@ QT_BEGIN_NAMESPACE
 
 #ifndef QT_NO_SHORTCUT
 
-class QKeySequence;
-
 /*****************************************************************************
   QKeySequence stream functions
  *****************************************************************************/
 #ifndef QT_NO_DATASTREAM
+class QKeySequence;
 Q_GUI_EXPORT QDataStream &operator<<(QDataStream &in, const QKeySequence &ks);
 Q_GUI_EXPORT QDataStream &operator>>(QDataStream &out, QKeySequence &ks);
 #endif
@@ -59,8 +58,6 @@ void qt_set_sequence_auto_mnemonic(bool b);
 
 class QVariant;
 class QKeySequencePrivate;
-
-Q_GUI_EXPORT Q_DECL_PURE_FUNCTION uint qHash(const QKeySequence &key, uint seed = 0) Q_DECL_NOTHROW;
 
 class Q_GUI_EXPORT QKeySequence
 {
@@ -137,8 +134,7 @@ public:
         FullScreen,
         Deselect,
         DeleteCompleteLine,
-        Backspace,
-        Cancel
+        Backspace
      };
      Q_ENUM(StandardKey)
 
@@ -181,10 +177,10 @@ public:
     int operator[](uint i) const;
     QKeySequence &operator=(const QKeySequence &other);
 #ifdef Q_COMPILER_RVALUE_REFS
-    QKeySequence &operator=(QKeySequence &&other) Q_DECL_NOTHROW { swap(other); return *this; }
+    inline QKeySequence &operator=(QKeySequence &&other)
+    { qSwap(d, other.d); return *this; }
 #endif
-    void swap(QKeySequence &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
-
+    inline void swap(QKeySequence &other) { qSwap(d, other.d); }
     bool operator==(const QKeySequence &other) const;
     inline bool operator!= (const QKeySequence &other) const
     { return !(*this == other); }
@@ -208,7 +204,6 @@ private:
 
     friend Q_GUI_EXPORT QDataStream &operator<<(QDataStream &in, const QKeySequence &ks);
     friend Q_GUI_EXPORT QDataStream &operator>>(QDataStream &in, QKeySequence &ks);
-    friend Q_GUI_EXPORT uint qHash(const QKeySequence &key, uint seed) Q_DECL_NOTHROW;
     friend class QShortcutMap;
     friend class QShortcut;
 

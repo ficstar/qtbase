@@ -34,9 +34,8 @@
 #include "qnsview.h"
 #include "qcocoainputcontext.h"
 #include "qcocoanativeinterface.h"
+#include "qcocoaautoreleasepool.h"
 #include "qcocoawindow.h"
-
-#include <Carbon/Carbon.h>
 
 #include <QtCore/QRect>
 #include <QtGui/QGuiApplication>
@@ -78,7 +77,6 @@ QCocoaInputContext::QCocoaInputContext()
     , mWindow(QGuiApplication::focusWindow())
 {
     QMetaObject::invokeMethod(this, "connectSignals", Qt::QueuedConnection);
-    updateLocale();
 }
 
 QCocoaInputContext::~QCocoaInputContext()
@@ -100,7 +98,7 @@ void QCocoaInputContext::reset()
     if (!view)
         return;
 
-    QMacAutoReleasePool pool;
+    QCocoaAutoReleasePool pool;
     if (NSTextInputContext *ctxt = [NSTextInputContext currentInputContext]) {
         [ctxt discardMarkedText];
         [view unmarkText];
@@ -117,22 +115,6 @@ void QCocoaInputContext::focusObjectChanged(QObject *focusObject)
 {
     Q_UNUSED(focusObject);
     mWindow = QGuiApplication::focusWindow();
-}
-
-void QCocoaInputContext::updateLocale()
-{
-    TISInputSourceRef source = TISCopyCurrentKeyboardInputSource();
-    CFArrayRef languages = (CFArrayRef) TISGetInputSourceProperty(source, kTISPropertyInputSourceLanguages);
-    if (CFArrayGetCount(languages) > 0) {
-        CFStringRef langRef = (CFStringRef)CFArrayGetValueAtIndex(languages, 0);
-        QString name = QCFString::toQString(langRef);
-        QLocale locale(name);
-        if (m_locale != locale) {
-            m_locale = locale;
-            emitLocaleChanged();
-        }
-    }
-    CFRelease(source);
 }
 
 QT_END_NAMESPACE

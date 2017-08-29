@@ -53,6 +53,7 @@
 #include <QMap>
 #include <QVariant>
 
+#ifndef QT_NO_BEARERMANAGEMENT
 #ifndef QT_NO_DBUS
 
 QT_BEGIN_NAMESPACE
@@ -94,7 +95,7 @@ private Q_SLOTS:
     void updateServices(const ConnmanMapList &changed, const QList<QDBusObjectPath> &removed);
 
     void servicesReady(const QStringList &);
-    void finishedScan(bool error);
+    void finishedScan();
     void changedModem();
     void serviceStateChanged(const QString &state);
     void configurationChange(QConnmanServiceInterface * service);
@@ -134,6 +135,7 @@ protected:
 QT_END_NAMESPACE
 
 #endif // QT_NO_DBUS
+#endif // QT_NO_BEARERMANAGEMENT
 
 #endif
 

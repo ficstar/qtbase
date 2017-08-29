@@ -39,12 +39,12 @@
 #include "qwindowsdirect2dwindow.h"
 
 #include "qwindowscontext.h"
+#include "qwindowsguieventdispatcher.h"
 
 #include <qplatformdefs.h>
 #include <QtCore/QCoreApplication>
 #include <QtGui/private/qpixmap_raster_p.h>
 #include <QtGui/qpa/qwindowsysteminterface.h>
-#include <QtPlatformSupport/private/qwindowsguieventdispatcher_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -219,11 +219,12 @@ QWindowsDirect2DIntegration::~QWindowsDirect2DIntegration()
      return static_cast<QWindowsDirect2DIntegration *>(QWindowsIntegration::instance());
  }
 
-
-QWindowsWindow *QWindowsDirect2DIntegration::createPlatformWindowHelper(QWindow *window, const QWindowsWindowData &data) const
-{
-    return new QWindowsDirect2DWindow(window, data);
-}
+ QPlatformWindow *QWindowsDirect2DIntegration::createPlatformWindow(QWindow *window) const
+ {
+     QWindowsWindowData data = createWindowData(window);
+     return data.hwnd ? new QWindowsDirect2DWindow(window, data)
+                      : Q_NULLPTR;
+ }
 
  QPlatformNativeInterface *QWindowsDirect2DIntegration::nativeInterface() const
  {

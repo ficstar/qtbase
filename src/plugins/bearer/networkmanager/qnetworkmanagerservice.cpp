@@ -74,7 +74,7 @@ QNetworkManagerInterface::QNetworkManagerInterface(QObject *parent)
     if (!propsReply.isError()) {
         propertyMap = propsReply.value();
     } else {
-        qWarning() << "propsReply" << propsReply.error().message();
+        qWarning() << Q_FUNC_INFO << "propsReply"<<propsReply.error().message();
     }
 
     QDBusPendingReply<QList <QDBusObjectPath> > nmReply
@@ -83,7 +83,7 @@ QNetworkManagerInterface::QNetworkManagerInterface(QObject *parent)
     if (!nmReply.isError()) {
         devicesPathList = nmReply.value();
     } else {
-        qWarning() << "nmReply" << nmReply.error().message();
+        qWarning() << Q_FUNC_INFO <<"nmReply"<<nmReply.error().message();
     }
 
     QDBusConnection::systemBus().connect(QLatin1String(NM_DBUS_SERVICE),
@@ -95,21 +95,6 @@ QNetworkManagerInterface::QNetworkManagerInterface(QObject *parent)
 
 QNetworkManagerInterface::~QNetworkManagerInterface()
 {
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  QLatin1String(NM_DBUS_PATH),
-                                  QLatin1String(NM_DBUS_INTERFACE),
-                                  QLatin1String("PropertiesChanged"),
-                                  this,SLOT(propertiesSwap(QMap<QString,QVariant>)));
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  QLatin1String(NM_DBUS_PATH),
-                                  QLatin1String(NM_DBUS_INTERFACE),
-                                  QLatin1String("DeviceAdded"),
-                                  this,SIGNAL(deviceAdded(QDBusObjectPath)));
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  QLatin1String(NM_DBUS_PATH),
-                                  QLatin1String(NM_DBUS_INTERFACE),
-                                  QLatin1String("DeviceRemoved"),
-                                  this,SIGNAL(deviceRemoved(QDBusObjectPath)));
 }
 
 bool QNetworkManagerInterface::setConnections()
@@ -229,7 +214,7 @@ void QNetworkManagerInterface::propertiesSwap(QMap<QString,QVariant> map)
         i.next();
         propertyMap.insert(i.key(),i.value());
 
-        if (i.key() == QLatin1String("State")) {
+        if (i.key() == QStringLiteral("State")) {
             quint32 state = i.value().toUInt();
             if (state == NM_DEVICE_STATE_ACTIVATED
                 || state == NM_DEVICE_STATE_DISCONNECTED
@@ -238,7 +223,7 @@ void QNetworkManagerInterface::propertiesSwap(QMap<QString,QVariant> map)
                 Q_EMIT propertiesChanged(map);
                 Q_EMIT stateChanged(state);
             }
-        } else if (i.key() == QLatin1String("ActiveConnections")) {
+        } else if (i.key() == QStringLiteral("ActiveConnections")) {
             Q_EMIT propertiesChanged(map);
         }
     }
@@ -250,6 +235,28 @@ QNetworkManagerInterfaceAccessPoint::QNetworkManagerInterfaceAccessPoint(const Q
                   NM_DBUS_INTERFACE_ACCESS_POINT,
                   QDBusConnection::systemBus(),parent)
 {
+    if (!isValid()) {
+        return;
+    }
+    PropertiesDBusInterface *accessPointPropertiesInterface = new PropertiesDBusInterface(QLatin1String(NM_DBUS_SERVICE),
+                                                  dbusPathName,
+                                                  DBUS_PROPERTIES_INTERFACE,
+                                                  QDBusConnection::systemBus());
+
+    QList<QVariant> argumentList;
+    argumentList << QLatin1String(NM_DBUS_INTERFACE_ACCESS_POINT);
+    QDBusPendingReply<QVariantMap> propsReply
+            = accessPointPropertiesInterface->callWithArgumentList(QDBus::Block,QLatin1String("GetAll"),
+                                                                       argumentList);
+    if (!propsReply.isError()) {
+        propertyMap = propsReply.value();
+    }
+
+    QDBusConnection::systemBus().connect(QLatin1String(NM_DBUS_SERVICE),
+                                  dbusPathName,
+                                  QLatin1String(NM_DBUS_INTERFACE_ACCESS_POINT),
+                                  QLatin1String("PropertiesChanged"),
+                                  this,SLOT(propertiesSwap(QMap<QString,QVariant>)));
 }
 
 QNetworkManagerInterfaceAccessPoint::~QNetworkManagerInterfaceAccessPoint()
@@ -362,11 +369,6 @@ QNetworkManagerInterfaceDevice::QNetworkManagerInterfaceDevice(const QString &de
 
 QNetworkManagerInterfaceDevice::~QNetworkManagerInterfaceDevice()
 {
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  path(),
-                                  QLatin1String(NM_DBUS_INTERFACE_DEVICE),
-                                  QLatin1String("PropertiesChanged"),
-                                  this,SLOT(propertiesSwap(QMap<QString,QVariant>)));
 }
 
 QString QNetworkManagerInterfaceDevice::udi() const
@@ -416,7 +418,7 @@ void QNetworkManagerInterfaceDevice::propertiesSwap(QMap<QString,QVariant> map)
     QMapIterator<QString, QVariant> i(map);
     while (i.hasNext()) {
         i.next();
-        if (i.key() == QLatin1String("AvailableConnections")) { //Device
+        if (i.key() == QStringLiteral("AvailableConnections")) { //Device
             const QDBusArgument &dbusArgs = i.value().value<QDBusArgument>();
             QDBusObjectPath path;
             QStringList paths;
@@ -466,11 +468,6 @@ QNetworkManagerInterfaceDeviceWired::QNetworkManagerInterfaceDeviceWired(const Q
 
 QNetworkManagerInterfaceDeviceWired::~QNetworkManagerInterfaceDeviceWired()
 {
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  path(),
-                                  QLatin1String(NM_DBUS_INTERFACE_DEVICE_WIRED),
-                                  QLatin1String("PropertiesChanged"),
-                                  this,SLOT(propertiesSwap(QMap<QString,QVariant>)));
 }
 
 QString QNetworkManagerInterfaceDeviceWired::hwAddress() const
@@ -517,8 +514,9 @@ void QNetworkManagerInterfaceDeviceWired::propertiesSwap(QMap<QString,QVariant> 
     while (i.hasNext()) {
         i.next();
         propertyMap.insert(i.key(),i.value());
-        if (i.key() == QLatin1String("Carrier"))
+        if (i.key() == QStringLiteral("Carrier")) {
             Q_EMIT carrierChanged(i.value().toBool());
+        }
     }
     Q_EMIT propertiesChanged(map);
 }
@@ -560,20 +558,77 @@ QNetworkManagerInterfaceDeviceWireless::QNetworkManagerInterfaceDeviceWireless(c
                                   QLatin1String(NM_DBUS_INTERFACE_DEVICE_WIRELESS),
                                   QLatin1String("PropertiesChanged"),
                                   this,SLOT(propertiesSwap(QMap<QString,QVariant>)));
+
+    QDBusPendingReply<QList<QDBusObjectPath> > reply
+            = asyncCall(QLatin1String("GetAccessPoints"));
+
+    QDBusPendingCallWatcher *callWatcher = new QDBusPendingCallWatcher(reply);
+    connect(callWatcher, SIGNAL(finished(QDBusPendingCallWatcher*)),
+                     this, SLOT(accessPointsFinished(QDBusPendingCallWatcher*)));
 }
 
 QNetworkManagerInterfaceDeviceWireless::~QNetworkManagerInterfaceDeviceWireless()
 {
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  path(),
-                                  QLatin1String(NM_DBUS_INTERFACE_DEVICE_WIRELESS),
-                                  QLatin1String("PropertiesChanged"),
-                                  this,SLOT(propertiesSwap(QMap<QString,QVariant>)));
+}
+
+void QNetworkManagerInterfaceDeviceWireless::slotAccessPointAdded(QDBusObjectPath path)
+{
+    if (path.path().length() > 2)
+        Q_EMIT accessPointAdded(path.path());
+}
+
+void QNetworkManagerInterfaceDeviceWireless::slotAccessPointRemoved(QDBusObjectPath path)
+{
+    if (path.path().length() > 2)
+        Q_EMIT accessPointRemoved(path.path());
 }
 
 bool QNetworkManagerInterfaceDeviceWireless::setConnections()
 {
-    return true;
+    if (!isValid())
+        return false;
+
+    QDBusConnection dbusConnection = QDBusConnection::systemBus();
+    bool allOk = true;
+
+    if (!dbusConnection.connect(QLatin1String(NM_DBUS_SERVICE),
+                               interfacePath,
+                                QLatin1String(NM_DBUS_INTERFACE_DEVICE_WIRELESS),
+                                QLatin1String("AccessPointAdded"),
+                                this, SLOT(slotAccessPointAdded(QDBusObjectPath)))) {
+        allOk = false;
+    }
+
+
+    if (!dbusConnection.connect(QLatin1String(NM_DBUS_SERVICE),
+                              interfacePath,
+                              QLatin1String(NM_DBUS_INTERFACE_DEVICE_WIRELESS),
+                              QLatin1String("AccessPointRemoved"),
+                              this, SLOT(slotAccessPointRemoved(QDBusObjectPath)))) {
+        allOk = false;
+    }
+
+    if (!dbusConnection.connect(QLatin1String(NM_DBUS_SERVICE),
+                               interfacePath,
+                               QLatin1String(NM_DBUS_INTERFACE_DEVICE_WIRELESS),
+                               QLatin1String("ScanDone"),
+                               this, SLOT(scanIsDone()))) {
+        allOk = false;
+    }
+    return allOk;
+}
+
+void QNetworkManagerInterfaceDeviceWireless::accessPointsFinished(QDBusPendingCallWatcher *watcher)
+{
+    QDBusPendingReply<QList<QDBusObjectPath> > reply(*watcher);
+    watcher->deleteLater();
+    if (!reply.isError()) {
+        accessPointsList = reply.value();
+    }
+
+    for (int i = 0; i < accessPointsList.size(); i++) {
+        Q_EMIT accessPointAdded(accessPointsList.at(i).path());
+    }
 }
 
 QList <QDBusObjectPath> QNetworkManagerInterfaceDeviceWireless::getAccessPoints()
@@ -622,6 +677,11 @@ quint32 QNetworkManagerInterfaceDeviceWireless::wirelessCapabilities() const
     return 0;
 }
 
+void QNetworkManagerInterfaceDeviceWireless::scanIsDone()
+{
+    Q_EMIT scanDone();
+}
+
 void QNetworkManagerInterfaceDeviceWireless::requestScan()
 {
     asyncCall(QLatin1String("RequestScan"));
@@ -633,8 +693,9 @@ void QNetworkManagerInterfaceDeviceWireless::propertiesSwap(QMap<QString,QVarian
     while (i.hasNext()) {
         i.next();
         propertyMap.insert(i.key(),i.value());
-        if (i.key() == QLatin1String("ActiveAccessPoint")) //DeviceWireless
+        if (i.key() == QStringLiteral("ActiveAccessPoint")) { //DeviceWireless
             Q_EMIT propertiesChanged(map);
+        }
     }
 }
 
@@ -670,12 +731,6 @@ QNetworkManagerInterfaceDeviceModem::QNetworkManagerInterfaceDeviceModem(const Q
 
 QNetworkManagerInterfaceDeviceModem::~QNetworkManagerInterfaceDeviceModem()
 {
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  path(),
-                                  QLatin1String(NM_DBUS_PATH_SETTINGS),
-                                  QLatin1String(NM_DBUS_IFACE_SETTINGS),
-                                  QLatin1String("NewConnection"),
-                                  this, SIGNAL(newConnection(QDBusObjectPath)));
 }
 
 QNetworkManagerInterfaceDeviceModem::ModemCapabilities QNetworkManagerInterfaceDeviceModem::modemCapabilities() const
@@ -734,7 +789,7 @@ bool QNetworkManagerSettings::setConnections()
                                              QLatin1String("NewConnection"),
                                              this, SIGNAL(newConnection(QDBusObjectPath)))) {
         allOk = false;
-        qWarning("NewConnection could not be connected");
+        qWarning() << Q_FUNC_INFO << "NewConnection could not be connected";
     }
 
     return allOk;
@@ -780,16 +835,6 @@ QNetworkManagerSettingsConnection::QNetworkManagerSettingsConnection(const QStri
 
 QNetworkManagerSettingsConnection::~QNetworkManagerSettingsConnection()
 {
-    QDBusConnection::systemBus().disconnect(service(),
-                                  path(),
-                                  QLatin1String(NM_DBUS_IFACE_SETTINGS_CONNECTION),
-                                  QLatin1String("Updated"),
-                                  this, SIGNAL(updated()));
-    QDBusConnection::systemBus().disconnect(service(),
-                                  path(),
-                                  QLatin1String(NM_DBUS_IFACE_SETTINGS_CONNECTION),
-                                  QLatin1String("Removed"),
-                                  this, SIGNAL(slotSettingsRemoved()));
 }
 
 bool QNetworkManagerSettingsConnection::setConnections()
@@ -946,11 +991,6 @@ QNetworkManagerConnectionActive::QNetworkManagerConnectionActive(const QString &
 
 QNetworkManagerConnectionActive::~QNetworkManagerConnectionActive()
 {
-    QDBusConnection::systemBus().disconnect(QLatin1String(NM_DBUS_SERVICE),
-                                  path(),
-                                  QLatin1String(NM_DBUS_INTERFACE_ACTIVE_CONNECTION),
-                                  QLatin1String("PropertiesChanged"),
-                                  this,SLOT(propertiesSwap(QMap<QString,QVariant>)));
 }
 
 QDBusObjectPath QNetworkManagerConnectionActive::connection() const
@@ -1011,7 +1051,7 @@ void QNetworkManagerConnectionActive::propertiesSwap(QMap<QString,QVariant> map)
     while (i.hasNext()) {
         i.next();
         propertyMap.insert(i.key(),i.value());
-        if (i.key() == QLatin1String("State")) {
+        if (i.key() == QStringLiteral("State")) {
             quint32 state = i.value().toUInt();
             if (state == NM_ACTIVE_CONNECTION_STATE_ACTIVATED
                 || state == NM_ACTIVE_CONNECTION_STATE_DEACTIVATED) {

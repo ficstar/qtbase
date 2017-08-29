@@ -48,7 +48,6 @@
 #include <private/qobject_p.h>
 
 #include <QtCore/qlist.h>
-#include <QtCore/qvector.h>
 #include <QtCore/qsharedpointer.h>
 
 QT_BEGIN_NAMESPACE
@@ -65,8 +64,7 @@ class Q_CORE_EXPORT QAbstractTransitionPrivate
 public:
     QAbstractTransitionPrivate();
 
-    static QAbstractTransitionPrivate *get(QAbstractTransition *q)
-    { return q->d_func(); }
+    static QAbstractTransitionPrivate *get(QAbstractTransition *q);
 
     bool callEventTest(QEvent *e);
     virtual void callOnTransition(QEvent *e);
@@ -74,7 +72,7 @@ public:
     QStateMachine *machine() const;
     void emitTriggered();
 
-    QVector<QPointer<QAbstractState> > targetStates;
+    QList<QPointer<QAbstractState> > targetStates;
     QAbstractTransition::TransitionType transitionType;
 
 #ifndef QT_NO_ANIMATION

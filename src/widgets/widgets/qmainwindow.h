@@ -77,13 +77,12 @@ public:
         AllowNestedDocks = 0x02,
         AllowTabbedDocks = 0x04,
         ForceTabbedDocks = 0x08,  // implies AllowTabbedDocks, !AllowNestedDocks
-        VerticalTabs = 0x10,      // implies AllowTabbedDocks
-        GroupedDragging = 0x20    // implies AllowTabbedDocks
+        VerticalTabs = 0x10       // implies AllowTabbedDocks
     };
     Q_ENUM(DockOption)
     Q_DECLARE_FLAGS(DockOptions, DockOption)
 
-    explicit QMainWindow(QWidget *parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags());
+    explicit QMainWindow(QWidget *parent = 0, Qt::WindowFlags flags = 0);
     ~QMainWindow();
 
     QSize iconSize() const;
@@ -165,9 +164,6 @@ public:
     bool restoreDockWidget(QDockWidget *dockwidget);
 
     Qt::DockWidgetArea dockWidgetArea(QDockWidget *dockwidget) const;
-
-    void resizeDocks(const QList<QDockWidget *> &docks,
-                     const QList<int> &sizes, Qt::Orientation orientation);
 #endif // QT_NO_DOCKWIDGET
 
     QByteArray saveState(int version = 0) const;

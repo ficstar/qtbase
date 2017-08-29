@@ -65,7 +65,6 @@ public:
 public slots:
     void initTestCase();
     void cleanup();
-    void cleanupTestCase();
 
 private slots:
     void getSetCheck();
@@ -164,7 +163,6 @@ private slots:
     void string_write_operator_ToDevice_data();
     void string_write_operator_ToDevice();
     void latin1String_write_operator_ToDevice();
-    void stringref_write_operator_ToDevice();
 
     // other
     void skipWhiteSpace_data();
@@ -229,8 +227,6 @@ private slots:
     void alignAccountingStyle();
     void setCodec();
 
-    void textModeOnEmptyRead();
-
 private:
     void generateLineData(bool for_QString);
     void generateAllData(bool for_QString);
@@ -242,9 +238,6 @@ private:
 
     QTemporaryDir tempDir;
     QString testFileName;
-#ifdef BUILTIN_TESTDATA
-    QSharedPointer<QTemporaryDir> m_dataDir;
-#endif
     const QString m_rfc3261FilePath;
     const QString m_shiftJisFilePath;
 };
@@ -265,20 +258,14 @@ tst_QTextStream::tst_QTextStream()
 
 void tst_QTextStream::initTestCase()
 {
-    QVERIFY2(tempDir.isValid(), qPrintable(tempDir.errorString()));
     QVERIFY(!m_rfc3261FilePath.isEmpty());
     QVERIFY(!m_shiftJisFilePath.isEmpty());
 
     testFileName = tempDir.path() + "/testfile";
 
-#ifdef BUILTIN_TESTDATA
-    m_dataDir = QEXTRACTTESTDATA("/");
-    QVERIFY2(QDir::setCurrent(m_dataDir->path()), qPrintable("Could not chdir to " + m_dataDir->path()));
-#else
     // chdir into the testdata dir and refer to our helper apps with relative paths
     QString testdata_dir = QFileInfo(QFINDTESTDATA("stdinProcess")).absolutePath();
     QVERIFY2(QDir::setCurrent(testdata_dir), qPrintable("Could not chdir to " + testdata_dir));
-#endif
 }
 
 // Testing get/set functions
@@ -399,13 +386,6 @@ void tst_QTextStream::getSetCheck()
 void tst_QTextStream::cleanup()
 {
     QCoreApplication::instance()->processEvents();
-}
-
-void tst_QTextStream::cleanupTestCase()
-{
-#ifdef BUILTIN_TESTDATA
-    QDir::setCurrent(QCoreApplication::applicationDirPath());
-#endif
 }
 
 // ------------------------------------------------------------------------------
@@ -2573,22 +2553,6 @@ void tst_QTextStream::latin1String_write_operator_ToDevice()
     QCOMPARE(buf.buffer().constData(), "No explicit lengthExplicit length");
 }
 
-void tst_QTextStream::stringref_write_operator_ToDevice()
-{
-    QBuffer buf;
-    buf.open(QBuffer::WriteOnly);
-    QTextStream stream(&buf);
-    stream.setCodec(QTextCodec::codecForName("ISO-8859-1"));
-    stream.setAutoDetectUnicode(true);
-
-    const QString expected = "No explicit lengthExplicit length";
-
-    stream << expected.leftRef(18);
-    stream << expected.midRef(18);
-    stream.flush();
-    QCOMPARE(buf.buffer().constData(), "No explicit lengthExplicit length");
-}
-
 // ------------------------------------------------------------------------------
 void tst_QTextStream::useCase1()
 {
@@ -2747,7 +2711,7 @@ void tst_QTextStream::readBomSeekBackReadBomAgain()
     QFile::remove("utf8bom");
     QFile file("utf8bom");
     QVERIFY(file.open(QFile::ReadWrite));
-    file.write("\xef\xbb\xbf""Andreas");
+    file.write("\xef\xbb\xbf" "Andreas");
     file.seek(0);
     QCOMPARE(file.pos(), qint64(0));
 
@@ -3062,19 +3026,6 @@ void tst_QTextStream::int_write_with_locale()
     stream << input;
     QCOMPARE(result, output);
 }
-
-void tst_QTextStream::textModeOnEmptyRead()
-{
-    const QString filename(tempDir.path() + QLatin1String("/textmodetest.txt"));
-
-    QFile file(filename);
-    QVERIFY2(file.open(QIODevice::ReadWrite | QIODevice::Text), qPrintable(file.errorString()));
-    QTextStream stream(&file);
-    QVERIFY(file.isTextModeEnabled());
-    QString emptyLine = stream.readLine(); // Text mode flag cleared here
-    QVERIFY(file.isTextModeEnabled());
-}
-
 
 // ------------------------------------------------------------------------------
 

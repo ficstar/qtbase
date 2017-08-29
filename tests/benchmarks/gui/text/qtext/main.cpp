@@ -42,7 +42,7 @@
 #include <QBuffer>
 #include <qtest.h>
 
-Q_DECLARE_METATYPE(QVector<QTextLayout::FormatRange>)
+Q_DECLARE_METATYPE(QList<QTextLayout::FormatRange>)
 
 class tst_QText: public QObject
 {
@@ -324,13 +324,13 @@ void tst_QText::layout()
 void tst_QText::formattedLayout_data()
 {
     QTest::addColumn<QString>("text");
-    QTest::addColumn<QVector<QTextLayout::FormatRange> >("ranges");
+    QTest::addColumn<QList<QTextLayout::FormatRange> >("ranges");
 
     QTextCharFormat format;
     format.setForeground(QColor("steelblue"));
 
     {
-        QVector<QTextLayout::FormatRange> ranges;
+        QList<QTextLayout::FormatRange> ranges;
 
         QTextLayout::FormatRange formatRange;
         formatRange.format = format;
@@ -341,7 +341,7 @@ void tst_QText::formattedLayout_data()
         QTest::newRow("short-single") << m_shortLorem << ranges;
     }
     {
-        QVector<QTextLayout::FormatRange> ranges;
+        QList<QTextLayout::FormatRange> ranges;
 
         QString text = m_lorem.repeated(100);
         const int width = 1;
@@ -360,15 +360,15 @@ void tst_QText::formattedLayout_data()
 void tst_QText::formattedLayout()
 {
     QFETCH(QString, text);
-    QFETCH(QVector<QTextLayout::FormatRange>, ranges);
+    QFETCH(QList<QTextLayout::FormatRange>, ranges);
 
     QTextLayout layout(text);
-    layout.setFormats(ranges);
+    layout.setAdditionalFormats(ranges);
     setupTextLayout(&layout);
 
     QBENCHMARK {
         QTextLayout layout(text);
-        layout.setFormats(ranges);
+        layout.setAdditionalFormats(ranges);
         setupTextLayout(&layout);
     }
 }

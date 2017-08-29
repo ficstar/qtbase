@@ -1,7 +1,6 @@
 /****************************************************************************
 **
 ** Copyright (C) 2014 John Layt <jlayt@kde.org>
-** Copyright (C) 2016 The Qt Company Ltd.
 ** Contact: http://www.qt.io/licensing/
 **
 ** This file is part of the plugins of the Qt Toolkit.
@@ -42,6 +41,8 @@
 
 QT_BEGIN_NAMESPACE
 
+#ifndef QT_NO_PRINTER
+
 QT_WARNING_DISABLE_GCC("-Wsign-compare")
 
 extern qreal qt_pointMultiplier(QPageLayout::Unit unit);
@@ -75,22 +76,6 @@ static QPrint::InputSlot paperBinToInputSlot(int windowsId, const QString &name)
     return slot;
 }
 
-static LPDEVMODE getDevmode(HANDLE hPrinter, const QString &printerId)
-{
-    LPWSTR printerIdUtf16 = const_cast<LPWSTR>(reinterpret_cast<LPCWSTR>(printerId.utf16()));
-    // Allocate the required DEVMODE buffer
-    LONG dmSize = DocumentProperties(NULL, hPrinter, printerIdUtf16, NULL, NULL, 0);
-    if (dmSize < 0)
-        return Q_NULLPTR;
-    LPDEVMODE pDevMode = reinterpret_cast<LPDEVMODE>(malloc(dmSize));
-     // Get the default DevMode
-    LONG result = DocumentProperties(NULL, hPrinter, printerIdUtf16, pDevMode, NULL, DM_OUT_BUFFER);
-    if (result != IDOK) {
-        free(pDevMode);
-        pDevMode = Q_NULLPTR;
-    }
-    return pDevMode;
-}
 
 QWindowsPrintDevice::QWindowsPrintDevice()
     : QPlatformPrintDevice(),
@@ -208,21 +193,26 @@ QPageSize QWindowsPrintDevice::defaultPageSize() const
 
     QPageSize pageSize;
 
-    if (LPDEVMODE pDevMode = getDevmode(m_hPrinter, m_id)) {
-        // Get the default paper size
-        if (pDevMode->dmFields & DM_PAPERSIZE) {
-            // Find the supported page size that matches, in theory default should be one of them
-            foreach (const QPageSize &ps, m_pageSizes) {
-                if (ps.windowsId() == pDevMode->dmPaperSize) {
-                    pageSize = ps;
-                    break;
-                }
+    // Allocate the required DEVMODE buffer
+    DWORD dmSize = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), NULL, NULL, 0);
+    LPDEVMODE pDevMode = (LPDEVMODE)malloc(dmSize);
+
+     // Get the default DevMode
+    DWORD result = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), pDevMode, NULL, DM_OUT_BUFFER);
+
+    // Get the default paper size
+    if (result == IDOK && pDevMode->dmFields & DM_PAPERSIZE) {
+        // Find the supported page size that matches, in theory default should be one of them
+        foreach (const QPageSize &ps, m_pageSizes) {
+            if (ps.windowsId() == pDevMode->dmPaperSize) {
+                pageSize = ps;
+                break;
             }
         }
-        // Clean-up
-        free(pDevMode);
     }
 
+    // Clean-up
+    free(pDevMode);
     return pageSize;
 }
 
@@ -238,14 +228,20 @@ QMarginsF QWindowsPrintDevice::printableMargins(const QPageSize &pageSize,
     QScopedArrayPointer<BYTE> buffer(new BYTE[needed]);
     if (GetPrinter(m_hPrinter, 2, buffer.data(), needed, &needed)) {
         PPRINTER_INFO_2 info = reinterpret_cast<PPRINTER_INFO_2>(buffer.data());
-        LPDEVMODE devMode = info->pDevMode;
+        DEVMODE *devMode = info->pDevMode;
         bool separateDevMode = false;
         if (!devMode) {
             // GetPrinter() didn't include the DEVMODE. Get it a different way.
-            devMode = getDevmode(m_hPrinter, m_id);
-            if (!devMode)
-                return margins;
+            LONG result = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(),
+                                             NULL, NULL, 0);
+            devMode = (DEVMODE *)malloc(result);
             separateDevMode = true;
+            result = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(),
+                                        devMode, NULL, DM_OUT_BUFFER);
+            if (result != IDOK) {
+                free(devMode);
+                return margins;
+            }
         }
 
         HDC pDC = CreateDC(NULL, (LPWSTR)m_id.utf16(), NULL, devMode);
@@ -297,17 +293,23 @@ int QWindowsPrintDevice::defaultResolution() const
 {
     int resolution = 72;  // TODO Set a sensible default?
 
-    if (LPDEVMODE pDevMode = getDevmode(m_hPrinter, m_id)) {
-        // Get the default resolution
-        if (pDevMode->dmFields & DM_YRESOLUTION) {
-            if (pDevMode->dmPrintQuality > 0)
-                resolution = pDevMode->dmPrintQuality;
-            else
-                resolution = pDevMode->dmYResolution;
-        }
-        // Clean-up
-        free(pDevMode);
+    // Allocate the required DEVMODE buffer
+    DWORD dmSize = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), NULL, NULL, 0);
+    LPDEVMODE pDevMode = (LPDEVMODE)malloc(dmSize);
+
+     // Get the default DevMode
+    DWORD result = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), pDevMode, NULL, DM_OUT_BUFFER);
+
+    // Get the default resolution
+    if (result == IDOK && pDevMode->dmFields & DM_YRESOLUTION) {
+        if (pDevMode->dmPrintQuality > 0)
+            resolution = pDevMode->dmPrintQuality;
+        else
+            resolution = pDevMode->dmYResolution;
     }
+
+    // Clean-up
+    free(pDevMode);
     return resolution;
 }
 
@@ -340,20 +342,26 @@ QPrint::InputSlot QWindowsPrintDevice::defaultInputSlot() const
 {
     QPrint::InputSlot inputSlot = QPlatformPrintDevice::defaultInputSlot();;
 
-    if (LPDEVMODE pDevMode = getDevmode(m_hPrinter, m_id)) {
-        // Get the default input slot
-        if (pDevMode->dmFields & DM_DEFAULTSOURCE) {
-            QPrint::InputSlot tempSlot = paperBinToInputSlot(pDevMode->dmDefaultSource, QString());
-            foreach (const QPrint::InputSlot &slot, supportedInputSlots()) {
-                if (slot.key == tempSlot.key) {
-                    inputSlot = slot;
-                    break;
-                }
+    // Allocate the required DEVMODE buffer
+    DWORD dmSize = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), NULL, NULL, 0);
+    LPDEVMODE pDevMode = (LPDEVMODE)malloc(dmSize);
+
+     // Get the default DevMode
+    DWORD result = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), pDevMode, NULL, DM_OUT_BUFFER);
+
+    // Get the default input slot
+    if (result == IDOK && pDevMode->dmFields & DM_DEFAULTSOURCE) {
+        QPrint::InputSlot tempSlot = paperBinToInputSlot(pDevMode->dmDefaultSource, QString());
+        foreach (const QPrint::InputSlot &slot, supportedInputSlots()) {
+            if (slot.key == tempSlot.key) {
+                inputSlot = slot;
+                break;
             }
         }
-        // Clean-up
-        free(pDevMode);
     }
+
+    // Clean-up
+    free(pDevMode);
     return inputSlot;
 }
 
@@ -380,17 +388,23 @@ QPrint::DuplexMode QWindowsPrintDevice::defaultDuplexMode() const
 {
     QPrint::DuplexMode duplexMode = QPrint::DuplexNone;
 
-    if (LPDEVMODE pDevMode = getDevmode(m_hPrinter, m_id)) {
-        // Get the default duplex mode
-        if (pDevMode->dmFields & DM_DUPLEX) {
-            if (pDevMode->dmDuplex == DMDUP_VERTICAL)
-                duplexMode = QPrint::DuplexLongSide;
-            else if (pDevMode->dmDuplex == DMDUP_HORIZONTAL)
-                duplexMode = QPrint::DuplexShortSide;
-        }
-        // Clean-up
-        free(pDevMode);
+    // Allocate the required DEVMODE buffer
+    DWORD dmSize = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), NULL, NULL, 0);
+    LPDEVMODE pDevMode = (LPDEVMODE)malloc(dmSize);
+
+     // Get the default DevMode
+    DWORD result = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), pDevMode, NULL, DM_OUT_BUFFER);
+
+    // Get the default duplex mode
+    if (result == IDOK && pDevMode->dmFields & DM_DUPLEX) {
+        if (pDevMode->dmDuplex == DMDUP_VERTICAL)
+            duplexMode = QPrint::DuplexLongSide;
+        else if (pDevMode->dmDuplex == DMDUP_HORIZONTAL)
+            duplexMode = QPrint::DuplexShortSide;
     }
+
+    // Clean-up
+    free(pDevMode);
     return duplexMode;
 }
 
@@ -412,13 +426,21 @@ QPrint::ColorMode QWindowsPrintDevice::defaultColorMode() const
 
     QPrint::ColorMode colorMode = QPrint::GrayScale;
 
-    if (LPDEVMODE pDevMode = getDevmode(m_hPrinter, m_id)) {
-        // Get the default color mode
-        if (pDevMode->dmFields & DM_COLOR && pDevMode->dmColor == DMCOLOR_COLOR)
+    // Allocate the required DEVMODE buffer
+    DWORD dmSize = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), NULL, NULL, 0);
+    LPDEVMODE pDevMode = (LPDEVMODE)malloc(dmSize);
+
+     // Get the default DevMode
+    DWORD result = DocumentProperties(NULL, m_hPrinter, (LPWSTR)m_id.utf16(), pDevMode, NULL, DM_OUT_BUFFER);
+
+    // Get the default color mode
+    if (result == IDOK && pDevMode->dmFields & DM_COLOR) {
+        if (pDevMode->dmColor == DMCOLOR_COLOR)
             colorMode = QPrint::Color;
-        // Clean-up
-        free(pDevMode);
     }
+
+    // Clean-up
+    free(pDevMode);
     return colorMode;
 }
 
@@ -448,5 +470,7 @@ QString QWindowsPrintDevice::defaultPrintDeviceId()
     GetDefaultPrinter(name.data(), &size);
     return QString::fromWCharArray(name.data());
 }
+
+#endif // QT_NO_PRINTER
 
 QT_END_NAMESPACE

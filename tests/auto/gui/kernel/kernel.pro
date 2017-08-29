@@ -11,7 +11,6 @@ SUBDIRS=\
    qguitimer \
    qguivariant \
    qinputmethod \
-   qkeyevent \
    qkeysequence \
    qmouseevent \
    qmouseevent_modal \
@@ -25,7 +24,7 @@ SUBDIRS=\
    qopenglwindow \
    qrasterwindow
 
-win32:!wince:!winrt:qtHaveModule(network): SUBDIRS += noqteventloop
+win32:!wince*:!winrt: SUBDIRS += noqteventloop
 
 !qtHaveModule(widgets): SUBDIRS -= \
    qmouseevent_modal \

@@ -1112,13 +1112,13 @@ void tst_QTreeWidgetItemIterator::updateIfModifiedFromWidget()
     delete item;
     item = *it;
     if (expecteditemIsNull) {
-        QVERIFY(!item);
+        QVERIFY(item == 0);
     } else {
         QVERIFY(item);
         QCOMPARE(item->text(0), expecteditemvalue);
         item = *itRemove;
         if (expectedUpdatedCurrent.isNull()) {
-            QVERIFY(!item);
+            QVERIFY(item == 0);
         } else {
             QCOMPARE(item->text(0), expectedUpdatedCurrent);
         }

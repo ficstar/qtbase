@@ -57,6 +57,7 @@ void tst_QPrintDevice::basics()
     if (defaultId.isEmpty()) {
         qDebug() << "No default printer found";
     } else {
+        qDebug() << "Default Printer ID :" << defaultId;
         QVERIFY(ps->availablePrintDeviceIds().contains(defaultId));
     }
 
@@ -65,9 +66,7 @@ void tst_QPrintDevice::basics()
     // Just exercise the api for now as we don't know what is installed
     foreach (const QString id, ps->availablePrintDeviceIds()) {
         QPrintDevice printDevice = ps->createPrintDevice(id);
-        const char quote = id == defaultId ? '*' : '"';
-        qDebug().noquote().nospace() << "\nCreated printer " << quote << id
-            << quote << ":\n" << printDevice << '\n';
+        qDebug() << "Created printer" << id;
         QCOMPARE(printDevice.isValid(), true);
         printDevice.id();
         printDevice.name();

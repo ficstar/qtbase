@@ -256,45 +256,8 @@ QJsonArray QJsonArray::fromStringList(const QStringList &list)
 QJsonArray QJsonArray::fromVariantList(const QVariantList &list)
 {
     QJsonArray array;
-    if (list.isEmpty())
-        return array;
-
-    array.detach2(1024);
-
-    QVector<QJsonPrivate::Value> values;
-    values.resize(list.size());
-    QJsonPrivate::Value *valueData = values.data();
-    uint currentOffset = sizeof(QJsonPrivate::Base);
-
-    for (int i = 0; i < list.size(); ++i) {
-        QJsonValue val = QJsonValue::fromVariant(list.at(i));
-
-        bool latinOrIntValue;
-        int valueSize = QJsonPrivate::Value::requiredStorage(val, &latinOrIntValue);
-
-        if (!array.detach2(valueSize))
-            return QJsonArray();
-
-        QJsonPrivate::Value *v = valueData + i;
-        v->type = (val.t == QJsonValue::Undefined ? QJsonValue::Null : val.t);
-        v->latinOrIntValue = latinOrIntValue;
-        v->latinKey = false;
-        v->value = QJsonPrivate::Value::valueToStore(val, currentOffset);
-        if (valueSize)
-            QJsonPrivate::Value::copyData(val, (char *)array.a + currentOffset, latinOrIntValue);
-
-        currentOffset += valueSize;
-        array.a->size = currentOffset;
-    }
-
-    // write table
-    array.a->tableOffset = currentOffset;
-    if (!array.detach2(sizeof(QJsonPrivate::offset)*values.size()))
-        return QJsonArray();
-    memcpy(array.a->table(), values.constData(), values.size()*sizeof(uint));
-    array.a->length = values.size();
-    array.a->size = currentOffset + sizeof(QJsonPrivate::offset)*values.size();
-
+    for (QVariantList::const_iterator it = list.constBegin(); it != list.constEnd(); ++it)
+        array.append(QJsonValue::fromVariant(*it));
     return array;
 }
 
@@ -308,7 +271,6 @@ QVariantList QJsonArray::toVariantList() const
     QVariantList list;
 
     if (a) {
-        list.reserve(a->length);
         for (int i = 0; i < (int)a->length; ++i)
             list.append(QJsonValue(d, a, a->at(i)).toVariant());
     }
@@ -419,7 +381,7 @@ void QJsonArray::removeAt(int i)
     if (!a || i < 0 || i >= (int)a->length)
         return;
 
-    detach2();
+    detach();
     a->removeItems(i, 1);
     ++d->compactionCounter;
     if (d->compactionCounter > 32u && d->compactionCounter >= unsigned(a->length) / 2u)
@@ -479,8 +441,7 @@ void QJsonArray::insert(int i, const QJsonValue &value)
     bool compressed;
     int valueSize = QJsonPrivate::Value::requiredStorage(val, &compressed);
 
-    if (!detach2(valueSize + sizeof(QJsonPrivate::Value)))
-        return;
+    detach(valueSize + sizeof(QJsonPrivate::Value));
 
     if (!a->length)
         a->tableOffset = sizeof(QJsonPrivate::Array);
@@ -530,8 +491,7 @@ void QJsonArray::replace(int i, const QJsonValue &value)
     bool compressed;
     int valueSize = QJsonPrivate::Value::requiredStorage(val, &compressed);
 
-    if (!detach2(valueSize))
-        return;
+    detach(valueSize);
 
     if (!a->length)
         a->tableOffset = sizeof(QJsonPrivate::Array);
@@ -572,8 +532,8 @@ bool QJsonArray::contains(const QJsonValue &value) const
     \a i must be a valid index position in the array (i.e., \c{0 <= i <
     size()}).
 
-    The return value is of type QJsonValueRef, a helper class for QJsonArray
-    and QJsonObject. When you get an object of type QJsonValueRef, you can
+    The return value is of type \keyword QJsonValueRef, a helper class for QJsonArray
+    and QJsonObject. When you get an object of type \keyword QJsonValueRef, you can
     use it as if it were a reference to a QJsonValue. If you assign to it,
     the assignment will apply to the character in the QJsonArray of QJsonObject
     from which you got the reference.
@@ -778,8 +738,8 @@ bool QJsonArray::operator!=(const QJsonArray &other) const
     You can change the value of an item by using operator*() on the
     left side of an assignment.
 
-    The return value is of type QJsonValueRef, a helper class for QJsonArray
-    and QJsonObject. When you get an object of type QJsonValueRef, you can
+    The return value is of type \keyword QJsonValueRef, a helper class for QJsonArray
+    and QJsonObject. When you get an object of type \keyword QJsonValueRef, you can
     use it as if it were a reference to a QJsonValue. If you assign to it,
     the assignment will apply to the character in the QJsonArray of QJsonObject
     from which you got the reference.
@@ -798,8 +758,8 @@ bool QJsonArray::operator!=(const QJsonArray &other) const
     This function is provided to make QJsonArray iterators behave like C++
     pointers.
 
-    The return value is of type QJsonValueRef, a helper class for QJsonArray
-    and QJsonObject. When you get an object of type QJsonValueRef, you can
+    The return value is of type \keyword QJsonValueRef, a helper class for QJsonArray
+    and QJsonObject. When you get an object of type \keyword QJsonValueRef, you can
     use it as if it were a reference to a QJsonValue. If you assign to it,
     the assignment will apply to the character in the QJsonArray of QJsonObject
     from which you got the reference.
@@ -1162,38 +1122,21 @@ bool QJsonArray::operator!=(const QJsonArray &other) const
  */
 void QJsonArray::detach(uint reserve)
 {
-    Q_UNUSED(reserve)
-    Q_ASSERT(!reserve);
-    detach2(0);
-}
-
-/*!
-    \internal
- */
-bool QJsonArray::detach2(uint reserve)
-{
     if (!d) {
-        if (reserve >= QJsonPrivate::Value::MaxSize) {
-            qWarning("QJson: Document too large to store in data structure");
-            return false;
-        }
         d = new QJsonPrivate::Data(reserve, QJsonValue::Array);
         a = static_cast<QJsonPrivate::Array *>(d->header->root());
         d->ref.ref();
-        return true;
+        return;
     }
     if (reserve == 0 && d->ref.load() == 1)
-        return true;
+        return;
 
     QJsonPrivate::Data *x = d->clone(a, reserve);
-    if (!x)
-        return false;
     x->ref.ref();
     if (!d->ref.deref())
         delete d;
     d = x;
     a = static_cast<QJsonPrivate::Array *>(d->header->root());
-    return true;
 }
 
 /*!
@@ -1204,7 +1147,7 @@ void QJsonArray::compact()
     if (!d || !d->compactionCounter)
         return;
 
-    detach2();
+    detach();
     d->compact();
     a = static_cast<QJsonPrivate::Array *>(d->header->root());
 }

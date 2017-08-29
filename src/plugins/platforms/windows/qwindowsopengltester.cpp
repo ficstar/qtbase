@@ -75,10 +75,10 @@ GpuDescription GpuDescription::detect()
     const HRESULT hr = direct3D9->GetAdapterIdentifier(0, 0, &adapterIdentifier);
     direct3D9->Release();
     if (SUCCEEDED(hr)) {
-        result.vendorId = adapterIdentifier.VendorId;
-        result.deviceId = adapterIdentifier.DeviceId;
-        result.revision = adapterIdentifier.Revision;
-        result.subSysId = adapterIdentifier.SubSysId;
+        result.vendorId = int(adapterIdentifier.VendorId);
+        result.deviceId = int(adapterIdentifier.DeviceId);
+        result.revision = int(adapterIdentifier.Revision);
+        result.subSysId = int(adapterIdentifier.SubSysId);
         QVector<int> version(4, 0);
         version[0] = HIWORD(adapterIdentifier.DriverVersion.HighPart); // Product
         version[1] = LOWORD(adapterIdentifier.DriverVersion.HighPart); // Version
@@ -98,7 +98,6 @@ GpuDescription GpuDescription::detect()
 #endif
 }
 
-#ifndef QT_NO_DEBUG_STREAM
 QDebug operator<<(QDebug d, const GpuDescription &gd)
 {
     QDebugStateSaver s(d);
@@ -110,7 +109,6 @@ QDebug operator<<(QDebug d, const GpuDescription &gd)
       << ", version=" << gd.driverVersion << ", " << gd.description << ')';
     return d;
 }
-#endif // !QT_NO_DEBUG_STREAM
 
 // Return printable string formatted like the output of the dxdiag tool.
 QString GpuDescription::toString() const
@@ -226,7 +224,7 @@ QWindowsOpenGLTester::Renderers QWindowsOpenGLTester::detectSupportedRenderers(c
 #elif defined(Q_OS_WINCE)
     return QWindowsOpenGLTester::Gles;
 #else
-    QOpenGLConfig::Gpu qgpu = QOpenGLConfig::Gpu::fromDevice(gpu.vendorId, gpu.deviceId, gpu.driverVersion, gpu.description);
+    QOpenGLConfig::Gpu qgpu = QOpenGLConfig::Gpu::fromDevice(gpu.vendorId, gpu.deviceId, gpu.driverVersion);
     SupportedRenderersCache *srCache = supportedRenderersCache();
     SupportedRenderersCache::const_iterator it = srCache->find(qgpu);
     if (it != srCache->cend())
@@ -252,26 +250,23 @@ QWindowsOpenGLTester::Renderers QWindowsOpenGLTester::detectSupportedRenderers(c
     qCDebug(lcQpaGl) << "GPU features:" << features;
 
     if (features.contains(QStringLiteral("disable_desktopgl"))) { // Qt-specific
-        qCDebug(lcQpaGl) << "Disabling Desktop GL: " << gpu;
+        qCWarning(lcQpaGl) << "Disabling Desktop GL: " << gpu;
         result &= ~QWindowsOpenGLTester::DesktopGl;
     }
     if (features.contains(QStringLiteral("disable_angle"))) { // Qt-specific keyword
-        qCDebug(lcQpaGl) << "Disabling ANGLE: " << gpu;
+        qCWarning(lcQpaGl) << "Disabling ANGLE: " << gpu;
         result &= ~QWindowsOpenGLTester::GlesMask;
     } else {
         if (features.contains(QStringLiteral("disable_d3d11"))) { // standard keyword
-            qCDebug(lcQpaGl) << "Disabling D3D11: " << gpu;
+            qCWarning(lcQpaGl) << "Disabling D3D11: " << gpu;
             result &= ~QWindowsOpenGLTester::AngleRendererD3d11;
         }
         if (features.contains(QStringLiteral("disable_d3d9"))) { // Qt-specific
-            qCDebug(lcQpaGl) << "Disabling D3D9: " << gpu;
+            qCWarning(lcQpaGl) << "Disabling D3D9: " << gpu;
             result &= ~QWindowsOpenGLTester::AngleRendererD3d9;
         }
     }
-    if (features.contains(QStringLiteral("disable_rotation"))) {
-        qCDebug(lcQpaGl) << "Disabling rotation: " << gpu;
-        result |= DisableRotationFlag;
-    }
+
     srCache->insert(qgpu, result);
     return result;
 #endif // !Q_OS_WINCE && !QT_NO_OPENGL
@@ -281,7 +276,7 @@ QWindowsOpenGLTester::Renderers QWindowsOpenGLTester::supportedGlesRenderers()
 {
     const GpuDescription gpu = GpuDescription::detect();
     const QWindowsOpenGLTester::Renderers result = detectSupportedRenderers(gpu, true);
-    qCDebug(lcQpaGl) << __FUNCTION__ << gpu << "renderer: " << result;
+    qDebug(lcQpaGl) << __FUNCTION__ << gpu << "renderer: " << result;
     return result;
 }
 
@@ -289,7 +284,7 @@ QWindowsOpenGLTester::Renderers QWindowsOpenGLTester::supportedRenderers()
 {
     const GpuDescription gpu = GpuDescription::detect();
     const QWindowsOpenGLTester::Renderers result = detectSupportedRenderers(gpu, false);
-    qCDebug(lcQpaGl) << __FUNCTION__ << gpu << "renderer: " << result;
+    qDebug(lcQpaGl) << __FUNCTION__ << gpu << "renderer: " << result;
     return result;
 }
 
@@ -329,10 +324,10 @@ bool QWindowsOpenGLTester::testDesktopGL()
         WNDCLASS wclass;
         wclass.cbClsExtra = 0;
         wclass.cbWndExtra = 0;
-        wclass.hInstance = static_cast<HINSTANCE>(GetModuleHandle(0));
+        wclass.hInstance = (HINSTANCE) GetModuleHandle(0);
         wclass.hIcon = 0;
         wclass.hCursor = 0;
-        wclass.hbrBackground = HBRUSH(COLOR_BACKGROUND);
+        wclass.hbrBackground = (HBRUSH) (COLOR_BACKGROUND);
         wclass.lpszMenuName = 0;
         wclass.lpfnWndProc = DefWindowProc;
         wclass.lpszClassName = className;
@@ -371,7 +366,8 @@ bool QWindowsOpenGLTester::testDesktopGL()
         typedef const GLubyte * (APIENTRY * GetString_t)(GLenum name);
         GetString_t GetString = reinterpret_cast<GetString_t>(::GetProcAddress(lib, "glGetString"));
         if (GetString) {
-            if (const char *versionStr = reinterpret_cast<const char *>(GetString(GL_VERSION))) {
+            const char *versionStr = (const char *) GetString(GL_VERSION);
+            if (versionStr) {
                 const QByteArray version(versionStr);
                 const int majorDot = version.indexOf('.');
                 if (majorDot != -1) {

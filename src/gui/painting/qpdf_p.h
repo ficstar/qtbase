@@ -188,9 +188,9 @@ public:
                    Qt::ImageConversionFlags flags = Qt::AutoColor) Q_DECL_OVERRIDE;
     void drawTiledPixmap (const QRectF & rectangle, const QPixmap & pixmap, const QPointF & point) Q_DECL_OVERRIDE;
 
-    void drawHyperlink(const QRectF &r, const QUrl &url);
-
     void updateState(const QPaintEngineState &state) Q_DECL_OVERRIDE;
+
+    void drawHyperlink(const QRectF &r, const QUrl &url);
 
     int metric(QPaintDevice::PaintDeviceMetric metricType) const;
     Type type() const Q_DECL_OVERRIDE;
@@ -245,7 +245,7 @@ public:
     QPointF brushOrigin;
     QBrush brush;
     QPen pen;
-    QVector<QPainterPath> clips;
+    QList<QPainterPath> clips;
     bool clipEnabled;
     bool allClipped;
     bool hasPen;

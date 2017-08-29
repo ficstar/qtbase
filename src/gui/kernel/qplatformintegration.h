@@ -91,8 +91,7 @@ public:
         SyncState,
         RasterGLSurface,
         AllGLFunctionsQueryable,
-        ApplicationIcon,
-        SwitchableWidgetComposition
+        ApplicationIcon
     };
 
     virtual ~QPlatformIntegration() { }
@@ -173,13 +172,9 @@ public:
     virtual QOpenGLContext::OpenGLModuleType openGLModuleType();
 #endif
     virtual void setApplicationIcon(const QIcon &icon) const;
-
-    void removeScreen(QScreen *screen);
-
 protected:
     void screenAdded(QPlatformScreen *screen, bool isPrimary = false);
     void destroyScreen(QPlatformScreen *screen);
-    void setPrimaryScreen(QPlatformScreen *newPrimary);
 };
 
 QT_END_NAMESPACE

@@ -56,17 +56,19 @@ void tst_QDateTime_macTypes()
     }
     // QDateTime <-> NSDate
     {
-        QMacAutoReleasePool pool;
+        NSAutoreleasePool *autoreleasepool = [[NSAutoreleasePool alloc] init];
         QDateTime qtDateTime = QDateTime::fromMSecsSinceEpoch(0);
         const NSDate *nsDate = qtDateTime.toNSDate();
         QCOMPARE(QDateTime::fromNSDate(nsDate), qtDateTime);
+        [autoreleasepool release];
     }
     {
-        QMacAutoReleasePool pool;
+        NSAutoreleasePool *autoreleasepool = [[NSAutoreleasePool alloc] init];
         QDateTime qtDateTime = QDateTime::fromMSecsSinceEpoch(0);
         const NSDate *nsDate = qtDateTime.toNSDate();
         QDateTime qtDateTimeCopy(qtDateTime);
         qtDateTime.setTime_t(10000); // modify
         QCOMPARE(QDateTime::fromNSDate(nsDate), qtDateTimeCopy);
+        [autoreleasepool release];
     }
 }

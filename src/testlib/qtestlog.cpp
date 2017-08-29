@@ -46,7 +46,6 @@
 
 #include <QtCore/qatomic.h>
 #include <QtCore/qbytearray.h>
-#include <QtCore/QElapsedTimer>
 #include <QtCore/QVariant>
 #include <QtCore/QRegularExpression>
 
@@ -75,9 +74,6 @@ static void saveCoverageTool(const char * appname, bool testfailed, bool install
     Q_UNUSED(installedTestCoverage);
 #endif
 }
-
-static QElapsedTimer elapsedFunctionTime;
-static QElapsedTimer elapsedTotalTime;
 
 namespace QTest {
 
@@ -329,7 +325,6 @@ namespace QTest {
 
 void QTestLog::enterTestFunction(const char* function)
 {
-    elapsedFunctionTime.restart();
     if (printAvailableTags)
         return;
 
@@ -455,8 +450,6 @@ void QTestLog::addBenchmarkResult(const QBenchmarkResult &result)
 
 void QTestLog::startLogging()
 {
-    elapsedTotalTime.start();
-    elapsedFunctionTime.start();
     QTest::TestLoggers::startLogging();
     QTest::oldMessageHandler = qInstallMessageHandler(QTest::messageHandler);
 }
@@ -602,16 +595,6 @@ void QTestLog::setInstalledTestCoverage(bool installed)
 bool QTestLog::installedTestCoverage()
 {
     return QTest::installedTestCoverage;
-}
-
-qint64 QTestLog::nsecsTotalTime()
-{
-    return elapsedTotalTime.nsecsElapsed();
-}
-
-qint64 QTestLog::nsecsFunctionTime()
-{
-    return elapsedFunctionTime.nsecsElapsed();
 }
 
 QT_END_NAMESPACE

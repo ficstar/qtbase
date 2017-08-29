@@ -94,7 +94,7 @@ bool QAccessibleTable::isValid() const
 
 QAccessibleTable::~QAccessibleTable()
 {
-    Q_FOREACH (QAccessible::Id id, childToId)
+    Q_FOREACH (QAccessible::Id id, childToId.values())
         QAccessible::deleteAccessibleInterface(id);
 }
 
@@ -198,9 +198,7 @@ QList<QAccessibleInterface *> QAccessibleTable::selectedCells() const
     QList<QAccessibleInterface*> cells;
     if (!view()->selectionModel())
         return cells;
-    const QModelIndexList selectedIndexes = view()->selectionModel()->selectedIndexes();
-    cells.reserve(selectedIndexes.size());
-    Q_FOREACH (const QModelIndex &index, selectedIndexes)
+    Q_FOREACH (const QModelIndex &index, view()->selectionModel()->selectedIndexes())
         cells.append(child(logicalIndex(index)));
     return cells;
 }
@@ -210,11 +208,9 @@ QList<int> QAccessibleTable::selectedColumns() const
     if (!view()->selectionModel())
         return QList<int>();
     QList<int> columns;
-    const QModelIndexList selectedColumns = view()->selectionModel()->selectedColumns();
-    columns.reserve(selectedColumns.size());
-    Q_FOREACH (const QModelIndex &index, selectedColumns)
+    Q_FOREACH (const QModelIndex &index, view()->selectionModel()->selectedColumns()) {
         columns.append(index.column());
-
+    }
     return columns;
 }
 
@@ -223,11 +219,9 @@ QList<int> QAccessibleTable::selectedRows() const
     if (!view()->selectionModel())
         return QList<int>();
     QList<int> rows;
-    const QModelIndexList selectedRows = view()->selectionModel()->selectedRows();
-    rows.reserve(selectedRows.size());
-    Q_FOREACH (const QModelIndex &index, selectedRows)
+    Q_FOREACH (const QModelIndex &index, view()->selectionModel()->selectedRows()) {
         rows.append(index.row());
-
+    }
     return rows;
 }
 
@@ -532,7 +526,7 @@ void QAccessibleTable::modelChange(QAccessibleTableModelChangeEvent *event)
 
     switch (event->modelChangeType()) {
     case QAccessibleTableModelChangeEvent::ModelReset:
-        Q_FOREACH (QAccessible::Id id, childToId)
+        Q_FOREACH (QAccessible::Id id, childToId.values())
             QAccessible::deleteAccessibleInterface(id);
         childToId.clear();
         break;
@@ -1016,9 +1010,6 @@ QAccessible::Role QAccessibleTableCell::role() const
 QAccessible::State QAccessibleTableCell::state() const
 {
     QAccessible::State st;
-    if (!view)
-        return st;
-
     QRect globalRect = view->rect();
     globalRect.translate(view->mapToGlobal(QPoint(0,0)));
     if (!globalRect.intersects(rect()))

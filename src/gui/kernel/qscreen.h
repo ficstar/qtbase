@@ -52,9 +52,6 @@ class QScreenPrivate;
 class QWindow;
 class QRect;
 class QPixmap;
-#ifndef QT_NO_DEBUG_STREAM
-class QDebug;
-#endif
 
 class Q_GUI_EXPORT QScreen : public QObject
 {
@@ -154,12 +151,7 @@ private:
     friend class QGuiApplicationPrivate;
     friend class QPlatformIntegration;
     friend class QPlatformScreen;
-    friend class QHighDpiScaling;
 };
-
-#ifndef QT_NO_DEBUG_STREAM
-Q_GUI_EXPORT QDebug operator<<(QDebug, const QScreen *);
-#endif
 
 QT_END_NAMESPACE
 

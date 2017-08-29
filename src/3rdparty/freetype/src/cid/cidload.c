@@ -4,7 +4,7 @@
 /*                                                                         */
 /*    CID-keyed Type1 font loader (body).                                  */
 /*                                                                         */
-/*  Copyright 1996-2015 by                                                 */
+/*  Copyright 1996-2006, 2009, 2011-2014 by                                */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -38,7 +38,7 @@
 
 
   /* read a single offset */
-  FT_LOCAL_DEF( FT_ULong )
+  FT_LOCAL_DEF( FT_Long )
   cid_get_offset( FT_Byte*  *start,
                   FT_Byte    offsize )
   {
@@ -53,7 +53,7 @@
     }
 
     *start = p;
-    return result;
+    return (FT_Long)result;
   }
 
 
@@ -167,7 +167,6 @@
       matrix = &dict->font_matrix;
       offset = &dict->font_offset;
 
-      /* input is scaled by 1000 to accommodate default FontMatrix */
       result = cid_parser_to_fixed_array( parser, 6, temp, 3 );
 
       if ( result < 6 )
@@ -181,12 +180,15 @@
         return FT_THROW( Invalid_File_Format );
       }
 
-      /* atypical case */
+      /* Set Units per EM based on FontMatrix values.  We set the value to */
+      /* 1000 / temp_scale, because temp_scale was already multiplied by   */
+      /* 1000 (in t1_tofixed, from psobjs.c).                              */
+
+      root->units_per_EM = (FT_UShort)FT_DivFix( 1000, temp_scale );
+
+      /* we need to scale the values by 1.0/temp[3] */
       if ( temp_scale != 0x10000L )
       {
-        /* set units per EM based on FontMatrix values */
-        root->units_per_EM = (FT_UShort)FT_DivFix( 1000, temp_scale );
-
         temp[0] = FT_DivFix( temp[0], temp_scale );
         temp[1] = FT_DivFix( temp[1], temp_scale );
         temp[2] = FT_DivFix( temp[2], temp_scale );
@@ -220,12 +222,6 @@
 
 
     num_dicts = cid_parser_to_int( parser );
-    if ( num_dicts < 0 )
-    {
-      FT_ERROR(( "parse_fd_array: invalid number of dictionaries\n" ));
-      error = FT_THROW( Invalid_File_Format );
-      goto Exit;
-    }
 
     if ( !cid->font_dicts )
     {
@@ -235,7 +231,7 @@
       if ( FT_NEW_ARRAY( cid->font_dicts, num_dicts ) )
         goto Exit;
 
-      cid->num_dicts = num_dicts;
+      cid->num_dicts = (FT_UInt)num_dicts;
 
       /* don't forget to set a few defaults */
       for ( n = 0; n < cid->num_dicts; n++ )
@@ -294,7 +290,7 @@
   cid_parse_dict( CID_Face     face,
                   CID_Loader*  loader,
                   FT_Byte*     base,
-                  FT_ULong     size )
+                  FT_Long      size )
   {
     CID_Parser*  parser = &loader->parser;
 
@@ -346,11 +342,11 @@
         /* look for immediates */
         if ( *cur == '/' && cur + 2 < limit )
         {
-          FT_UInt  len;
+          FT_PtrDist  len;
 
 
           cur++;
-          len = (FT_UInt)( parser->root.cursor - cur );
+          len = parser->root.cursor - cur;
 
           if ( len > 0 && len < 22 )
           {
@@ -367,10 +363,10 @@
               if ( !name )
                 break;
 
-              if ( cur[0] == name[0]                     &&
-                   len == ft_strlen( (const char*)name ) )
+              if ( cur[0] == name[0]                                 &&
+                   len == (FT_PtrDist)ft_strlen( (const char*)name ) )
               {
-                FT_UInt  n;
+                FT_PtrDist  n;
 
 
                 for ( n = 1; n < len; n++ )
@@ -411,7 +407,7 @@
     FT_Int         n;
     CID_Subrs      subr;
     FT_UInt        max_offsets = 0;
-    FT_ULong*      offsets = NULL;
+    FT_ULong*      offsets = 0;
     PSAux_Service  psaux = (PSAux_Service)face->psaux;
 
 
@@ -454,8 +450,8 @@
       }
 
       /* read the subrmap's offsets */
-      if ( FT_STREAM_SEEK( cid->data_offset + dict->subrmap_offset )     ||
-           FT_FRAME_ENTER( ( num_subrs + 1 ) * (FT_UInt)dict->sd_bytes ) )
+      if ( FT_STREAM_SEEK( cid->data_offset + dict->subrmap_offset ) ||
+           FT_FRAME_ENTER( ( num_subrs + 1 ) * dict->sd_bytes )      )
         goto Fail;
 
       p = (FT_Byte*)stream->cursor;
@@ -504,7 +500,7 @@
         }
       }
 
-      subr->num_subrs = (FT_Int)num_subrs;
+      subr->num_subrs = num_subrs;
     }
 
   Exit:
@@ -550,7 +546,7 @@
 
   static FT_Error
   cid_hex_to_binary( FT_Byte*  data,
-                     FT_ULong  data_len,
+                     FT_Long   data_len,
                      FT_ULong  offset,
                      CID_Face  face )
   {

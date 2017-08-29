@@ -46,7 +46,7 @@ private:
     typedef QArrayDataOps<T> DataOps;
 
 public:
-    QArrayDataPointer() Q_DECL_NOTHROW
+    QArrayDataPointer()
         : d(Data::sharedNull())
     {
     }
@@ -77,16 +77,15 @@ public:
     }
 
 #ifdef Q_COMPILER_RVALUE_REFS
-    QArrayDataPointer(QArrayDataPointer &&other) Q_DECL_NOTHROW
+    QArrayDataPointer(QArrayDataPointer &&other)
         : d(other.d)
     {
         other.d = Data::sharedNull();
     }
 
-    QArrayDataPointer &operator=(QArrayDataPointer &&other) Q_DECL_NOTHROW
+    QArrayDataPointer &operator=(QArrayDataPointer &&other)
     {
-        QArrayDataPointer moved(std::move(other));
-        this->swap(moved);
+        this->swap(other);
         return *this;
     }
 #endif
@@ -127,7 +126,7 @@ public:
         return (!d->isMutable() || d->ref.isShared());
     }
 
-#if !defined(QT_NO_UNSHARABLE_CONTAINERS)
+#if QT_SUPPORTS(UNSHARABLE_CONTAINERS)
     void setSharable(bool sharable)
     {
         if (needsDetach()) {
@@ -144,7 +143,7 @@ public:
     bool isSharable() const { return d->isSharable(); }
 #endif
 
-    void swap(QArrayDataPointer &other) Q_DECL_NOTHROW
+    void swap(QArrayDataPointer &other)
     {
         qSwap(d, other.d);
     }

@@ -57,14 +57,16 @@ protected:
 
     virtual void writeRcFilePart(QTextStream &t);
 
-    virtual bool findLibraries(bool linkPrl, bool mergeLflags);
+    int findHighestVersion(const QString &dir, const QString &stem, const QString &ext = QLatin1String("lib"));
+    virtual bool findLibraries();
 
-    virtual LibFlagType parseLibFlag(const ProString &flag, ProString *arg);
     virtual ProString fixLibFlag(const ProString &lib);
 
+    virtual void processPrlFiles();
     void processVars();
     void fixTargetExt();
     void processRcFileVar();
+    virtual QString getLibTarget();
     static QString cQuoted(const QString &str);
     virtual QString getManifestFileForRcFile() const;
 };

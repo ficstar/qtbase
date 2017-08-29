@@ -1322,6 +1322,4 @@ bool QSpinBox::event(QEvent *event)
 
 QT_END_NAMESPACE
 
-#include "moc_qspinbox.cpp"
-
 #endif // QT_NO_SPINBOX

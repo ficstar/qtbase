@@ -60,9 +60,18 @@ class tst_QGridLayout : public QObject
 {
 Q_OBJECT
 
-private slots:
+public:
+    tst_QGridLayout();
+    virtual ~tst_QGridLayout();
+
+
+public slots:
     void initTestCase();
+    void cleanupTestCase();
+    void init();
     void cleanup();
+
+private slots:
     void getItemPosition();
     void itemAtPosition();
     void badDistributionBug();
@@ -88,72 +97,76 @@ private slots:
     void taskQTBUG_40609_addingLayoutToItself();
     void replaceWidget();
     void dontCrashWhenExtendsToEnd();
+
+private:
+    QWidget *testWidget;
+    QGridLayout *testLayout;
+    QWidget *w1;
+    QWidget *w2;
+    QWidget *w3;
+    QSpacerItem *sp;
+
+    QGridLayout *m_grid;
+    QWidget *m_toplevel;
 };
+
+
+tst_QGridLayout::tst_QGridLayout()
+{
+    m_grid = 0;
+    m_toplevel = 0;
+}
+
+tst_QGridLayout::~tst_QGridLayout()
+{
+    delete m_toplevel;
+}
 
 void tst_QGridLayout::initTestCase()
 {
 #ifdef Q_OS_WINCE //disable magic for WindowsCE
     qApp->setAutoMaximizeThreshold(-1);
 #endif
+    // Create the test class
+    testWidget = new QWidget(0);
+
+    testLayout = new QGridLayout(testWidget);
+
+    w1 = new QWidget(testWidget);
+    w1->setPalette(QPalette(Qt::red));
+    testLayout->addWidget(w1, 0, 0);
+
+    w2 = new QWidget(testWidget);
+    testLayout->addWidget(w2, 1, 1, 2, 2);
+    w2->setPalette(QPalette(Qt::green));
+
+    w3 = new QWidget(testWidget);
+    testLayout->addWidget(w3, 0, 1, 1, 2);
+    w3->setPalette(QPalette(Qt::blue));
+
+    sp = new QSpacerItem(4, 4);
+    testLayout->addItem(sp, 1, 3, 2, 1);
+
+    testWidget->resize( 200, 200 );
+    testWidget->show();
 }
 
-static inline int visibleTopLevelWidgetCount()
+void tst_QGridLayout::cleanupTestCase()
 {
-    int result= 0;
-    foreach (const QWidget *topLevel, QApplication::topLevelWidgets()) {
-        if (topLevel->isVisible())
-            ++result;
-    }
-    return result;
+    delete testWidget;
+    testWidget = 0;
+}
+
+void tst_QGridLayout::init()
+{
 }
 
 void tst_QGridLayout::cleanup()
 {
-    // Verify that no visible top levels are leaked. Cannot check for
-    // topLevelWidgets().isEmpty() here since the data driven test layoutSpacing()
-    // will appear to "leak" top levels due to it creating widgets in the test data.
-    QCOMPARE(visibleTopLevelWidgetCount(), 0);
-}
-
-class ItemTestWidget : public QWidget {
-public:
-    ItemTestWidget();
-
-    QGridLayout *testLayout;
-    QWidget *w1;
-    QWidget *w2;
-    QWidget *w3;
-    QSpacerItem *sp;
-};
-
-ItemTestWidget::ItemTestWidget()
-    : testLayout(new QGridLayout(this))
-    , w1(new QWidget(this))
-    , w2(new QWidget(this))
-    , w3(new QWidget(this))
-    , sp(new QSpacerItem(4, 4))
-{
-    setObjectName("testWidget");
-    setWindowTitle(QTest::currentTestFunction());
-
-    w1->setPalette(QPalette(Qt::red));
-    testLayout->addWidget(w1, 0, 0);
-
-    testLayout->addWidget(w2, 1, 1, 2, 2);
-    w2->setPalette(QPalette(Qt::green));
-
-    testLayout->addWidget(w3, 0, 1, 1, 2);
-    w3->setPalette(QPalette(Qt::blue));
-
-    testLayout->addItem(sp, 1, 3, 2, 1);
 }
 
 void tst_QGridLayout::getItemPosition()
 {
-    ItemTestWidget testWidget;
-    testWidget.resize(200, 200);
-    testWidget.show();
-
     QLayoutItem *item;
     int counter = 0;
 
@@ -162,28 +175,28 @@ void tst_QGridLayout::getItemPosition()
     bool seenW3 = false;
     bool seenSpacer = false;
 
-    while ((item = testWidget.testLayout->itemAt(counter))) {
+    while ((item = testLayout->itemAt(counter))) {
         QWidget *w = item->widget();
         int r,c,rs,cs;
-        testWidget.testLayout->getItemPosition(counter, &r, &c, &rs, &cs);
+        testLayout->getItemPosition(counter, &r, &c, &rs, &cs);
 
 //        qDebug() << "item" << counter << "has" <<r << c << rs << cs;
 
-        if (w == testWidget.w1) {
+        if (w == w1) {
             QVERIFY(!seenW1);
             seenW1 = true;
             QCOMPARE(r, 0);
             QCOMPARE(c, 0);
             QCOMPARE(rs, 1);
             QCOMPARE(cs, 1);
-        } else if (w == testWidget.w2) {
+        } else if (w == w2) {
             QVERIFY(!seenW2);
             seenW2 = true;
             QCOMPARE(r, 1);
             QCOMPARE(c, 1);
             QCOMPARE(rs, 2);
             QCOMPARE(cs, 2);
-        } else if (w == testWidget.w3) {
+        } else if (w == w3) {
             QVERIFY(!seenW3);
             seenW3 = true;
             QCOMPARE(r, 0);
@@ -210,20 +223,16 @@ void tst_QGridLayout::getItemPosition()
 
 void tst_QGridLayout::itemAtPosition()
 {
-    ItemTestWidget testWidget;
-    testWidget.resize(200, 200);
-    testWidget.show();
-
     void *table[4][5] = {
-        { testWidget.w1, testWidget.w3,testWidget.w3, 0,  0 },
-        { 0,  testWidget.w2, testWidget.w2, testWidget.sp, 0 },
-        { 0,  testWidget.w2, testWidget.w2, testWidget.sp, 0 },
+        { w1, w3, w3, 0,  0 },
+        { 0,  w2, w2, sp, 0 },
+        { 0,  w2, w2, sp, 0 },
         { 0,  0,  0,  0,  0 }
     };
 
     for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 5; ++col) {
-            QLayoutItem *item = testWidget.testLayout->itemAtPosition(row, col);
+            QLayoutItem *item = testLayout->itemAtPosition(row, col);
             QVERIFY(item == table[row][col]
                     || (item && item->widget() == table[row][col]));
         }
@@ -851,31 +860,32 @@ void tst_QGridLayout::minMaxSize()
         }
     }
     QApplication::setStyle(style);
-    QWidget toplevel;
-    toplevel.setWindowTitle(QLatin1String(QTest::currentTestFunction())
-                            + QLatin1Char(' ') + QLatin1String(QTest::currentDataTag()));
-    setFrameless(&toplevel);
-    QGridLayout *grid = new QGridLayout;
+    if (!m_grid)
+        m_grid = new QGridLayout();
+    if (!m_toplevel) {
+        m_toplevel = new QWidget();
+        setFrameless(m_toplevel);
+    }
     if (fixedSize.isValid()) {
-        toplevel.setFixedSize(fixedSize);
+        m_toplevel->setFixedSize(fixedSize);
     } else {
-        toplevel.setMinimumSize(QSize(0,0));
-        toplevel.setMaximumSize(QSize(QWIDGETSIZE_MAX,QWIDGETSIZE_MAX));
+        m_toplevel->setMinimumSize(QSize(0,0));
+        m_toplevel->setMaximumSize(QSize(QWIDGETSIZE_MAX,QWIDGETSIZE_MAX));
     }
     // Do a two-pass one using the real testdata, the other pass enables heightForWidth
     // on the widget, but the heightForWidth() function just return sizeHint().width()
     for (int pass = 0; pass < 2; ++pass) {
-        toplevel.hide();
+        m_toplevel->hide();
         QApplication::processEvents();
         QTest::qWait(20);
         // Test if removeItem uninitializes data properly
-        while (grid->count()) {
-            QLayoutItem *item = grid->itemAt(0);
-            grid->removeItem(item);
+        while (m_grid->count()) {
+            QLayoutItem *item = m_grid->itemAt(0);
+            m_grid->removeItem(item);
             delete item->widget();
             delete item;
         }
-        toplevel.setLayout(grid);
+        m_toplevel->setLayout(m_grid);
 
         // a layout with a top-level parent widget
         QList<QPointer<SizeHinterFrame> > sizehinters;
@@ -889,29 +899,29 @@ void tst_QGridLayout::minMaxSize()
                 QSizePolicy sp = sh->sizePolicy();
                 sp.setHorizontalPolicy((QSizePolicy::Policy)sizePolicy);
                 sh->setSizePolicy(sp);
-                sh->setParent(&toplevel);
+                sh->setParent(m_toplevel);
                 if (si.minSize.isValid())
                     sh->setMinimumSize(si.minSize);
                 if (si.maxSize.isValid())
                     sh->setMaximumSize(si.maxSize);
                 sizehinters.append(sh);
-                grid->addWidget(sh, i, j);
+                m_grid->addWidget(sh, i, j);
             }
         }
 
-        toplevel.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&toplevel));
-        toplevel.adjustSize();
+        m_toplevel->show();
+        QVERIFY(QTest::qWaitForWindowExposed(m_toplevel));
+        m_toplevel->adjustSize();
         QTest::qWait(240);                              // wait for the implicit adjustSize
         // If the following fails we might have to wait longer.
         // If that does not help there is likely a problem with the implicit adjustSize in show()
         if (!fixedSize.isValid()) {
             // Note that this can fail if the desktop has large fonts on windows.
-            QTRY_COMPARE(toplevel.size(), toplevel.sizeHint());
+            QTRY_COMPARE(m_toplevel->size(), m_toplevel->sizeHint());
         }
         // We are relying on the order here...
         for (int pi = 0; pi < sizehinters.count(); ++pi) {
-            QPoint pt = sizehinters.at(pi)->mapTo(&toplevel, QPoint(0, 0));
+            QPoint pt = sizehinters.at(pi)->mapTo(m_toplevel, QPoint(0, 0));
             QCOMPARE(pt, sizeinfos.at(pi).expectedPos);
         }
     }

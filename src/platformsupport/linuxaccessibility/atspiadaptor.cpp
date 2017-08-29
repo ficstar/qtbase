@@ -1431,9 +1431,7 @@ bool AtSpiAdaptor::accessibleInterface(QAccessibleInterface *interface, const QS
                       QSpiObjectReference(connection, QDBusObjectPath(QSPI_OBJECT_PATH_ROOT))));
     } else if (function == QLatin1String("GetChildren")) {
         QSpiObjectReferenceArray children;
-        const int numChildren = interface->childCount();
-        children.reserve(numChildren);
-        for (int i = 0; i < numChildren; ++i) {
+        for (int i = 0; i < interface->childCount(); ++i) {
             QString childPath = pathForInterface(interface->child(i));
             QSpiObjectReference ref(connection, QDBusObjectPath(childPath));
             children << ref;
@@ -1509,7 +1507,7 @@ QSpiRelationArray AtSpiAdaptor::relationSet(QAccessibleInterface *interface, con
     Q_FOREACH (const RelationPair &pair, relationInterfaces) {
 // FIXME: this loop seems a bit strange... "related" always have one item when we check.
 //And why is it a list, when it always have one item? And it seems to assume that the QAccessible::Relation enum maps directly to AtSpi
-        QSpiObjectReferenceArray related;
+        QList<QSpiObjectReference> related;
 
         QDBusObjectPath path = QDBusObjectPath(pathForInterface(pair.first));
         related.append(QSpiObjectReference(connection, path));
@@ -1749,9 +1747,7 @@ QSpiActionArray AtSpiAdaptor::getActions(QAccessibleInterface *interface) const
 {
     QAccessibleActionInterface *actionInterface = interface->actionInterface();
     QSpiActionArray actions;
-    const QStringList actionNames = QAccessibleBridgeUtils::effectiveActionNames(interface);
-    actions.reserve(actionNames.size());
-    Q_FOREACH (const QString &actionName, actionNames) {
+    Q_FOREACH (const QString &actionName, QAccessibleBridgeUtils::effectiveActionNames(interface)) {
         QSpiAction action;
         QStringList keyBindings;
 
@@ -1961,71 +1957,71 @@ namespace
         // https://bugzilla.gnome.org/show_bug.cgi?id=744553 "ATK docs provide no guidance for allowed values of some text attributes"
         // specifically for "weight", "invalid", "language" and value range for colors
 
-        if (ia2Name == QLatin1String("background-color")) {
+        if (ia2Name == QStringLiteral("background-color")) {
             name = QStringLiteral("bg-color");
             value = atspiColor(value);
-        } else if (ia2Name == QLatin1String("font-family")) {
+        } else if (ia2Name == QStringLiteral("font-family")) {
             name = QStringLiteral("family-name");
-        } else if (ia2Name == QLatin1String("color")) {
+        } else if (ia2Name == QStringLiteral("color")) {
             name = QStringLiteral("fg-color");
             value = atspiColor(value);
-        } else if (ia2Name == QLatin1String("text-align")) {
+        } else if (ia2Name == QStringLiteral("text-align")) {
             name = QStringLiteral("justification");
-            if (value == QLatin1String("justify")) {
+            if (value == QStringLiteral("justify")) {
                 value = QStringLiteral("fill");
             } else {
-                if (value != QLatin1String("left") &&
-                    value != QLatin1String("right") &&
-                    value != QLatin1String("center")
+                if (value != QStringLiteral("left") &&
+                    value != QStringLiteral("right") &&
+                    value != QStringLiteral("center")
                 ) {
                     value = QString();
                     qAtspiDebug() << "Unknown text-align attribute value \"" << value << "\" cannot be translated to AT-SPI.";
                 }
             }
-        } else if (ia2Name == QLatin1String("font-size")) {
+        } else if (ia2Name == QStringLiteral("font-size")) {
             name = QStringLiteral("size");
             value = atspiSize(value);
-        } else if (ia2Name == QLatin1String("font-style")) {
+        } else if (ia2Name == QStringLiteral("font-style")) {
             name = QStringLiteral("style");
-            if (value != QLatin1String("normal") &&
-                value != QLatin1String("italic") &&
-                value != QLatin1String("oblique")
+            if (value != QStringLiteral("normal") &&
+                value != QStringLiteral("italic") &&
+                value != QStringLiteral("oblique")
             ) {
                 value = QString();
                 qAtspiDebug() << "Unknown font-style attribute value \"" << value << "\" cannot be translated to AT-SPI.";
             }
-        } else if (ia2Name == QLatin1String("text-underline-type")) {
+        } else if (ia2Name == QStringLiteral("text-underline-type")) {
             name = QStringLiteral("underline");
-            if (value != QLatin1String("none") &&
-                value != QLatin1String("single") &&
-                value != QLatin1String("double")
+            if (value != QStringLiteral("none") &&
+                value != QStringLiteral("single") &&
+                value != QStringLiteral("double")
             ) {
                 value = QString();
                 qAtspiDebug() << "Unknown text-underline-type attribute value \"" << value << "\" cannot be translated to AT-SPI.";
             }
-        } else if (ia2Name == QLatin1String("font-weight")) {
+        } else if (ia2Name == QStringLiteral("font-weight")) {
             name = QStringLiteral("weight");
-            if (value == QLatin1String("normal"))
+            if (value == QStringLiteral("normal"))
                 // Orca seems to accept all IAccessible2 values except for "normal"
                 // (on which it produces traceback and fails to read any following text attributes),
                 // but that is the default value, so omit it anyway
                 value = QString();
-        } else if (ia2Name == QLatin1String("text-position")) {
+        } else if (ia2Name == QStringLiteral("text-position")) {
             name = QStringLiteral("vertical-align");
-            if (value != QLatin1String("baseline") &&
-                value != QLatin1String("super") &&
-                value != QLatin1String("sub")
+            if (value != QStringLiteral("baseline") &&
+                value != QStringLiteral("super") &&
+                value != QStringLiteral("sub")
             ) {
                 value = QString();
                 qAtspiDebug() << "Unknown text-position attribute value \"" << value << "\" cannot be translated to AT-SPI.";
             }
-        } else if (ia2Name == QLatin1String("writing-mode")) {
+        } else if (ia2Name == QStringLiteral("writing-mode")) {
             name = QStringLiteral("direction");
-            if (value == QLatin1String("lr"))
+            if (value == QStringLiteral("lr"))
                 value = QStringLiteral("ltr");
-            else if (value == QLatin1String("rl"))
+            else if (value == QStringLiteral("rl"))
                 value = QStringLiteral("rtl");
-            else if (value == QLatin1String("tb")) {
+            else if (value == QStringLiteral("tb")) {
                 // IAccessible2 docs refer to XSL, which specifies "tb" is shorthand for "tb-rl"; so at least give a hint about the horizontal direction (ATK does not support vertical direction in this attribute (yet))
                 value = QStringLiteral("rtl");
                 qAtspiDebug() << "writing-mode attribute value \"tb\" translated only w.r.t. horizontal direction; vertical direction ignored";
@@ -2033,9 +2029,9 @@ namespace
                 value = QString();
                 qAtspiDebug() << "Unknown writing-mode attribute value \"" << value << "\" cannot be translated to AT-SPI.";
             }
-        } else if (ia2Name == QLatin1String("language")) {
+        } else if (ia2Name == QStringLiteral("language")) {
             // OK - ATK has no docs on the format of the value, IAccessible2 has reasonable format - leave it at that now
-        } else if (ia2Name == QLatin1String("invalid")) {
+        } else if (ia2Name == QStringLiteral("invalid")) {
             // OK - ATK docs are vague but suggest they support the same range of values as IAccessible2
         } else {
             // attribute we know nothing about
@@ -2079,6 +2075,7 @@ QVariantList AtSpiAdaptor::getAttributeValue(QAccessibleInterface *interface, in
     QSpiAttributeSet map;
     int startOffset;
     int endOffset;
+    bool defined;
 
     joined = interface->textInterface()->attributes(offset, &startOffset, &endOffset);
     attributes = joined.split (QLatin1Char(';'), QString::SkipEmptyParts, Qt::CaseSensitive);
@@ -2090,7 +2087,7 @@ QVariantList AtSpiAdaptor::getAttributeValue(QAccessibleInterface *interface, in
             map[attribute.name] = attribute.value;
     }
     mapped = map[attributeName];
-    const bool defined = !mapped.isEmpty();
+    defined = mapped.isEmpty();
     QVariantList list;
     list << mapped << startOffset << endOffset << defined;
     return list;
@@ -2311,7 +2308,7 @@ bool AtSpiAdaptor::tableInterface(QAccessibleInterface *interface, const QString
             (column < 0) ||
             (row >= interface->tableInterface()->rowCount()) ||
             (column >= interface->tableInterface()->columnCount())) {
-            qAtspiDebug() << "WARNING: invalid index for tableInterface GetAccessibleAt (" << row << ", " << column << ')';
+            qAtspiDebug() << "WARNING: invalid index for tableInterface GetAccessibleAt (" << row << ", " << column << ")";
             return false;
         }
 
@@ -2330,7 +2327,7 @@ bool AtSpiAdaptor::tableInterface(QAccessibleInterface *interface, const QString
         int column = message.arguments().at(1).toInt();
         QAccessibleInterface *cell = interface->tableInterface()->cellAt(row, column);
         if (!cell) {
-            qAtspiDebug() << "WARNING: AtSpiAdaptor::GetIndexAt(" << row << ',' << column << ") did not find a cell. " << interface;
+            qAtspiDebug() << "WARNING: AtSpiAdaptor::GetIndexAt(" << row << "," << column << ") did not find a cell. " << interface;
             return false;
         }
         int index = interface->indexOfChild(cell);

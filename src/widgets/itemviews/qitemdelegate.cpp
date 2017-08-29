@@ -61,7 +61,6 @@
 
 #include <limits.h>
 
-// keep in sync with QAbstractItemDelegate::helpEvent()
 #ifndef DBL_DIG
 #  define DBL_DIG 10
 #endif
@@ -97,7 +96,7 @@ public:
             return text;
         }
 
-    QString valueToText(const QVariant &value, const QStyleOptionViewItem &option) const;
+    static QString valueToText(const QVariant &value, const QStyleOptionViewItem &option);
 
     QItemEditorFactory *f;
     bool clipPainting;
@@ -327,9 +326,40 @@ void QItemDelegate::setClipping(bool clip)
     d->clipPainting = clip;
 }
 
-QString QItemDelegatePrivate::valueToText(const QVariant &value, const QStyleOptionViewItem &option) const
+QString QItemDelegatePrivate::valueToText(const QVariant &value, const QStyleOptionViewItem &option)
 {
-    return textForRole(Qt::DisplayRole, value, option.locale, DBL_DIG);
+    QString text;
+    switch (value.userType()) {
+        case QMetaType::Float:
+            text = option.locale.toString(value.toFloat(), 'g');
+            break;
+        case QVariant::Double:
+            text = option.locale.toString(value.toDouble(), 'g', DBL_DIG);
+            break;
+        case QVariant::Int:
+        case QVariant::LongLong:
+            text = option.locale.toString(value.toLongLong());
+            break;
+        case QVariant::UInt:
+        case QVariant::ULongLong:
+            text = option.locale.toString(value.toULongLong());
+            break;
+        case QVariant::Date:
+            text = option.locale.toString(value.toDate(), QLocale::ShortFormat);
+            break;
+        case QVariant::Time:
+            text = option.locale.toString(value.toTime(), QLocale::ShortFormat);
+            break;
+        case QVariant::DateTime:
+            text = option.locale.toString(value.toDateTime().date(), QLocale::ShortFormat);
+            text += QLatin1Char(' ');
+            text += option.locale.toString(value.toDateTime().time(), QLocale::ShortFormat);
+            break;
+        default:
+            text = replaceNewLine(value.toString());
+            break;
+    }
+    return text;
 }
 
 /*!
@@ -398,7 +428,7 @@ void QItemDelegate::paint(QPainter *painter,
     QRect displayRect;
     value = index.data(Qt::DisplayRole);
     if (value.isValid() && !value.isNull()) {
-        text = d->valueToText(value, opt);
+        text = QItemDelegatePrivate::valueToText(value, opt);
         displayRect = textRectangle(painter, d->textLayoutBounds(opt), opt.font, text);
     }
 
@@ -1025,7 +1055,7 @@ QRect QItemDelegate::rect(const QStyleOptionViewItem &option,
             return QRect(QPoint(0, 0), option.decorationSize);
         case QVariant::String:
         default: {
-            const QString text = d->valueToText(value, option);
+            QString text = QItemDelegatePrivate::valueToText(value, option);
             value = index.data(Qt::FontRole);
             QFont fnt = qvariant_cast<QFont>(value).resolve(option.font);
             return textRectangle(0, d->textLayoutBounds(option), fnt, text); }

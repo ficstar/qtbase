@@ -1,7 +1,8 @@
 TEMPLATE = app
 TARGET = tst_bench_qnetworkdiskcache
 
-QT = core network testlib
+QT += gui # for QDesktopServices
+QT += network testlib
 
 CONFIG += release
 

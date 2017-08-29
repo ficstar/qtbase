@@ -53,6 +53,7 @@
 #include "QtGui/qpainter.h"
 #include "QtGui/qpainterpath.h"
 #include "QtGui/qpaintengine.h"
+#include <QtCore/qhash.h>
 
 #include <private/qpen_p.h>
 
@@ -240,7 +241,7 @@ public:
     }
 
     QTransform viewTransform() const;
-    qreal effectiveDevicePixelRatio() const;
+    int effectiveDevicePixelRatio() const;
     QTransform hidpiScaleTransform() const;
     static bool attachPainterPrivate(QPainter *q, QPaintDevice *pdev);
     void detachPainterPrivate(QPainter *q);

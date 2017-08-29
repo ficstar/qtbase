@@ -84,7 +84,7 @@ public:
 
     void addOutlineToPath(qreal x, qreal y, const QGlyphLayout &glyphs, QPainterPath *path, QTextItem::RenderFlags flags) Q_DECL_OVERRIDE;
     virtual void addGlyphsToPath(glyph_t *glyphs, QFixedPoint *positions, int nglyphs,
-                         QPainterPath *path, QTextItem::RenderFlags flags) Q_DECL_OVERRIDE;
+                         QPainterPath *path, QTextItem::RenderFlags flags);
 
     HGDIOBJ selectDesignFont() const;
 
@@ -108,7 +108,6 @@ public:
     glyph_metrics_t alphaMapBoundingBox(glyph_t glyph, QFixed, const QTransform &matrix, GlyphFormat) Q_DECL_OVERRIDE;
 
     QFontEngine *cloneWithSize(qreal pixelSize) const Q_DECL_OVERRIDE;
-    Qt::HANDLE handle() const Q_DECL_OVERRIDE;
     bool supportsTransformation(const QTransform &transform) const Q_DECL_OVERRIDE;
 
 #ifndef Q_CC_MINGW
@@ -145,6 +144,7 @@ private:
     uint        hasUnreliableOutline : 1;
     uint        cffTable   : 1;
     TEXTMETRIC  tm;
+    int         lw;
     const unsigned char *cmap;
     int cmapSize;
     QByteArray cmapTable;

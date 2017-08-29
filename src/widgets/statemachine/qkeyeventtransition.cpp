@@ -117,7 +117,7 @@ int QKeyEventTransition::key() const
 }
 
 /*!
-  Sets the \a key that this key event transition will check for.
+  Sets the key that this key event transition will check for.
 */
 void QKeyEventTransition::setKey(int key)
 {
@@ -167,7 +167,5 @@ void QKeyEventTransition::onTransition(QEvent *event)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qkeyeventtransition.cpp"
 
 #endif //QT_NO_STATEMACHINE

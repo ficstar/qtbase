@@ -544,9 +544,7 @@ static void makeDistanceField(QDistanceFieldData *data, const QPainterPath &path
             QPoint n(to.y() - from.y(), from.x() - to.x());
             if (n.x() == 0 && n.y() == 0)
                 continue;
-            int scale = qRound((offs << 16) / qSqrt(qreal(n.x()) * n.x() + qreal(n.y()) * n.y())); // 8:16
-            Q_ASSERT(scale != 0);
-
+            int scale = qRound((offs << 16) / qSqrt(qreal(n.x() * n.x() + n.y() * n.y()))); // 8:16
             n.rx() = n.x() * scale >> 8;
             n.ry() = n.y() * scale >> 8;
             normals.append(n);
@@ -689,10 +687,8 @@ static void makeDistanceField(QDistanceFieldData *data, const QPainterPath &path
 
 static bool imageHasNarrowOutlines(const QImage &im)
 {
-    if (im.isNull() || im.width() < 1 || im.height() < 1)
+    if (im.isNull())
         return false;
-    else if (im.width() == 1 || im.height() == 1)
-        return true;
 
     int minHThick = 999;
     int minVThick = 999;
@@ -801,9 +797,8 @@ QDistanceFieldData *QDistanceFieldData::create(const QPainterPath &path, bool do
 {
     int dfMargin = QT_DISTANCEFIELD_RADIUS(doubleResolution) / QT_DISTANCEFIELD_SCALE(doubleResolution);
     int glyphWidth = qCeil(path.boundingRect().width() / QT_DISTANCEFIELD_SCALE(doubleResolution)) + dfMargin * 2;
-    int glyphHeight = qCeil(path.boundingRect().height() / QT_DISTANCEFIELD_SCALE(doubleResolution)) + dfMargin * 2;
 
-    QDistanceFieldData *data = create(QSize(glyphWidth, glyphHeight));
+    QDistanceFieldData *data = create(QSize(glyphWidth, QT_DISTANCEFIELD_TILESIZE(doubleResolution)));
 
     makeDistanceField(data,
                       path,

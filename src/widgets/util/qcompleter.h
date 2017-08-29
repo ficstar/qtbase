@@ -76,10 +76,10 @@ public:
         CaseInsensitivelySortedModel
     };
 
-    QCompleter(QObject *parent = Q_NULLPTR);
-    QCompleter(QAbstractItemModel *model, QObject *parent = Q_NULLPTR);
+    QCompleter(QObject *parent = 0);
+    QCompleter(QAbstractItemModel *model, QObject *parent = 0);
 #ifndef QT_NO_STRINGLISTMODEL
-    QCompleter(const QStringList& completions, QObject *parent = Q_NULLPTR);
+    QCompleter(const QStringList& completions, QObject *parent = 0);
 #endif
     ~QCompleter();
 

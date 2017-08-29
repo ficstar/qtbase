@@ -57,7 +57,7 @@ QT_BEGIN_NAMESPACE
 
     It is up to the platform plugin to manage the lifetime of the
     compositor (instance(), destroy()), set the correct destination
-    context and window as early as possible (setTarget()),
+    context and window as early as possible (setTargetWindow()),
     register the composited windows as they are shown, activated,
     raised and lowered (addWindow(), moveToTop(), etc.), and to
     schedule repaints (update()).
@@ -177,11 +177,11 @@ static inline QRect toBottomLeftRect(const QRect &topLeftRect, int windowHeight)
 
 static void clippedBlit(const QPlatformTextureList *textures, int idx, const QRect &targetWindowRect, QOpenGLTextureBlitter *blitter)
 {
-    const QRect clipRect = textures->clipRect(idx);
-    if (clipRect.isEmpty())
-        return;
-
     const QRect rectInWindow = textures->geometry(idx);
+    QRect clipRect = textures->clipRect(idx);
+    if (clipRect.isEmpty())
+        clipRect = QRect(QPoint(0, 0), rectInWindow.size());
+
     const QRect clippedRectInWindow = rectInWindow & clipRect.translated(rectInWindow.topLeft());
     const QRect srcRect = toBottomLeftRect(clipRect, rectInWindow.height());
 

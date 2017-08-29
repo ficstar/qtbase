@@ -52,7 +52,7 @@ private:
 public:
     QDBusInterface(const QString &service, const QString &path, const QString &interface = QString(),
                    const QDBusConnection &connection = QDBusConnection::sessionBus(),
-                   QObject *parent = Q_NULLPTR);
+                   QObject *parent = 0);
     ~QDBusInterface();
 
     virtual const QMetaObject *metaObject() const Q_DECL_OVERRIDE;

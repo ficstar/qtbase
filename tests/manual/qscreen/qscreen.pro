@@ -1,5 +1,4 @@
 QT += core gui widgets
-CONFIG += console
 
 TARGET = qscreen
 TEMPLATE = app

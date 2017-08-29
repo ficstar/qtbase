@@ -9,10 +9,7 @@ TARGET = ../tst_qapplication
 
 TESTDATA = ../test/test.pro ../tmp/README
 
-!winrt {
-  SUBPROGRAMS = desktopsettingsaware modal
-  win32:!wince: SUBPROGRAMS += wincmdline
+SUBPROGRAMS = desktopsettingsaware modal
+win32:!wince: SUBPROGRAMS += wincmdline
 
-  for(file, SUBPROGRAMS): TEST_HELPER_INSTALLS += "../$${file}/$${file}"
-}
-
+for(file, SUBPROGRAMS): TEST_HELPER_INSTALLS += "../$${file}/$${file}"

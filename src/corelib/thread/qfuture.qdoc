@@ -352,7 +352,6 @@
 /*! \class QFuture::const_iterator
     \reentrant
     \since 4.4
-    \inmodule QtCore
 
     \brief The QFuture::const_iterator class provides an STL-style const
     iterator for QFuture.

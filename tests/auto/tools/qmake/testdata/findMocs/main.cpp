@@ -39,7 +39,6 @@
 #include <moc_object5.cpp>
 #include <moc_object6.cpp>
 #include <moc_object7.cpp>
-#include     "object8.h"
-#include <moc_object9.cpp>
 
-int main() { return 0; }
+int main () {}
+

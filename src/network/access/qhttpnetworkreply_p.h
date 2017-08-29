@@ -121,23 +121,13 @@ public:
     void setUserProvidedDownloadBuffer(char*);
     char* userProvidedDownloadBuffer();
 
-    void abort();
-
-    bool isAborted() const;
     bool isFinished() const;
 
     bool isPipeliningUsed() const;
     bool isSpdyUsed() const;
     void setSpdyWasUsed(bool spdy);
 
-    bool isRedirecting() const;
-
     QHttpNetworkConnection* connection();
-
-    QUrl redirectUrl() const;
-    void setRedirectUrl(const QUrl &url);
-
-    static bool isHttpRedirect(int statusCode);
 
 #ifndef QT_NO_SSL
     QSslConfiguration sslConfiguration() const;
@@ -163,7 +153,6 @@ Q_SIGNALS:
     void proxyAuthenticationRequired(const QNetworkProxy &proxy, QAuthenticator *authenticator);
 #endif
     void authenticationRequired(const QHttpNetworkRequest &request, QAuthenticator *authenticator);
-    void redirected(const QUrl &url, int httpStatus, int maxRedirectsRemaining);
 private:
     Q_DECLARE_PRIVATE(QHttpNetworkReply)
     friend class QHttpSocketEngine;
@@ -175,7 +164,7 @@ private:
 };
 
 
-class Q_AUTOTEST_EXPORT QHttpNetworkReplyPrivate : public QObjectPrivate, public QHttpNetworkHeaderPrivate
+class QHttpNetworkReplyPrivate : public QObjectPrivate, public QHttpNetworkHeaderPrivate
 {
 public:
     QHttpNetworkReplyPrivate(const QUrl &newUrl = QUrl());
@@ -196,7 +185,6 @@ public:
     qint64 readReplyBodyChunked(QAbstractSocket *in, QByteDataBuffer *out);
     qint64 getChunkSize(QAbstractSocket *in, qint64 *chunkSize);
 
-    bool isRedirecting() const;
     bool shouldEmitSignals();
     bool expectContent();
     void eraseData();
@@ -217,8 +205,7 @@ public:
         SPDYSYNSent,
         SPDYUploading,
         SPDYHalfClosed,
-        SPDYClosed,
-        Aborted
+        SPDYClosed
     } state;
 
     QHttpNetworkRequest request;
@@ -258,7 +245,6 @@ public:
     bool downstreamLimited;
 
     char* userProvidedDownloadBuffer;
-    QUrl redirectUrl;
 
 #ifndef QT_NO_COMPRESS
     z_stream_s *inflateStrm;

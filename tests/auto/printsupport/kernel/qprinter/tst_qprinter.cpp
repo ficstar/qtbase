@@ -425,12 +425,12 @@ void tst_QPrinter::outputFormatFromSuffix()
     if (QPrinterInfo::availablePrinters().size() == 0)
         QSKIP("No printers available.");
     QPrinter p;
-    QCOMPARE(p.outputFormat(), QPrinter::NativeFormat);
+    QVERIFY(p.outputFormat() == QPrinter::NativeFormat);
     p.setOutputFileName("test.pdf");
     TempFileCleanup tmpFile("test.pdf");
-    QCOMPARE(p.outputFormat(), QPrinter::PdfFormat);
+    QVERIFY(p.outputFormat() == QPrinter::PdfFormat);
     p.setOutputFileName(QString());
-    QCOMPARE(p.outputFormat(), QPrinter::NativeFormat);
+    QVERIFY(p.outputFormat() == QPrinter::NativeFormat);
 }
 
 void tst_QPrinter::testPageMargins_data()
@@ -1090,12 +1090,12 @@ void tst_QPrinter::doubleSidedPrinting()
     QPrinter native;
     if (native.outputFormat() == QPrinter::NativeFormat) {
         // Test default
-        QPrinterInfo printerInfo(native);
+        QPrinterInfo printerInfo;
         bool expected = (printerInfo.defaultDuplexMode() != QPrinter::DuplexNone);
-        QCOMPARE(native.doubleSidedPrinting(), expected);
+        QCOMPARE(native.doubleSidedPrinting(), false);
 
-        // Test set/get, changing the expected value if possible
-        expected = expected ? false : (printerInfo.supportedDuplexModes().count() > 1);
+        // Test set/get
+        expected = (printerInfo.supportedDuplexModes().count() > 1);
         native.setDoubleSidedPrinting(expected);
         QCOMPARE(native.doubleSidedPrinting(), expected);
 
@@ -1628,24 +1628,7 @@ void tst_QPrinter::resolution()
         // Test set/get
         int expected = 333;
 #ifdef Q_OS_MAC
-        // QMacPrintEngine chooses the closest supported resolution.
-        const QList<int> all_supported = native.supportedResolutions();
-        foreach (int supported, all_supported) {
-            // Test setting a supported resolution
-            int requested = supported;
-            native.setResolution(requested);
-            QCOMPARE(native.resolution(), requested);
-
-            // Test setting an unsupported resolution
-            do {
-                requested += 5;
-            } while (all_supported.contains(requested));
-            native.setResolution(requested);
-            int result = native.resolution();
-            QVERIFY(all_supported.contains(result));
-            QVERIFY(qAbs(result - requested) <= qAbs(supported - requested));
-        }
-
+        // Set resolution does nothing on OSX, see QTBUG-7000
         expected = native.resolution();
 #endif // Q_OS_MAC
         native.setResolution(expected);

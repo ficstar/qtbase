@@ -171,8 +171,6 @@ QInputEvent::~QInputEvent()
     \fn ulong QInputEvent::timestamp() const
 
     Returns the window system's timestamp for this event.
-    It will normally be in milliseconds since some arbitrary point
-    in time, such as the time when the system was started.
 */
 
 /*! \fn void QInputEvent::setTimestamp(ulong atimestamp)
@@ -309,36 +307,6 @@ QMouseEvent::QMouseEvent(Type type, const QPointF &localPos, const QPointF &wind
                          Qt::KeyboardModifiers modifiers)
     : QInputEvent(type, modifiers), l(localPos), w(windowPos), s(screenPos), b(button), mouseState(buttons), caps(0)
 {}
-
-/*!
-    \since 5.6
-
-    Constructs a mouse event object.
-
-    The \a type parameter must be QEvent::MouseButtonPress,
-    QEvent::MouseButtonRelease, QEvent::MouseButtonDblClick,
-    or QEvent::MouseMove.
-
-    The points \a localPos, \a windowPos and \a screenPos specify the
-    mouse cursor's position relative to the receiving widget or item,
-    window, and screen, respectively.
-
-    The \a button that caused the event is given as a value from the
-    \l Qt::MouseButton enum. If the event \a type is \l MouseMove,
-    the appropriate button for this event is Qt::NoButton. \a buttons
-    is the state of all buttons at the time of the event, \a modifiers
-    is the state of all keyboard modifiers.
-
-    The source of the event is specified by \a source.
-
-*/
-QMouseEvent::QMouseEvent(QEvent::Type type, const QPointF &localPos, const QPointF &windowPos, const QPointF &screenPos,
-                         Qt::MouseButton button, Qt::MouseButtons buttons,
-                         Qt::KeyboardModifiers modifiers, Qt::MouseEventSource source)
-    : QInputEvent(type, modifiers), l(localPos), w(windowPos), s(screenPos), b(button), mouseState(buttons), caps(0)
-{
-    QGuiApplicationPrivate::setMouseEventSource(this, source);
-}
 
 /*!
     \internal
@@ -653,7 +621,7 @@ QHoverEvent::~QHoverEvent()
     wheel event delta: angleDelta() returns the delta in wheel
     degrees. This value is always provided. pixelDelta() returns
     the delta in screen pixels and is available on platforms that
-    have high-resolution trackpads, such as \macos. If that is the
+    have high-resolution trackpads, such as OS X. If that is the
     case, source() will return Qt::MouseEventSynthesizedBySystem.
 
     The functions pos() and globalPos() return the mouse cursor's
@@ -726,11 +694,8 @@ QHoverEvent::~QHoverEvent()
 QWheelEvent::QWheelEvent(const QPointF &pos, int delta,
                          Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers,
                          Qt::Orientation orient)
-    : QInputEvent(Wheel, modifiers), p(pos), qt4D(delta), qt4O(orient), mouseState(buttons),
-      ph(Qt::NoScrollPhase), src(Qt::MouseEventNotSynthesized)
+    : QInputEvent(Wheel, modifiers), p(pos), qt4D(delta), qt4O(orient), mouseState(buttons)
 {
-    if (!QGuiApplicationPrivate::scrollNoPhaseAllowed)
-        ph = Qt::ScrollUpdate;
     g = QCursor::pos();
     if (orient == Qt::Vertical)
         angleD = QPoint(0, delta);
@@ -763,11 +728,8 @@ QWheelEvent::~QWheelEvent()
 QWheelEvent::QWheelEvent(const QPointF &pos, const QPointF& globalPos, int delta,
                          Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers,
                          Qt::Orientation orient)
-    : QInputEvent(Wheel, modifiers), p(pos), g(globalPos), qt4D(delta), qt4O(orient), mouseState(buttons),
-      ph(Qt::NoScrollPhase), src(Qt::MouseEventNotSynthesized)
+    : QInputEvent(Wheel, modifiers), p(pos), g(globalPos), qt4D(delta), qt4O(orient), mouseState(buttons)
 {
-    if (!QGuiApplicationPrivate::scrollNoPhaseAllowed)
-        ph = Qt::ScrollUpdate;
     if (orient == Qt::Vertical)
         angleD = QPoint(0, delta);
     else
@@ -802,12 +764,8 @@ QWheelEvent::QWheelEvent(const QPointF &pos, const QPointF& globalPos,
             QPoint pixelDelta, QPoint angleDelta, int qt4Delta, Qt::Orientation qt4Orientation,
             Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
     : QInputEvent(Wheel, modifiers), p(pos), g(globalPos), pixelD(pixelDelta),
-      angleD(angleDelta), qt4D(qt4Delta), qt4O(qt4Orientation), mouseState(buttons), ph(Qt::NoScrollPhase),
-      src(Qt::MouseEventNotSynthesized)
-{
-    if (!QGuiApplicationPrivate::scrollNoPhaseAllowed)
-        ph = Qt::ScrollUpdate;
-}
+      angleD(angleDelta), qt4D(qt4Delta), qt4O(qt4Orientation), mouseState(buttons), ph(Qt::ScrollUpdate)
+{}
 
 /*!
     Constructs a wheel event object.
@@ -883,7 +841,7 @@ QWheelEvent::QWheelEvent(const QPointF &pos, const QPointF& globalPos,
 
     Returns the scrolling distance in pixels on screen. This value is
     provided on platforms that support high-resolution pixel-based
-    delta values, such as \macos. The value should be used directly
+    delta values, such as OS X. The value should be used directly
     to scroll content on screen.
 
     Example:
@@ -1024,7 +982,7 @@ QWheelEvent::QWheelEvent(const QPointF &pos, const QPointF& globalPos,
     Returns the scrolling phase of this wheel event.
 
     \note The Qt::ScrollBegin and Qt::ScrollEnd phases are currently
-    supported only on \macos.
+    supported only on OS X.
 */
 
 
@@ -1039,10 +997,8 @@ QWheelEvent::QWheelEvent(const QPointF &pos, const QPointF& globalPos,
     when keys are pressed or released.
 
     A key event contains a special accept flag that indicates whether
-    the receiver will handle the key event. This flag is set by default
-    for QEvent::KeyPress and QEvent::KeyRelease, so there is no need to
-    call accept() when acting on a key event. For QEvent::ShortcutOverride
-    the receiver needs to explicitly accept the event to trigger the override.
+    the receiver will handle the key event. This flag is set by default,
+    so there is no need to call accept() when acting on a key event.
     Calling ignore() on a key event will propagate it to the parent widget.
     The event is propagated up the parent widget chain until a widget
     accepts it or an event filter consumes it.
@@ -1077,8 +1033,6 @@ QKeyEvent::QKeyEvent(Type type, int key, Qt::KeyboardModifiers modifiers, const 
       nScanCode(0), nVirtualKey(0), nModifiers(0),
       c(count), autor(autorep)
 {
-     if (type == QEvent::ShortcutOverride)
-        ignore();
 }
 
 /*!
@@ -1106,8 +1060,6 @@ QKeyEvent::QKeyEvent(Type type, int key, Qt::KeyboardModifiers modifiers,
       nScanCode(nativeScanCode), nVirtualKey(nativeVirtualKey), nModifiers(nativeModifiers),
       c(count), autor(autorep)
 {
-    if (type == QEvent::ShortcutOverride)
-        ignore();
 }
 
 
@@ -1642,7 +1594,7 @@ QCloseEvent::~QCloseEvent()
    \ingroup events
 
    Icon drag events are sent to widgets when the main icon of a window
-   has been dragged away. On \macos, this happens when the proxy
+   has been dragged away. On OS X, this happens when the proxy
    icon of a window is dragged off the title bar.
 
    It is normal to begin using drag and drop in response to this
@@ -2033,11 +1985,6 @@ QInputMethodEvent::QInputMethodEvent(const QInputMethodEvent &other)
     : QEvent(QEvent::InputMethod), preedit(other.preedit), attrs(other.attrs),
       commit(other.commit), replace_from(other.replace_from), replace_length(other.replace_length)
 {
-}
-
-QInputMethodEvent::~QInputMethodEvent()
-{
-    // must be empty until ### Qt 6
 }
 
 /*!
@@ -2653,15 +2600,15 @@ Qt::MouseButtons QTabletEvent::buttons() const
     \row
         \li Qt::ZoomNativeGesture
         \li Magnification delta in percent.
-        \li \macos: Two-finger pinch.
+        \li OS X: Two-finger pinch.
     \row
         \li Qt::SmartZoomNativeGesture
         \li Boolean magnification state.
-        \li \macos: Two-finger douple tap (trackpad) / One-finger douple tap (magic mouse).
+        \li OS X: Two-finger douple tap (trackpad) / One-finger douple tap (magic mouse).
     \row
         \li Qt::RotateNativeGesture
         \li Rotation delta in degrees.
-        \li \macos: Two-finger rotate.
+        \li OS X: Two-finger rotate.
     \endtable
 
 
@@ -2684,7 +2631,7 @@ Qt::MouseButtons QTabletEvent::buttons() const
     gesture position relative to the receiving widget or item,
     window, and screen, respectively.
 
-    \a realValue is the \macos event parameter, \a sequenceId and \a intValue are the Windows event parameters.
+    \a realValue is the OS X event parameter, \a sequenceId and \a intValue are the Windows event parameters.
 */
 QNativeGestureEvent::QNativeGestureEvent(Qt::NativeGestureType type, const QPointF &localPos, const QPointF &windowPos,
                                          const QPointF &screenPos, qreal realValue, ulong sequenceId, quint64 intValue)
@@ -3421,27 +3368,12 @@ QShowEvent::~QShowEvent()
     when the operating system requests that a file or URL should be opened.
     This is a high-level event that can be caused by different user actions
     depending on the user's desktop environment; for example, double
-    clicking on an file icon in the Finder on \macos.
+    clicking on an file icon in the Finder on OS X.
 
     This event is only used to notify the application of a request.
     It may be safely ignored.
 
-    \note This class is currently supported for \macos only.
-
-    \section1 \macos Example
-
-    In order to trigger the event on \macos, the application must be configured
-    to let the OS know what kind of file(s) it should react on.
-
-    For example, the following \c Info.plist file declares that the application
-    can act as a viewer for files with a PNG extension:
-
-    \snippet qfileopenevent/Info.plist Custom Info.plist
-
-    The following implementation of a QApplication subclass prints the path to
-    the file that was, for example, dropped on the Dock icon of the application.
-
-    \snippet qfileopenevent/main.cpp QApplication subclass
+    \note This class is currently supported for OS X only.
 */
 
 /*!
@@ -3507,13 +3439,13 @@ bool QFileOpenEvent::openFile(QFile &file, QIODevice::OpenMode flags) const
     \internal
     \class QToolBarChangeEvent
     \brief The QToolBarChangeEvent class provides an event that is
-    sent whenever a the toolbar button is clicked on \macos.
+    sent whenever a the toolbar button is clicked on OS X.
 
     \ingroup events
     \inmodule QtGui
 
-    The QToolBarChangeEvent is sent when the toolbar button is clicked. On
-    \macos, this is the long oblong button on the right side of the window
+    The QToolBarChangeEvent is sent when the toolbar button is clicked. On Mac
+    OS X, this is the long oblong button on the right side of the window
     title bar. The default implementation is to toggle the appearance (hidden or
     shown) of the associated toolbars for the window.
 */
@@ -3579,7 +3511,6 @@ static inline void formatTouchEvent(QDebug d, const QTouchEvent &t)
 {
     d << "QTouchEvent(";
     QtDebugUtils::formatQEnum(d, t.type());
-    d << " device: " << t.device()->name();
     d << " states: ";
     QtDebugUtils::formatQFlags(d, t.touchPointStates());
     d << ", " << t.touchPoints().size() << " points: " << t.touchPoints() << ')';
@@ -3841,9 +3772,6 @@ QDebug operator<<(QDebug dbg, const QEvent *e)
     switch (type) {
     case QEvent::Expose:
         dbg << "QExposeEvent(" << static_cast<const QExposeEvent *>(e)->region() << ')';
-        break;
-    case QEvent::Paint:
-        dbg << "QPaintEvent(" << static_cast<const QPaintEvent *>(e)->region() << ')';
         break;
     case QEvent::MouseButtonPress:
     case QEvent::MouseMove:

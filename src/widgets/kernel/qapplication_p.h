@@ -150,7 +150,7 @@ public:
 
     bool notify_helper(QObject *receiver, QEvent * e);
 
-    void init(
+    void construct(
 #ifdef Q_DEAD_CODE_FROM_QT4_X11
                    Display *dpy = 0, Qt::HANDLE visual = 0, Qt::HANDLE cmap = 0
 #endif
@@ -202,7 +202,6 @@ public:
     static QWidget *active_window;
 #ifndef QT_NO_WHEELEVENT
     static int  wheel_scroll_lines;
-    static QPointer<QWidget> wheel_widget;
 #endif
 
     static int enabledAnimations; // Combination of QPlatformTheme::UiEffect
@@ -219,6 +218,8 @@ public:
 #endif
 
     static QApplicationPrivate *instance() { return self; }
+
+    static QString styleOverride;
 
 #ifdef QT_KEYPAD_NAVIGATION
     static QWidget *oldEditFocus;
@@ -282,7 +283,6 @@ public:
     QWidget *findClosestTouchPointTarget(QTouchDevice *device, const QTouchEvent::TouchPoint &touchPoint);
     void appendTouchPoint(const QTouchEvent::TouchPoint &touchPoint);
     void removeTouchPoint(int touchPointId);
-    void activateImplicitTouchGrab(QWidget *widget, QTouchEvent *touchBeginEvent);
     static bool translateRawTouchEvent(QWidget *widget,
                                        QTouchDevice *device,
                                        const QList<QTouchEvent::TouchPoint> &touchPoints,

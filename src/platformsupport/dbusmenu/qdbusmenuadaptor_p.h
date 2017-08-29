@@ -45,17 +45,6 @@
 #ifndef DBUSMENUADAPTOR_H
 #define DBUSMENUADAPTOR_H
 
-//
-//  W A R N I N G
-//  -------------
-//
-// This file is not part of the Qt API.  It exists purely as an
-// implementation detail.  This header file may change from version to
-// version without notice, or even be removed.
-//
-// We mean it.
-//
-
 #include <QtCore/QObject>
 #include <QtDBus/QtDBus>
 #include "qdbusmenutypes_p.h"
@@ -140,7 +129,7 @@ class QDBusMenuAdaptor: public QDBusAbstractAdaptor
 "  </interface>\n"
         "")
 public:
-    QDBusMenuAdaptor(QDBusPlatformMenu *topLevelMenu);
+    QDBusMenuAdaptor(QObject *parent);
     virtual ~QDBusMenuAdaptor();
 
 public: // PROPERTIES
@@ -157,7 +146,7 @@ public Q_SLOTS: // METHODS
     bool AboutToShow(int id);
     QList<int> AboutToShowGroup(const QList<int> &ids, QList<int> &idErrors);
     void Event(int id, const QString &eventId, const QDBusVariant &data, uint timestamp);
-    QList<int> EventGroup(const QDBusMenuEventList &events);
+    void EventGroup(const QDBusMenuEventList &events);
     QDBusMenuItemList GetGroupProperties(const QList<int> &ids, const QStringList &propertyNames);
     uint GetLayout(int parentId, int recursionDepth, const QStringList &propertyNames, QDBusMenuLayoutItem &layout);
     QDBusVariant GetProperty(int id, const QString &name);
@@ -166,9 +155,6 @@ Q_SIGNALS: // SIGNALS
     void ItemActivationRequested(int id, uint timestamp);
     void ItemsPropertiesUpdated(const QDBusMenuItemList &updatedProps, const QDBusMenuItemKeysList &removedProps);
     void LayoutUpdated(uint revision, int parent);
-
-private:
-    QDBusPlatformMenu *m_topLevelMenu;
 };
 
 QT_END_NAMESPACE

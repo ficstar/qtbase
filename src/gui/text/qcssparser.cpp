@@ -54,7 +54,7 @@ using namespace QCss;
 
 struct QCssKnownValue
 {
-    const char name[28];
+    const char *name;
     quint64 id;
 };
 
@@ -461,7 +461,6 @@ void ValueExtractor::lengthValues(const Declaration &decl, int *m)
     }
 
     QList<QVariant> v;
-    v.reserve(4);
     for (i = 0; i < 4; i++) {
         v += QVariant::fromValue<LengthData>(datas[i]);
         m[i] = lengthValueFromData(datas[i], f);

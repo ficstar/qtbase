@@ -43,7 +43,7 @@ QT_BEGIN_NAMESPACE
 
 QPointF QScrollerPrivate::realDpi(int screen)
 {
-    QMacAutoReleasePool pool;
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     NSArray *nsscreens = [NSScreen screens];
 
     if (screen < 0 || screen >= int([nsscreens count]))
@@ -59,6 +59,7 @@ QPointF QScrollerPrivate::realDpi(int screen)
     } else {
         return QPointF();
     }
+    [pool release];
 }
 
 QT_END_NAMESPACE

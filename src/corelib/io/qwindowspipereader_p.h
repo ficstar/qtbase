@@ -45,12 +45,16 @@
 // We mean it.
 //
 
+#include <qbytearray.h>
 #include <qobject.h>
 #include <private/qringbuffer_p.h>
 
 #include <qt_windows.h>
 
 QT_BEGIN_NAMESPACE
+
+
+class QWinOverlappedIoNotifier;
 
 class Q_CORE_EXPORT QWindowsPipeReader : public QObject
 {
@@ -60,7 +64,6 @@ public:
     ~QWindowsPipeReader();
 
     void setHandle(HANDLE hPipeReadEnd);
-    void startAsyncRead();
     void stop();
 
     void setMaxReadBufferSize(qint64 size) { readBufferMaxSize = size; }
@@ -73,42 +76,31 @@ public:
     bool waitForReadyRead(int msecs);
     bool waitForPipeClosed(int msecs);
 
+    void startAsyncRead();
     bool isReadOperationActive() const { return readSequenceStarted; }
 
 Q_SIGNALS:
     void winError(ulong, const QString &);
     void readyRead();
     void pipeClosed();
-    void _q_queueReadyRead(QPrivateSignal);
+
+private Q_SLOTS:
+    void notified(quint32 numberOfBytesRead, quint32 errorCode, OVERLAPPED *notifiedOverlapped);
 
 private:
-    static void CALLBACK readFileCompleted(DWORD errorCode, DWORD numberOfBytesTransfered,
-                                           OVERLAPPED *overlappedBase);
-    void notified(DWORD errorCode, DWORD numberOfBytesRead);
     DWORD checkPipeState();
-    bool waitForNotification(int timeout);
-    void emitPendingReadyRead();
 
-    class Overlapped : public OVERLAPPED
-    {
-        Q_DISABLE_COPY(Overlapped)
-    public:
-        explicit Overlapped(QWindowsPipeReader *reader);
-        void clear();
-        QWindowsPipeReader *pipeReader;
-    };
-
+private:
     HANDLE handle;
-    Overlapped overlapped;
+    OVERLAPPED overlapped;
+    QWinOverlappedIoNotifier *dataReadNotifier;
     qint64 readBufferMaxSize;
     QRingBuffer readBuffer;
-    qint64 actualReadBufferSize;
+    int actualReadBufferSize;
     bool stopped;
     bool readSequenceStarted;
-    bool notifiedCalled;
     bool pipeBroken;
-    bool readyReadPending;
-    bool inReadyRead;
+    bool readyReadEmitted;
 };
 
 QT_END_NAMESPACE

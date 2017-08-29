@@ -39,7 +39,6 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
-#include <QStatusBar>
 #include <QVector>
 #include <QPainter>
 #include <QCursor>
@@ -73,9 +72,6 @@ public:
 public slots:
     void clearPoints() { m_points.clear(); update(); }
 
-signals:
-    void stats(QString s);
-
 protected:
     void mouseDoubleClickEvent(QMouseEvent *event) { outputMouseEvent(event); }
     void mouseMoveEvent(QMouseEvent *event) { outputMouseEvent(event); }
@@ -85,7 +81,6 @@ protected:
     void tabletEvent(QTabletEvent *);
 
     void paintEvent(QPaintEvent *);
-    void timerEvent(QTimerEvent *);
 
 private:
     void outputMouseEvent(QMouseEvent *event);
@@ -94,36 +89,28 @@ private:
     bool m_lastIsTabletMove;
     Qt::MouseButton m_lastButton;
     QVector<TabletPoint> m_points;
-    int m_tabletMoveCount;
-    int m_paintEventCount;
 };
 
 EventReportWidget::EventReportWidget()
     : m_lastIsMouseMove(false)
     , m_lastIsTabletMove(false)
     , m_lastButton(Qt::NoButton)
-    , m_tabletMoveCount(0)
-    , m_paintEventCount(0)
-{
-    startTimer(1000);
-}
+{ }
 
 void EventReportWidget::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
-    int lineSpacing = fontMetrics().lineSpacing();
-    int halfLineSpacing = lineSpacing / 2;
     const QRectF geom = QRectF(QPoint(0, 0), size());
     p.fillRect(geom, Qt::white);
     p.drawRect(QRectF(geom.topLeft(), geom.bottomRight() - QPointF(1,1)));
     p.setPen(Qt::white);
     QPainterPath ellipse;
-    ellipse.addEllipse(0, 0, halfLineSpacing * 5, halfLineSpacing);
+    ellipse.addEllipse(0, 0, 50, 10);
     foreach (const TabletPoint &t, m_points) {
         if (geom.contains(t.pos)) {
               QPainterPath pp;
-              pp.addEllipse(t.pos, halfLineSpacing, halfLineSpacing);
-              QRectF pointBounds(t.pos.x() - halfLineSpacing, t.pos.y() - halfLineSpacing, lineSpacing, lineSpacing);
+              pp.addEllipse(t.pos, 8, 8);
+              QRectF pointBounds(t.pos.x() - 10, t.pos.y() - 10, 20, 20);
               switch (t.type) {
               case TabletButtonPress:
                   p.fillPath(pp, Qt::darkGreen);
@@ -146,7 +133,7 @@ void EventReportWidget::paintEvent(QPaintEvent *)
                           p.drawPath(ellipse);
                           p.restore();
                       } else {
-                          p.drawEllipse(t.pos, t.pressure * halfLineSpacing, t.pressure * halfLineSpacing);
+                          p.drawEllipse(t.pos, t.pressure * 10.0, t.pressure * 10.0);
                       }
                       p.setPen(Qt::white);
                   } else {
@@ -156,7 +143,6 @@ void EventReportWidget::paintEvent(QPaintEvent *)
               }
           }
     }
-    ++m_paintEventCount;
 }
 
 void EventReportWidget::tabletEvent(QTabletEvent *event)
@@ -166,13 +152,11 @@ void EventReportWidget::tabletEvent(QTabletEvent *event)
     switch (event->type()) {
     case QEvent::TabletEnterProximity:
     case QEvent::TabletLeaveProximity:
-        qDebug() << "proximity" << event;
         break;
     case QEvent::TabletMove:
         m_points.push_back(TabletPoint(event->pos(), TabletMove, m_lastButton, event->pointerType(), event->pressure(), event->rotation()));
         update();
         isMove = true;
-        ++m_tabletMoveCount;
         break;
     case QEvent::TabletPress:
         m_points.push_back(TabletPoint(event->pos(), TabletButtonPress, event->button(), event->pointerType(), event->rotation()));
@@ -208,13 +192,6 @@ void EventReportWidget::outputMouseEvent(QMouseEvent *event)
     qDebug() << event;
 }
 
-void EventReportWidget::timerEvent(QTimerEvent *)
-{
-    emit stats(QString("%1 moves/sec, %2 frames/sec").arg(m_tabletMoveCount).arg(m_paintEventCount));
-    m_tabletMoveCount = 0;
-    m_paintEventCount = 0;
-}
-
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -224,7 +201,6 @@ int main(int argc, char *argv[])
     widget->setMinimumSize(640, 480);
     QMenu *fileMenu = mainWindow.menuBar()->addMenu("File");
     QObject::connect(fileMenu->addAction("Clear"), SIGNAL(triggered()), widget, SLOT(clearPoints()));
-    QObject::connect(widget, SIGNAL(stats(QString)), mainWindow.statusBar(), SLOT(showMessage(QString)));
     QAction *quitAction = fileMenu->addAction("Quit");
     QObject::connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     quitAction->setShortcut(Qt::CTRL + Qt::Key_Q);

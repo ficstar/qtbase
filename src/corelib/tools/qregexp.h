@@ -45,9 +45,6 @@ QT_BEGIN_NAMESPACE
 
 struct QRegExpPrivate;
 class QStringList;
-class QRegExp;
-
-Q_CORE_EXPORT uint qHash(const QRegExp &key, uint seed = 0) Q_DECL_NOTHROW;
 
 class Q_CORE_EXPORT QRegExp
 {
@@ -106,8 +103,6 @@ public:
 #endif
 
     static QString escape(const QString &str);
-
-    friend Q_CORE_EXPORT uint qHash(const QRegExp &key, uint seed) Q_DECL_NOTHROW;
 
 private:
     QRegExpPrivate *priv;

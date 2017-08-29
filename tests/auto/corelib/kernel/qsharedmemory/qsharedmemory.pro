@@ -1,5 +1,3 @@
 TEMPLATE = subdirs
 
-!winrt: SUBDIRS = sharedmemoryhelper
-
-SUBDIRS += test
+SUBDIRS = sharedmemoryhelper test

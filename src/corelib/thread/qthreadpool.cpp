@@ -204,8 +204,8 @@ void QThreadPoolPrivate::enqueueTask(QRunnable *runnable, int priority)
         ++runnable->ref;
 
     // put it on the queue
-    QVector<QPair<QRunnable *, int> >::const_iterator begin = queue.constBegin();
-    QVector<QPair<QRunnable *, int> >::const_iterator it = queue.constEnd();
+    QList<QPair<QRunnable *, int> >::const_iterator begin = queue.constBegin();
+    QList<QPair<QRunnable *, int> >::const_iterator it = queue.constEnd();
     if (it != begin && priority > (*(it - 1)).second)
         it = std::upper_bound(begin, --it, priority);
     queue.insert(it - begin, qMakePair(runnable, priority));
@@ -299,7 +299,7 @@ bool QThreadPoolPrivate::waitForDone(int msecs)
 void QThreadPoolPrivate::clear()
 {
     QMutexLocker locker(&mutex);
-    for (QVector<QPair<QRunnable *, int> >::const_iterator it = queue.constBegin();
+    for (QList<QPair<QRunnable *, int> >::const_iterator it = queue.constBegin();
          it != queue.constEnd(); ++it) {
         QRunnable* r = it->first;
         if (r->autoDelete() && !--r->ref)
@@ -319,8 +319,8 @@ bool QThreadPoolPrivate::stealRunnable(QRunnable *runnable)
         return false;
     {
         QMutexLocker locker(&mutex);
-        QVector<QPair<QRunnable *, int> >::iterator it = queue.begin();
-        QVector<QPair<QRunnable *, int> >::iterator end = queue.end();
+        QList<QPair<QRunnable *, int> >::iterator it = queue.begin();
+        QList<QPair<QRunnable *, int> >::iterator end = queue.end();
 
         while (it != end) {
             if (it->first == runnable) {

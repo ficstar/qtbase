@@ -49,7 +49,6 @@ struct PropertyContainer
     QString value;
     QMap<QString, PropertyContainer> properties;
 };
-Q_DECLARE_TYPEINFO(PropertyContainer, Q_MOVABLE_TYPE);
 
 CeSdkInfo::CeSdkInfo() : m_major(0) , m_minor(0)
 {
@@ -61,17 +60,17 @@ CeSdkHandler::CeSdkHandler()
 
 struct ContainsPathKey
 {
-    bool operator()(const QString &val) const
+    bool operator()(const QString &val)
     {
-        return !(val.endsWith(QLatin1String("MSBuildToolsPath"))
-                 || val.endsWith(QLatin1String("MSBuildToolsRoot")));
+        return !(val.endsWith(QStringLiteral("MSBuildToolsPath"))
+                 || val.endsWith(QStringLiteral("MSBuildToolsRoot")));
     }
 };
 
 struct ValueFromKey
 {
-    explicit ValueFromKey(const QSettings *settings) : settings(settings) {}
-    QString operator()(const QString &key) const
+    ValueFromKey(const QSettings *settings) : settings(settings){}
+    QString operator()(const QString &key)
     {
         return settings->value(key).toString();
     }
@@ -141,13 +140,13 @@ bool CeSdkHandler::parseMsBuildFile(QFile *file, CeSdkInfo *info)
     if (success) {
         const QString startPattern = QStringLiteral("$(Registry:");
         const int startIndex = sdkRootPath.indexOf(startPattern);
-        const int endIndex = sdkRootPath.lastIndexOf(QLatin1Char(')'));
+        const int endIndex = sdkRootPath.lastIndexOf(QStringLiteral(")"));
         const QString regString = sdkRootPath.mid(startIndex + startPattern.size(),
                                                   endIndex - startIndex - startPattern.size());
         QSettings sdkRootPathRegistry(regString, QSettings::NativeFormat);
         const QString erg = sdkRootPathRegistry.value(QStringLiteral(".")).toString();
         const QString fullSdkRootPath = erg + sdkRootPath.mid(endIndex + 1);
-        const QLatin1String rootString("$(SdkRootPath)");
+        const QString rootString = QStringLiteral("$(SdkRootPath)");
 
         includePath = includePath.replace(rootString, fullSdkRootPath);
         libraryPath = libraryPath.replace(rootString, fullSdkRootPath);
@@ -179,14 +178,13 @@ QStringList CeSdkHandler::filterMsBuildToolPaths(const QStringList &paths) const
 {
     QStringList result;
     foreach (const QString &path, paths) {
-        QDir dirVC110(path);
-        if (path.endsWith(QLatin1String("bin")))
-            dirVC110.cdUp();
-        QDir dirVC120 = dirVC110;
-        if (dirVC110.cd(QStringLiteral("Microsoft.Cpp\\v4.0\\V110\\Platforms")))
-            result << dirVC110.absolutePath();
-        if (dirVC120.cd(QStringLiteral("Microsoft.Cpp\\v4.0\\V120\\Platforms")))
-            result << dirVC120.absolutePath();
+        QDir dir(path);
+        if (path.endsWith(QStringLiteral("bin")))
+            dir.cdUp();
+        if (dir.cd(QStringLiteral("Microsoft.Cpp\\v4.0\\V110\\Platforms"))
+            || dir.cd(QStringLiteral("Microsoft.Cpp\\v4.0\\V120\\Platforms"))) {
+            result << dir.absolutePath();
+        }
     }
     return result;
 }
@@ -279,7 +277,7 @@ void CeSdkHandler::retrieveWEC2013SDKs()
             if (cpuInfo.properties.isEmpty())
                 continue;
             const PropertyContainer &cpuInfoVal = cpuInfo.properties.first().properties.value(QLatin1String("CpuName"));
-            if (cpuInfoVal.name != QLatin1String("CpuName"))
+            if (cpuInfoVal.name != QStringLiteral("CpuName"))
                 continue;
             const QString SDKName = QStringLiteral("SDK name");
             currentSdk.m_name = currentProperty.properties.value(SDKName).value+
@@ -287,8 +285,6 @@ void CeSdkHandler::retrieveWEC2013SDKs()
             currentSdk.m_major = currentProperty.properties.value(QLatin1String("OSMajor")).value.toInt();
             currentSdk.m_minor = currentProperty.properties.value(QLatin1String("OSMinor")).value.toInt();
             retrieveEnvironment(currentProperty.properties.value(QLatin1String("MSBuild Files110")).value.split(';'),
-                                filteredToolPaths, &currentSdk);
-            retrieveEnvironment(currentProperty.properties.value(QLatin1String("MSBuild Files120")).value.split(';'),
                                 filteredToolPaths, &currentSdk);
             if (!currentSdk.m_include.isEmpty())
                 m_list.append(currentSdk);

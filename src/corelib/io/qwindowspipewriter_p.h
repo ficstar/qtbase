@@ -46,11 +46,15 @@
 //
 
 #include <qelapsedtimer.h>
-#include <qobject.h>
-#include <qbytearray.h>
+#include <qthread.h>
+#include <qmutex.h>
+#include <qwaitcondition.h>
 #include <qt_windows.h>
 
 QT_BEGIN_NAMESPACE
+
+
+#ifndef QT_NO_THREAD
 
 #define SLEEPMIN 10
 #define SLEEPMAX 500
@@ -100,52 +104,45 @@ private:
     int nextSleep;
 };
 
-class Q_CORE_EXPORT QWindowsPipeWriter : public QObject
+class Q_CORE_EXPORT QWindowsPipeWriter : public QThread
 {
     Q_OBJECT
-public:
-    explicit QWindowsPipeWriter(HANDLE pipeWriteEnd, QObject *parent = 0);
-    ~QWindowsPipeWriter();
-
-    bool write(const QByteArray &ba);
-    void stop();
-    bool waitForWrite(int msecs);
-    bool isWriteOperationActive() const { return writeSequenceStarted; }
-    qint64 bytesToWrite() const;
 
 Q_SIGNALS:
     void canWrite();
     void bytesWritten(qint64 bytes);
-    void _q_queueBytesWritten(QPrivateSignal);
+
+public:
+    explicit QWindowsPipeWriter(HANDLE writePipe, QObject * parent = 0);
+    ~QWindowsPipeWriter();
+
+    bool waitForWrite(int msecs);
+    qint64 write(const char *data, qint64 maxlen);
+
+    qint64 bytesToWrite() const
+    {
+        QMutexLocker locker(&lock);
+        return data.size();
+    }
+
+    bool hadWritten() const
+    {
+        return hasWritten;
+    }
+
+protected:
+   void run();
 
 private:
-    static void CALLBACK writeFileCompleted(DWORD errorCode, DWORD numberOfBytesTransfered,
-                                            OVERLAPPED *overlappedBase);
-    void notified(DWORD errorCode, DWORD numberOfBytesWritten);
-    bool waitForNotification(int timeout);
-    void emitPendingBytesWrittenValue();
-
-    class Overlapped : public OVERLAPPED
-    {
-        Q_DISABLE_COPY(Overlapped)
-    public:
-        explicit Overlapped(QWindowsPipeWriter *pipeWriter);
-        void clear();
-
-        QWindowsPipeWriter *pipeWriter;
-    };
-
-    HANDLE handle;
-    Overlapped overlapped;
-    QByteArray buffer;
-    qint64 numberOfBytesToWrite;
-    qint64 pendingBytesWrittenValue;
-    bool stopped;
-    bool writeSequenceStarted;
-    bool notifiedCalled;
-    bool bytesWrittenPending;
-    bool inBytesWritten;
+    QByteArray data;
+    QWaitCondition waitCondition;
+    mutable QMutex lock;
+    HANDLE writePipe;
+    volatile bool quitNow;
+    bool hasWritten;
 };
+
+#endif //QT_NO_THREAD
 
 QT_END_NAMESPACE
 

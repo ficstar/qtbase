@@ -7,8 +7,6 @@ QMAKE_DIRLIST_SEP       = $$DIRLIST_SEPARATOR
 
 QMAKE_EXT_C             = .c
 QMAKE_EXT_CPP           = .cpp .cc .cxx
-QMAKE_EXT_OBJC          = .m
-QMAKE_EXT_OBJCXX        = .mm
 QMAKE_EXT_CPP_MOC       = .moc
 QMAKE_EXT_H             = .h .hpp .hh .hxx
 QMAKE_EXT_H_MOC         = .cpp
@@ -51,5 +49,5 @@ equals(QMAKE_HOST.os, Windows) {
     QMAKE_SH            = sh
 }
 
-CONFIG = file_copies qt warn_on release link_prl
+CONFIG = qt warn_on release link_prl
 QT = core gui

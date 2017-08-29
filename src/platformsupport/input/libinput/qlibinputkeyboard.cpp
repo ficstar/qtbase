@@ -33,7 +33,6 @@
 
 #include "qlibinputkeyboard_p.h"
 #include <QtCore/QTextCodec>
-#include <QtCore/QLoggingCategory>
 #include <qpa/qwindowsysteminterface.h>
 #include <libinput.h>
 #ifndef QT_NO_XKBCOMMON_EVDEV
@@ -42,8 +41,6 @@
 #endif
 
 QT_BEGIN_NAMESPACE
-
-Q_DECLARE_LOGGING_CATEGORY(qLcLibInput)
 
 const int REPEAT_DELAY = 500;
 const int REPEAT_RATE = 100;
@@ -131,7 +128,6 @@ QLibInputKeyboard::QLibInputKeyboard()
 #endif
 {
 #ifndef QT_NO_XKBCOMMON_EVDEV
-    qCDebug(qLcLibInput) << "Using xkbcommon for key mapping";
     m_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     if (!m_ctx) {
         qWarning("Failed to create xkb context");
@@ -154,8 +150,6 @@ QLibInputKeyboard::QLibInputKeyboard()
 
     m_repeatTimer.setSingleShot(true);
     connect(&m_repeatTimer, &QTimer::timeout, this, &QLibInputKeyboard::handleRepeat);
-#else
-    qCWarning(qLcLibInput) << "X-less xkbcommon not available, not performing key mapping";
 #endif
 }
 
@@ -180,13 +174,10 @@ void QLibInputKeyboard::processKey(libinput_event_keyboard *e)
     const uint32_t k = libinput_event_keyboard_get_key(e) + 8;
     const bool pressed = libinput_event_keyboard_get_key_state(e) == LIBINPUT_KEY_STATE_PRESSED;
 
-    QVarLengthArray<char, 32> chars(32);
-    const int size = xkb_state_key_get_utf8(m_state, k, chars.data(), chars.size());
-    if (Q_UNLIKELY(size + 1 > chars.size())) { // +1 for NUL
-        chars.resize(size + 1);
-        xkb_state_key_get_utf8(m_state, k, chars.data(), chars.size());
-    }
-    const QString text = QString::fromUtf8(chars.constData(), size);
+    QByteArray chars;
+    chars.resize(1 + xkb_state_key_get_utf8(m_state, k, Q_NULLPTR, 0));
+    xkb_state_key_get_utf8(m_state, k, chars.data(), chars.size());
+    const QString text = QString::fromUtf8(chars);
 
     const xkb_keysym_t sym = xkb_state_key_get_one_sym(m_state, k);
 

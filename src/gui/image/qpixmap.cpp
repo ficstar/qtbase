@@ -481,7 +481,7 @@ QMatrix QPixmap::trueMatrix(const QMatrix &m, int w, int h)
 
 bool QPixmap::isQBitmap() const
 {
-    return data && data->type == QPlatformPixmap::BitmapType;
+    return data->type == QPlatformPixmap::BitmapType;
 }
 
 /*!
@@ -907,7 +907,7 @@ void QPixmap::fill(const QPaintDevice *device, const QPoint &p)
 {
     Q_UNUSED(device)
     Q_UNUSED(p)
-    qWarning("this function is deprecated, ignored");
+    qWarning("%s is deprecated, ignored", Q_FUNC_INFO);
 }
 
 
@@ -1412,8 +1412,10 @@ QPixmap QPixmap::transformed(const QMatrix &matrix, Qt::TransformationMode mode)
     QPixmap using the fromImage(). If this is too expensive an
     operation, you can use QBitmap::fromImage() instead.
 
-    To convert a QPixmap to and from HICON you can use the QtWinExtras
-    functions QtWin::toHICON() and QtWin::fromHICON() respectively.
+    The QPixmap class also supports conversion to and from HICON:
+    the toWinHICON() function creates a HICON equivalent to the
+    QPixmap, and returns the HICON handle. The fromWinHICON()
+    function returns a QPixmap that is equivalent to the given icon.
 
     \section1 Pixmap Transformations
 
@@ -1701,8 +1703,8 @@ QPixmap QPixmap::fromImageReader(QImageReader *imageReader, Qt::ImageConversionF
 
 QPixmap QPixmap::grabWindow(WId window, int x, int y, int w, int h)
 {
-    qWarning("this function is deprecated, use QScreen::grabWindow() instead."
-             " Defaulting to primary screen.");
+    qWarning("%s is deprecated, use QScreen::grabWindow() instead."
+             " Defaulting to primary screen.", Q_FUNC_INFO);
     return QGuiApplication::primaryScreen()->grabWindow(window, x, y, w, h);
 }
 

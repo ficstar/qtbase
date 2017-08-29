@@ -120,7 +120,6 @@ private slots:
     void loadGarbage();
 #endif
     void relativePath();
-    void absolutePath();
     void reloadPlugin();
     void preloadedPlugin_data();
     void preloadedPlugin();
@@ -312,7 +311,7 @@ void tst_QPluginLoader::loadCorruptElf()
 
 void tst_QPluginLoader::loadMachO_data()
 {
-#if defined(QT_BUILD_INTERNAL) && defined(Q_OF_MACH_O)
+#ifdef Q_OF_MACH_O
     QTest::addColumn<int>("parseResult");
 
     QTest::newRow("/dev/null") << int(QMachOParser::NotSuitable);
@@ -348,7 +347,7 @@ void tst_QPluginLoader::loadMachO_data()
 
 void tst_QPluginLoader::loadMachO()
 {
-#if defined(QT_BUILD_INTERNAL) && defined(Q_OF_MACH_O)
+#ifdef Q_OF_MACH_O
     QFile f(QFINDTESTDATA(QTest::currentDataTag()));
     QVERIFY(f.open(QIODevice::ReadOnly));
     QByteArray data = f.readAll();
@@ -400,20 +399,6 @@ void tst_QPluginLoader::relativePath()
     QVERIFY(!binDir.isEmpty());
     QCoreApplication::addLibraryPath(binDir);
     QPluginLoader loader("theplugin");
-    loader.load(); // not recommended, instance() should do the job.
-    PluginInterface *instance = qobject_cast<PluginInterface*>(loader.instance());
-    QVERIFY(instance);
-    QCOMPARE(instance->pluginName(), QLatin1String("Plugin ok"));
-    QVERIFY(loader.unload());
-}
-
-void tst_QPluginLoader::absolutePath()
-{
-    // Windows binaries run from release and debug subdirs, so we can't rely on the current dir.
-    const QString binDir = QFINDTESTDATA("bin");
-    QVERIFY(!binDir.isEmpty());
-    QVERIFY(QDir::isAbsolutePath(binDir));
-    QPluginLoader loader(binDir + "/theplugin");
     loader.load(); // not recommended, instance() should do the job.
     PluginInterface *instance = qobject_cast<PluginInterface*>(loader.instance());
     QVERIFY(instance);

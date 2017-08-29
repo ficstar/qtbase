@@ -33,6 +33,7 @@
 ****************************************************************************/
 
 #include "qwindowsintegration.h"
+#include "qwindowsscaling.h"
 #include "qwindowswindow.h"
 #include "qwindowscontext.h"
 #include "qwindowsopenglcontext.h"
@@ -44,6 +45,7 @@
 #  include "qwindowsfontdatabase_ft.h"
 #endif
 #include "qwindowsfontdatabase.h"
+#include "qwindowsguieventdispatcher.h"
 #ifndef QT_NO_CLIPBOARD
 #  include "qwindowsclipboard.h"
 #  ifndef QT_NO_DRAGANDDROP
@@ -62,11 +64,9 @@
 #  include "qwindowssessionmanager.h"
 #endif
 #include <QtGui/private/qguiapplication_p.h>
-#include <QtGui/private/qhighdpiscaling_p.h>
 #include <QtGui/qpa/qplatforminputcontextfactory_p.h>
 
-#include <QtPlatformSupport/private/qwindowsguieventdispatcher_p.h>
-
+#include <QtCore/private/qeventdispatcher_win_p.h>
 #include <QtCore/QDebug>
 #include <QtCore/QVariant>
 
@@ -139,8 +139,7 @@ struct QWindowsIntegrationPrivate
 #  endif
 #endif
 #ifndef QT_NO_OPENGL
-    QMutex m_staticContextLock;
-    QScopedPointer<QWindowsStaticOpenGLContext> m_staticOpenGLContext;
+    QSharedPointer<QWindowsStaticOpenGLContext> m_staticOpenGLContext;
 #endif // QT_NO_OPENGL
     QScopedPointer<QPlatformInputContext> m_inputContext;
 #ifndef QT_NO_ACCESSIBILITY
@@ -224,11 +223,24 @@ QWindowsIntegrationPrivate::QWindowsIntegrationPrivate(const QStringList &paramL
         m_context.setProcessDpiAwareness(dpiAwareness);
         dpiAwarenessSet = true;
     }
+    // Determine suitable scale factor, don't mix Windows and Qt scaling
+    if (dpiAwareness != QtWindows::ProcessDpiUnaware)
+        QWindowsScaling::setFactor(QWindowsScaling::determineUiScaleFactor());
     qCDebug(lcQpaWindows)
-        << __FUNCTION__ << "DpiAwareness=" << dpiAwareness
-        << "effective process DPI awareness=" << QWindowsContext::processDpiAwareness();
+        << __FUNCTION__ << "DpiAwareness=" << dpiAwareness <<",Scaling="
+        << QWindowsScaling::factor();
 
-    m_context.initTouch(m_options);
+    QTouchDevice *touchDevice = m_context.touchDevice();
+    if (touchDevice) {
+#ifdef Q_OS_WINCE
+        touchDevice->setCapabilities(touchDevice->capabilities() | QTouchDevice::MouseEmulation);
+#else
+        if (!(m_options & QWindowsIntegration::DontPassOsMouseEventsSynthesizedFromTouch)) {
+            touchDevice->setCapabilities(touchDevice->capabilities() | QTouchDevice::MouseEmulation);
+        }
+#endif
+        QWindowSystemInterface::registerTouchDevice(touchDevice);
+    }
 }
 
 QWindowsIntegrationPrivate::~QWindowsIntegrationPrivate()
@@ -256,9 +268,10 @@ QWindowsIntegration::~QWindowsIntegration()
 
 void QWindowsIntegration::initialize()
 {
-    QString icStr = QPlatformInputContextFactory::requested();
-    icStr.isNull() ? d->m_inputContext.reset(new QWindowsInputContext)
-                   : d->m_inputContext.reset(QPlatformInputContextFactory::create(icStr));
+    if (QPlatformInputContext *pluginContext = QPlatformInputContextFactory::create())
+        d->m_inputContext.reset(pluginContext);
+    else
+        d->m_inputContext.reset(new QWindowsInputContext);
 }
 
 bool QWindowsIntegration::hasCapability(QPlatformIntegration::Capability cap) const
@@ -284,19 +297,17 @@ bool QWindowsIntegration::hasCapability(QPlatformIntegration::Capability cap) co
         return true;
     case AllGLFunctionsQueryable:
         return true;
-    case SwitchableWidgetComposition:
-        return true;
     default:
         return QPlatformIntegration::hasCapability(cap);
     }
     return false;
 }
 
-QPlatformWindow *QWindowsIntegration::createPlatformWindow(QWindow *window) const
+QWindowsWindowData QWindowsIntegration::createWindowData(QWindow *window) const
 {
     QWindowsWindowData requested;
     requested.flags = window->flags();
-    requested.geometry = QHighDpi::toNativePixels(window->geometry(), window);
+    requested.geometry = QWindowsScaling::mapToNative(window->geometry());
     // Apply custom margins (see  QWindowsWindow::setCustomMargins())).
     const QVariant customMarginsV = window->property("_q_windowsCustomMargins");
     if (customMarginsV.isValid())
@@ -311,34 +322,22 @@ QPlatformWindow *QWindowsIntegration::createPlatformWindow(QWindow *window) cons
         << "\n    Obtained : " << obtained.geometry << " margins=" << obtained.frame
         << " handle=" << obtained.hwnd << ' ' << obtained.flags << '\n';
 
-    if (Q_UNLIKELY(!obtained.hwnd))
-        return Q_NULLPTR;
-
-    QWindowsWindow *result = createPlatformWindowHelper(window, obtained);
-    Q_ASSERT(result);
-
-    if (requested.flags != obtained.flags)
-        window->setFlags(obtained.flags);
-    // Trigger geometry change (unless it has a special state in which case setWindowState()
-    // will send the message) and screen change signals of QWindow.
-    if ((obtained.flags & Qt::Desktop) != Qt::Desktop) {
-        const Qt::WindowState state = window->windowState();
-        if (state != Qt::WindowMaximized && state != Qt::WindowFullScreen
-            && requested.geometry != obtained.geometry) {
-            QWindowSystemInterface::handleGeometryChange(window, obtained.geometry);
-        }
-        QPlatformScreen *screen = result->screenForGeometry(obtained.geometry);
-        if (screen && result->screen() != screen)
-            QWindowSystemInterface::handleWindowScreenChanged(window, screen->screen());
+    if (obtained.hwnd) {
+        if (requested.flags != obtained.flags)
+            window->setFlags(obtained.flags);
+        // Trigger geometry change signals of QWindow.
+        if ((obtained.flags & Qt::Desktop) != Qt::Desktop && requested.geometry != obtained.geometry)
+            QWindowSystemInterface::handleGeometryChange(window, QWindowsScaling::mapFromNative(obtained.geometry));
     }
 
-    return result;
+    return obtained;
 }
 
-// Overridden to return a QWindowsDirect2DWindow in Direct2D plugin.
-QWindowsWindow *QWindowsIntegration::createPlatformWindowHelper(QWindow *window, const QWindowsWindowData &data) const
+QPlatformWindow *QWindowsIntegration::createPlatformWindow(QWindow *window) const
 {
-    return new QWindowsWindow(window, data);
+    QWindowsWindowData data = createWindowData(window);
+    return data.hwnd ? new QWindowsWindow(window, data)
+                     : Q_NULLPTR;
 }
 
 #ifndef QT_NO_OPENGL
@@ -349,13 +348,8 @@ QWindowsStaticOpenGLContext *QWindowsStaticOpenGLContext::doCreate()
     QWindowsOpenGLTester::Renderer requestedRenderer = QWindowsOpenGLTester::requestedRenderer();
     switch (requestedRenderer) {
     case QWindowsOpenGLTester::DesktopGl:
-        if (QWindowsStaticOpenGLContext *glCtx = QOpenGLStaticContext::create()) {
-            if ((QWindowsOpenGLTester::supportedRenderers() & QWindowsOpenGLTester::DisableRotationFlag)
-                && !QWindowsScreen::setOrientationPreference(Qt::LandscapeOrientation)) {
-                qCWarning(lcQpaGl, "Unable to disable rotation.");
-            }
+        if (QWindowsStaticOpenGLContext *glCtx = QOpenGLStaticContext::create())
             return glCtx;
-        }
         qCWarning(lcQpaGl, "System OpenGL failed. Falling back to Software OpenGL.");
         return QOpenGLStaticContext::create(true);
     // If ANGLE is requested, use it, don't try anything else.
@@ -378,13 +372,8 @@ QWindowsStaticOpenGLContext *QWindowsStaticOpenGLContext::doCreate()
 
     const QWindowsOpenGLTester::Renderers supportedRenderers = QWindowsOpenGLTester::supportedRenderers();
     if (supportedRenderers & QWindowsOpenGLTester::DesktopGl) {
-        if (QWindowsStaticOpenGLContext *glCtx = QOpenGLStaticContext::create()) {
-            if ((supportedRenderers & QWindowsOpenGLTester::DisableRotationFlag)
-                && !QWindowsScreen::setOrientationPreference(Qt::LandscapeOrientation)) {
-                qCWarning(lcQpaGl, "Unable to disable rotation.");
-            }
+        if (QWindowsStaticOpenGLContext *glCtx = QOpenGLStaticContext::create())
             return glCtx;
-        }
     }
     if (QWindowsOpenGLTester::Renderers glesRenderers = supportedRenderers & QWindowsOpenGLTester::GlesMask) {
         if (QWindowsEGLStaticContext *eglCtx = QWindowsEGLStaticContext::create(glesRenderers))
@@ -436,9 +425,8 @@ QWindowsStaticOpenGLContext *QWindowsIntegration::staticOpenGLContext()
     if (!integration)
         return 0;
     QWindowsIntegrationPrivate *d = integration->d.data();
-    QMutexLocker lock(&d->m_staticContextLock);
     if (d->m_staticOpenGLContext.isNull())
-        d->m_staticOpenGLContext.reset(QWindowsStaticOpenGLContext::create());
+        d->m_staticOpenGLContext = QSharedPointer<QWindowsStaticOpenGLContext>(QWindowsStaticOpenGLContext::create());
     return d->m_staticOpenGLContext.data();
 }
 #endif // !QT_NO_OPENGL
@@ -519,8 +507,8 @@ QVariant QWindowsIntegration::styleHint(QPlatformIntegration::StyleHint hint) co
     case QPlatformIntegration::FontSmoothingGamma:
         return QVariant(QWindowsFontDatabase::fontSmoothingGamma());
     case QPlatformIntegration::MouseDoubleClickInterval:
-        if (const UINT ms = GetDoubleClickTime())
-            return QVariant(int(ms));
+        if (const int ms = GetDoubleClickTime())
+            return QVariant(ms);
         break;
     case QPlatformIntegration::UseRtlExtensions:
         return QVariant(d->m_context.useRTLExtensions());

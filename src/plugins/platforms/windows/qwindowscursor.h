@@ -37,48 +37,50 @@
 #include "qtwindows_additional.h"
 
 #include <qpa/qplatformcursor.h>
-#include <QtCore/QSharedPointer>
+#include <QtCore/QSharedDataPointer>
 #include <QtCore/QHash>
 
 QT_BEGIN_NAMESPACE
 
-struct QWindowsPixmapCursorCacheKey
-{
-    explicit QWindowsPixmapCursorCacheKey(const QCursor &c);
+class QWindowsWindowCursorData;
 
+struct QWindowsCursorCacheKey
+{
+    explicit QWindowsCursorCacheKey(const QCursor &c);
+    explicit QWindowsCursorCacheKey(Qt::CursorShape s) : shape(s), bitmapCacheKey(0), maskCacheKey(0) {}
+    QWindowsCursorCacheKey() : shape(Qt::CustomCursor), bitmapCacheKey(0), maskCacheKey(0) {}
+
+    Qt::CursorShape shape;
     qint64 bitmapCacheKey;
     qint64 maskCacheKey;
 };
 
-inline bool operator==(const QWindowsPixmapCursorCacheKey &k1, const QWindowsPixmapCursorCacheKey &k2)
+inline bool operator==(const QWindowsCursorCacheKey &k1, const QWindowsCursorCacheKey &k2)
 {
-    return k1.bitmapCacheKey == k2.bitmapCacheKey && k1.maskCacheKey == k2.maskCacheKey;
+    return k1.shape == k2.shape && k1.bitmapCacheKey == k2.bitmapCacheKey && k1.maskCacheKey == k2.maskCacheKey;
 }
 
-inline uint qHash(const QWindowsPixmapCursorCacheKey &k, uint seed) Q_DECL_NOTHROW
+inline uint qHash(const QWindowsCursorCacheKey &k, uint seed) Q_DECL_NOTHROW
 {
-    return (uint(k.bitmapCacheKey) + uint(k.maskCacheKey)) ^ seed;
+    return (uint(k.shape) + uint(k.bitmapCacheKey) + uint(k.maskCacheKey)) ^ seed;
 }
 
-class CursorHandle
+class QWindowsWindowCursor
 {
-    Q_DISABLE_COPY(CursorHandle)
 public:
-    explicit CursorHandle(HCURSOR hcursor = Q_NULLPTR) : m_hcursor(hcursor) {}
-    ~CursorHandle()
-    {
-        if (m_hcursor)
-            DestroyCursor(m_hcursor);
-    }
+    QWindowsWindowCursor();
+    explicit QWindowsWindowCursor(const QCursor &c);
+    ~QWindowsWindowCursor();
+    QWindowsWindowCursor(const QWindowsWindowCursor &c);
+    QWindowsWindowCursor &operator=(const QWindowsWindowCursor &c);
 
-    bool isNull() const { return !m_hcursor; }
-    HCURSOR handle() const { return m_hcursor; }
+    bool isNull() const;
+    QCursor cursor() const;
+    HCURSOR handle() const;
 
 private:
-    const HCURSOR m_hcursor;
+    QSharedDataPointer<QWindowsWindowCursorData> m_data;
 };
-
-typedef QSharedPointer<CursorHandle> CursorHandlePtr;
 
 class QWindowsCursor : public QPlatformCursor
 {
@@ -89,44 +91,25 @@ public:
         CursorSuppressed // Cursor suppressed by touch interaction (Windows 8).
     };
 
-    struct PixmapCursor {
-        explicit PixmapCursor(const QPixmap &pix = QPixmap(), const QPoint &h = QPoint()) : pixmap(pix), hotSpot(h) {}
-
-        QPixmap pixmap;
-        QPoint hotSpot;
-    };
-
-    explicit QWindowsCursor(const QPlatformScreen *screen);
+    QWindowsCursor();
 
     void changeCursor(QCursor * widgetCursor, QWindow * widget) Q_DECL_OVERRIDE;
     QPoint pos() const Q_DECL_OVERRIDE;
     void setPos(const QPoint &pos) Q_DECL_OVERRIDE;
 
-    static HCURSOR createPixmapCursor(QPixmap pixmap, const QPoint &hotSpot, qreal scaleFactor = 1);
-    static HCURSOR createPixmapCursor(const PixmapCursor &pc, qreal scaleFactor = 1) { return createPixmapCursor(pc.pixmap, pc.hotSpot, scaleFactor); }
-    static PixmapCursor customCursor(Qt::CursorShape cursorShape, const QPlatformScreen *screen = Q_NULLPTR);
-
-    static HCURSOR createCursorFromShape(Qt::CursorShape cursorShape, const QPlatformScreen *screen = Q_NULLPTR);
+    static HCURSOR createPixmapCursor(const QPixmap &pixmap, const QPoint &hotSpot);
+    static HCURSOR createSystemCursor(const QCursor &c);
+    static QCursor customCursor(Qt::CursorShape cursorShape);
     static QPoint mousePosition();
     static CursorState cursorState();
 
-    CursorHandlePtr standardWindowCursor(Qt::CursorShape s = Qt::ArrowCursor);
-    CursorHandlePtr pixmapWindowCursor(const QCursor &c);
-
-    QPixmap dragDefaultCursor(Qt::DropAction action) const;
+    QWindowsWindowCursor standardWindowCursor(Qt::CursorShape s = Qt::ArrowCursor);
+    QWindowsWindowCursor pixmapWindowCursor(const QCursor &c);
 
 private:
-    typedef QHash<Qt::CursorShape, CursorHandlePtr> StandardCursorCache;
-    typedef QHash<QWindowsPixmapCursorCacheKey, CursorHandlePtr> PixmapCursorCache;
+    typedef QHash<QWindowsCursorCacheKey, QWindowsWindowCursor>  CursorCache;
 
-    const QPlatformScreen *const m_screen;
-    StandardCursorCache m_standardCursorCache;
-    PixmapCursorCache m_pixmapCursorCache;
-
-    mutable QPixmap m_copyDragCursor;
-    mutable QPixmap m_moveDragCursor;
-    mutable QPixmap m_linkDragCursor;
-    mutable QPixmap m_ignoreDragCursor;
+    CursorCache m_cursorCache;
 };
 
 QT_END_NAMESPACE

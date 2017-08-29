@@ -45,6 +45,7 @@
 
 #include "qofonoservice_linux_p.h"
 
+#ifndef QT_NO_BEARERMANAGEMENT
 #ifndef QT_NO_DBUS
 
 QDBusArgument &operator<<(QDBusArgument &argument, const ObjectPathProperties &item)
@@ -97,7 +98,7 @@ QStringList QOfonoManagerInterface::getModems()
         QDBusPendingReply<PathPropertiesList> reply = callWithArgumentList(QDBus::Block, QLatin1String("GetModems"), argumentList);
         reply.waitForFinished();
         if (!reply.isError()) {
-            foreach (const ObjectPathProperties &modem, reply.value()) {
+            foreach (ObjectPathProperties modem, reply.value()) {
                 modemList << modem.path.path();
             }
         }
@@ -260,7 +261,7 @@ QStringList QOfonoDataConnectionManagerInterface::contexts()
         QDBusPendingReply<PathPropertiesList > reply = call(QLatin1String("GetContexts"));
         reply.waitForFinished();
         if (!reply.isError()) {
-            foreach (const ObjectPathProperties &context, reply.value()) {
+            foreach (ObjectPathProperties context, reply.value()) {
                 contextList << context.path.path();
             }
         }
@@ -381,3 +382,4 @@ QString QOfonoConnectionContextInterface::name()
 QT_END_NAMESPACE
 
 #endif // QT_NO_DBUS
+#endif // QT_NO_BEARERMANAGEMENT

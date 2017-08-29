@@ -266,5 +266,3 @@ bool QRadioButton::event(QEvent *e)
 
 
 QT_END_NAMESPACE
-
-#include "moc_qradiobutton.cpp"

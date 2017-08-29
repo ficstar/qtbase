@@ -41,13 +41,15 @@ QT_BEGIN_NAMESPACE
 Q_LOGGING_CATEGORY(qLcMenu, "qt.qpa.menu")
 
 static int nextDBusID = 1;
+QHash<int, QDBusPlatformMenu *> menusByID;
 QHash<int, QDBusPlatformMenuItem *> menuItemsByID;
+QList<QDBusPlatformMenu *> QDBusPlatformMenu::m_topLevelMenus;
 
 QDBusPlatformMenuItem::QDBusPlatformMenuItem(quintptr tag)
     : m_tag(tag ? tag : reinterpret_cast<quintptr>(this)) // QMenu will overwrite this later
     , m_subMenu(Q_NULLPTR)
     , m_role(NoRole)
-    , m_isEnabled(true)
+    , m_isEnabled(false)
     , m_isVisible(true)
     , m_isSeparator(false)
     , m_isCheckable(false)
@@ -83,11 +85,7 @@ void QDBusPlatformMenuItem::setIcon(const QIcon &icon)
 */
 void QDBusPlatformMenuItem::setMenu(QPlatformMenu *menu)
 {
-    if (m_subMenu)
-        static_cast<QDBusPlatformMenu *>(m_subMenu)->setContainingMenuItem(Q_NULLPTR);
-    m_subMenu = menu;
-    if (menu)
-        static_cast<QDBusPlatformMenu *>(menu)->setContainingMenuItem(this);
+    m_subMenu = static_cast<QDBusPlatformMenu *>(menu);
 }
 
 void QDBusPlatformMenuItem::setEnabled(bool enabled)
@@ -132,11 +130,7 @@ void QDBusPlatformMenuItem::trigger()
 
 QDBusPlatformMenuItem *QDBusPlatformMenuItem::byId(int id)
 {
-    // We need to check contains because otherwise QHash would insert
-    // a default-constructed nullptr value into menuItemsByID
-    if (menuItemsByID.contains(id))
-        return menuItemsByID[id];
-    return Q_NULLPTR;
+    return menuItemsByID[id];
 }
 
 QList<const QDBusPlatformMenuItem *> QDBusPlatformMenuItem::byIds(const QList<int> &ids)
@@ -152,16 +146,21 @@ QList<const QDBusPlatformMenuItem *> QDBusPlatformMenuItem::byIds(const QList<in
 
 QDBusPlatformMenu::QDBusPlatformMenu(quintptr tag)
     : m_tag(tag ? tag : reinterpret_cast<quintptr>(this))
-    , m_isEnabled(true)
+    , m_isEnabled(false)
     , m_isVisible(true)
     , m_isSeparator(false)
-    , m_revision(1)
-    , m_containingMenuItem(Q_NULLPTR)
+    , m_dbusID(nextDBusID++)
+    , m_revision(0)
 {
+    menusByID.insert(m_dbusID, this);
+    // Assume it's top-level until we find out otherwise
+    m_topLevelMenus << this;
 }
 
 QDBusPlatformMenu::~QDBusPlatformMenu()
 {
+    menusByID.remove(m_dbusID);
+    m_topLevelMenus.removeOne(this);
 }
 
 void QDBusPlatformMenu::insertMenuItem(QPlatformMenuItem *menuItem, QPlatformMenuItem *before)
@@ -175,59 +174,38 @@ void QDBusPlatformMenu::insertMenuItem(QPlatformMenuItem *menuItem, QPlatformMen
     else
         m_items.insert(idx, item);
     m_itemsByTag.insert(item->tag(), item);
+    // If a menu is found as a submenu under an item, we know that it's not a top-level menu.
     if (item->menu())
-        syncSubMenu(static_cast<const QDBusPlatformMenu *>(item->menu()));
-    emitUpdated();
+        m_topLevelMenus.removeOne(const_cast<QDBusPlatformMenu *>(static_cast<const QDBusPlatformMenu *>(item->menu())));
 }
 
 void QDBusPlatformMenu::removeMenuItem(QPlatformMenuItem *menuItem)
 {
-    QDBusPlatformMenuItem *item = static_cast<QDBusPlatformMenuItem *>(menuItem);
-    m_items.removeAll(item);
+    m_items.removeAll(static_cast<QDBusPlatformMenuItem *>(menuItem));
     m_itemsByTag.remove(menuItem->tag());
-    if (item->menu()) {
-        // disconnect from the signals we connected to in syncSubMenu()
-        const QDBusPlatformMenu *menu = static_cast<const QDBusPlatformMenu *>(item->menu());
-        disconnect(menu, &QDBusPlatformMenu::propertiesUpdated,
-                   this, &QDBusPlatformMenu::propertiesUpdated);
-        disconnect(menu, &QDBusPlatformMenu::updated,
-                   this, &QDBusPlatformMenu::updated);
-    }
-    emitUpdated();
-}
-
-void QDBusPlatformMenu::syncSubMenu(const QDBusPlatformMenu *menu)
-{
-    // The adaptor is only connected to the propertiesUpdated signal of the top-level
-    // menu, so the submenus should transfer their signals to their parents.
-    connect(menu, &QDBusPlatformMenu::propertiesUpdated,
-            this, &QDBusPlatformMenu::propertiesUpdated, Qt::UniqueConnection);
-    connect(menu, &QDBusPlatformMenu::updated,
-            this, &QDBusPlatformMenu::updated, Qt::UniqueConnection);
 }
 
 void QDBusPlatformMenu::syncMenuItem(QPlatformMenuItem *menuItem)
 {
-    QDBusPlatformMenuItem *item = static_cast<QDBusPlatformMenuItem *>(menuItem);
-    // if a submenu was added to this item, we need to connect to its signals
-    if (item->menu())
-        syncSubMenu(static_cast<const QDBusPlatformMenu *>(item->menu()));
     // TODO keep around copies of the QDBusMenuLayoutItems so they can be updated?
     // or eliminate them by putting dbus streaming operators in this class instead?
     // or somehow tell the dbusmenu client that something has changed, so it will ask for properties again
+    emitUpdated();
     QDBusMenuItemList updated;
     QDBusMenuItemKeysList removed;
-    updated << QDBusMenuItem(item);
+    updated << QDBusMenuItem(static_cast<QDBusPlatformMenuItem *>(menuItem));
     qCDebug(qLcMenu) << updated;
     emit propertiesUpdated(updated, removed);
 }
 
+QDBusPlatformMenu *QDBusPlatformMenu::byId(int id)
+{
+    return menusByID[id];
+}
+
 void QDBusPlatformMenu::emitUpdated()
 {
-    if (m_containingMenuItem)
-        emit updated(++m_revision, m_containingMenuItem->dbusID());
-    else
-        emit updated(++m_revision, 0);
+    emit updated(++m_revision, m_dbusID);
 }
 
 void QDBusPlatformMenu::setTag(quintptr tag)
@@ -255,14 +233,9 @@ void QDBusPlatformMenu::setVisible(bool isVisible)
     m_isVisible = isVisible;
 }
 
-void QDBusPlatformMenu::setContainingMenuItem(QDBusPlatformMenuItem *item)
-{
-    m_containingMenuItem = item;
-}
-
 QPlatformMenuItem *QDBusPlatformMenu::menuItemAt(int position) const
 {
-    return m_items.value(position);
+    return m_items.at(position);
 }
 
 QPlatformMenuItem *QDBusPlatformMenu::menuItemForTag(quintptr tag) const

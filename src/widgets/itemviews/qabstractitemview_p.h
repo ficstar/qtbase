@@ -74,7 +74,7 @@ typedef QHash<QWidget *, QPersistentModelIndex> QEditorIndexHash;
 typedef QHash<QPersistentModelIndex, QEditorInfo> QIndexEditorHash;
 
 typedef QPair<QRect, QModelIndex> QItemViewPaintPair;
-typedef QVector<QItemViewPaintPair> QItemViewPaintPairs;
+typedef QList<QItemViewPaintPair> QItemViewPaintPairs;
 
 class QEmptyModel : public QAbstractItemModel
 {
@@ -264,7 +264,9 @@ public:
     }
 
     const QEditorInfo &editorForIndex(const QModelIndex &index) const;
-    bool hasEditor(const QModelIndex &index) const;
+    inline bool hasEditor(const QModelIndex &index) const {
+        return indexEditorHash.find(index) != indexEditorHash.constEnd();
+    }
 
     QModelIndex indexForEditor(QWidget *editor) const;
     void addEditor(const QModelIndex &index, QWidget *editor, bool isStatic);

@@ -48,7 +48,7 @@ class Q_CORE_EXPORT QBitArray
     QByteArray d;
 
 public:
-    inline QBitArray() Q_DECL_NOTHROW {}
+    inline QBitArray() {}
     explicit QBitArray(int size, bool val = false);
     QBitArray(const QBitArray &other) : d(other.d) {}
     inline QBitArray &operator=(const QBitArray &other) { d = other.d; return *this; }

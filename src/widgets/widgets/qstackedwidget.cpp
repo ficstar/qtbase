@@ -287,6 +287,4 @@ bool QStackedWidget::event(QEvent *e)
 
 QT_END_NAMESPACE
 
-#include "moc_qstackedwidget.cpp"
-
 #endif // QT_NO_STACKEDWIDGET

@@ -57,7 +57,7 @@ class Q_WIDGETS_EXPORT QTextBrowser : public QTextEdit
     Q_PROPERTY(bool openLinks READ openLinks WRITE setOpenLinks)
 
 public:
-    explicit QTextBrowser(QWidget* parent = Q_NULLPTR);
+    explicit QTextBrowser(QWidget* parent = 0);
     virtual ~QTextBrowser();
 
     QUrl source() const;

@@ -181,13 +181,7 @@ bool QStringListModel::setData(const QModelIndex &index, const QVariant &value, 
     if (index.row() >= 0 && index.row() < lst.size()
         && (role == Qt::EditRole || role == Qt::DisplayRole)) {
         lst.replace(index.row(), value.toString());
-        QVector<int> roles;
-        roles.reserve(2);
-        roles.append(Qt::DisplayRole);
-        roles.append(Qt::EditRole);
-        emit dataChanged(index, index, roles);
-        // once Q_COMPILER_UNIFORM_INIT can be used, change to:
-        // emit dataChanged(index, index, {Qt::DisplayRole, Qt::EditRole});
+        emit dataChanged(index, index, QVector<int>() << role);
         return true;
     }
     return false;
@@ -263,9 +257,7 @@ void QStringListModel::sort(int, Qt::SortOrder order)
     emit layoutAboutToBeChanged(QList<QPersistentModelIndex>(), VerticalSortHint);
 
     QList<QPair<QString, int> > list;
-    const int lstCount = lst.count();
-    list.reserve(lstCount);
-    for (int i = 0; i < lstCount; ++i)
+    for (int i = 0; i < lst.count(); ++i)
         list.append(QPair<QString, int>(lst.at(i), i));
 
     if (order == Qt::AscendingOrder)
@@ -282,9 +274,7 @@ void QStringListModel::sort(int, Qt::SortOrder order)
 
     QModelIndexList oldList = persistentIndexList();
     QModelIndexList newList;
-    const int numOldIndexes = oldList.count();
-    newList.reserve(numOldIndexes);
-    for (int i = 0; i < numOldIndexes; ++i)
+    for (int i = 0; i < oldList.count(); ++i)
         newList.append(index(forwarding.at(oldList.at(i).row()), 0));
     changePersistentIndexList(oldList, newList);
 
@@ -307,9 +297,9 @@ QStringList QStringListModel::stringList() const
 */
 void QStringListModel::setStringList(const QStringList &strings)
 {
-    beginResetModel();
+    emit beginResetModel();
     lst = strings;
-    endResetModel();
+    emit endResetModel();
 }
 
 /*!

@@ -116,6 +116,7 @@ public:
     qreal step;
 
     struct Pair {
+        Pair(qreal a, qreal b) : step(a), value(b) {}
         bool operator <(const Pair &other) const
         { return step < other.step; }
         bool operator==(const Pair &other) const
@@ -123,22 +124,21 @@ public:
         qreal step;
         qreal value;
     };
-    QVector<Pair> xPosition;
-    QVector<Pair> yPosition;
-    QVector<Pair> rotation;
-    QVector<Pair> verticalScale;
-    QVector<Pair> horizontalScale;
-    QVector<Pair> verticalShear;
-    QVector<Pair> horizontalShear;
-    QVector<Pair> xTranslation;
-    QVector<Pair> yTranslation;
+    QList<Pair> xPosition;
+    QList<Pair> yPosition;
+    QList<Pair> rotation;
+    QList<Pair> verticalScale;
+    QList<Pair> horizontalScale;
+    QList<Pair> verticalShear;
+    QList<Pair> horizontalShear;
+    QList<Pair> xTranslation;
+    QList<Pair> yTranslation;
 
-    qreal linearValueForStep(qreal step, QVector<Pair> *source, qreal defaultValue = 0);
-    void insertUniquePair(qreal step, qreal value, QVector<Pair> *binList, const char* method);
+    qreal linearValueForStep(qreal step, QList<Pair> *source, qreal defaultValue = 0);
+    void insertUniquePair(qreal step, qreal value, QList<Pair> *binList, const char* method);
 };
-Q_DECLARE_TYPEINFO(QGraphicsItemAnimationPrivate::Pair, Q_PRIMITIVE_TYPE);
 
-qreal QGraphicsItemAnimationPrivate::linearValueForStep(qreal step, QVector<Pair> *source, qreal defaultValue)
+qreal QGraphicsItemAnimationPrivate::linearValueForStep(qreal step, QList<Pair> *source, qreal defaultValue)
 {
     if (source->isEmpty())
         return defaultValue;
@@ -168,18 +168,20 @@ qreal QGraphicsItemAnimationPrivate::linearValueForStep(qreal step, QVector<Pair
     return valueBefore + (valueAfter - valueBefore) * ((step - stepBefore) / (stepAfter - stepBefore));
 }
 
-void QGraphicsItemAnimationPrivate::insertUniquePair(qreal step, qreal value, QVector<Pair> *binList, const char* method)
+void QGraphicsItemAnimationPrivate::insertUniquePair(qreal step, qreal value, QList<Pair> *binList, const char* method)
 {
     if (!check_step_valid(step, method))
         return;
 
-    const Pair pair = { step, value };
+    Pair pair(step, value);
 
-    const QVector<Pair>::iterator result = std::lower_bound(binList->begin(), binList->end(), pair);
-    if (result == binList->end() || pair < *result)
-        binList->insert(result, pair);
-    else
+    QList<Pair>::iterator result = std::lower_bound(binList->begin(), binList->end(), pair);
+    if ((result != binList->end()) && !(pair < *result))
         result->value = value;
+    else {
+        *binList << pair;
+        std::sort(binList->begin(), binList->end());
+    }
 }
 
 /*!
@@ -282,9 +284,7 @@ void QGraphicsItemAnimation::setPosAt(qreal step, const QPointF &pos)
 QList<QPair<qreal, QPointF> > QGraphicsItemAnimation::posList() const
 {
     QList<QPair<qreal, QPointF> > list;
-    const int xPosCount = d->xPosition.size();
-    list.reserve(xPosCount);
-    for (int i = 0; i < xPosCount; ++i)
+    for (int i = 0; i < d->xPosition.size(); ++i)
         list << QPair<qreal, QPointF>(d->xPosition.at(i).step, QPointF(d->xPosition.at(i).value, d->yPosition.at(i).value));
 
     return list;
@@ -338,9 +338,7 @@ void QGraphicsItemAnimation::setRotationAt(qreal step, qreal angle)
 QList<QPair<qreal, qreal> > QGraphicsItemAnimation::rotationList() const
 {
     QList<QPair<qreal, qreal> > list;
-    const int numRotations = d->rotation.size();
-    list.reserve(numRotations);
-    for (int i = 0; i < numRotations; ++i)
+    for (int i = 0; i < d->rotation.size(); ++i)
         list << QPair<qreal, qreal>(d->rotation.at(i).step, d->rotation.at(i).value);
 
     return list;
@@ -388,9 +386,7 @@ void QGraphicsItemAnimation::setTranslationAt(qreal step, qreal dx, qreal dy)
 QList<QPair<qreal, QPointF> > QGraphicsItemAnimation::translationList() const
 {
     QList<QPair<qreal, QPointF> > list;
-    const int numTranslations = d->xTranslation.size();
-    list.reserve(numTranslations);
-    for (int i = 0; i < numTranslations; ++i)
+    for (int i = 0; i < d->xTranslation.size(); ++i)
         list << QPair<qreal, QPointF>(d->xTranslation.at(i).step, QPointF(d->xTranslation.at(i).value, d->yTranslation.at(i).value));
 
     return list;
@@ -439,9 +435,7 @@ void QGraphicsItemAnimation::setScaleAt(qreal step, qreal sx, qreal sy)
 QList<QPair<qreal, QPointF> > QGraphicsItemAnimation::scaleList() const
 {
     QList<QPair<qreal, QPointF> > list;
-    const int numScales = d->horizontalScale.size();
-    list.reserve(numScales);
-    for (int i = 0; i < numScales; ++i)
+    for (int i = 0; i < d->horizontalScale.size(); ++i)
         list << QPair<qreal, QPointF>(d->horizontalScale.at(i).step, QPointF(d->horizontalScale.at(i).value, d->verticalScale.at(i).value));
 
     return list;
@@ -489,9 +483,7 @@ void QGraphicsItemAnimation::setShearAt(qreal step, qreal sh, qreal sv)
 QList<QPair<qreal, QPointF> > QGraphicsItemAnimation::shearList() const
 {
     QList<QPair<qreal, QPointF> > list;
-    const int numShears = d->horizontalShear.size();
-    list.reserve(numShears);
-    for (int i = 0; i < numShears; ++i)
+    for (int i = 0; i < d->horizontalShear.size(); ++i)
         list << QPair<qreal, QPointF>(d->horizontalShear.at(i).step, QPointF(d->horizontalShear.at(i).value, d->verticalShear.at(i).value));
 
     return list;
@@ -587,7 +579,5 @@ void QGraphicsItemAnimation::afterAnimationStep(qreal step)
 }
 
 QT_END_NAMESPACE
-
-#include "moc_qgraphicsitemanimation.cpp"
 
 #endif // QT_NO_GRAPHICSVIEW

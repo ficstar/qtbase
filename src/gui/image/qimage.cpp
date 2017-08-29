@@ -98,21 +98,34 @@ QImageData::QImageData()
 {
 }
 
-/*! \fn QImageData * QImageData::create(const QSize &size, QImage::Format format)
+/*! \fn QImageData * QImageData::create(const QSize &size, QImage::Format format, int numColors)
 
     \internal
 
     Creates a new image data.
     Returns 0 if invalid parameters are give or anything else failed.
 */
-QImageData * QImageData::create(const QSize &size, QImage::Format format)
+QImageData * QImageData::create(const QSize &size, QImage::Format format, int numColors)
 {
-    if (!size.isValid() || format == QImage::Format_Invalid)
+    if (!size.isValid() || numColors < 0 || format == QImage::Format_Invalid)
         return 0;                                // invalid parameter(s)
 
     uint width = size.width();
     uint height = size.height();
     uint depth = qt_depthForFormat(format);
+
+    switch (format) {
+    case QImage::Format_Mono:
+    case QImage::Format_MonoLSB:
+        numColors = 2;
+        break;
+    case QImage::Format_Indexed8:
+        numColors = qBound(0, numColors, 256);
+        break;
+    default:
+        numColors = 0;
+        break;
+    }
 
     const int bytes_per_line = ((width * depth + 31) >> 5) << 2; // bytes per scanline (must be multiple of 4)
 
@@ -125,16 +138,13 @@ QImageData * QImageData::create(const QSize &size, QImage::Format format)
         return 0;
 
     QScopedPointer<QImageData> d(new QImageData);
-
-    switch (format) {
-    case QImage::Format_Mono:
-    case QImage::Format_MonoLSB:
-        d->colortable.resize(2);
+    d->colortable.resize(numColors);
+    if (depth == 1) {
         d->colortable[0] = QColor(Qt::black).rgba();
         d->colortable[1] = QColor(Qt::white).rgba();
-        break;
-    default:
-        break;
+    } else {
+        for (int i = 0; i < numColors; ++i)
+            d->colortable[i] = 0;
     }
 
     d->width = width;
@@ -170,9 +180,6 @@ QImageData::~QImageData()
     data = 0;
 }
 
-#if defined(_M_ARM)
-#pragma optimize("", off)
-#endif
 
 bool QImageData::checkForAlphaPixels() const
 {
@@ -185,9 +192,7 @@ bool QImageData::checkForAlphaPixels() const
     case QImage::Format_Indexed8:
         has_alpha_pixels = has_alpha_clut;
         break;
-    case QImage::Format_Alpha8:
-        has_alpha_pixels = true;
-        break;
+
     case QImage::Format_ARGB32:
     case QImage::Format_ARGB32_Premultiplied: {
         uchar *bits = data;
@@ -261,28 +266,12 @@ bool QImageData::checkForAlphaPixels() const
         }
     } break;
 
-    case QImage::Format_RGB32:
-    case QImage::Format_RGB16:
-    case QImage::Format_RGB444:
-    case QImage::Format_RGB555:
-    case QImage::Format_RGB666:
-    case QImage::Format_RGB888:
-    case QImage::Format_RGBX8888:
-    case QImage::Format_BGR30:
-    case QImage::Format_RGB30:
-    case QImage::Format_Grayscale8:
-        break;
-    case QImage::Format_Invalid:
-    case QImage::NImageFormats:
-        Q_UNREACHABLE();
+    default:
         break;
     }
 
     return has_alpha_pixels;
 }
-#if defined(_M_ARM)
-#pragma optimize("", on)
-#endif
 
 /*!
     \class QImage
@@ -486,10 +475,6 @@ bool QImageData::checkForAlphaPixels() const
     \li
     \snippet code/src_gui_image_qimage.cpp 1
     \endtable
-
-    For images with more than 8-bit per color-channel. The methods
-    setPixelColor() and pixelColor() can be used to set and get
-    with QColor values.
 
     QImage also provide the scanLine() function which returns a
     pointer to the pixel data at the scanline with the given index,
@@ -769,7 +754,7 @@ QImage::QImage() Q_DECL_NOEXCEPT
 QImage::QImage(int width, int height, Format format)
     : QPaintDevice()
 {
-    d = QImageData::create(QSize(width, height), format);
+    d = QImageData::create(QSize(width, height), format, 0);
 }
 
 /*!
@@ -784,7 +769,7 @@ QImage::QImage(int width, int height, Format format)
 QImage::QImage(const QSize &size, Format format)
     : QPaintDevice()
 {
-    d = QImageData::create(size, format);
+    d = QImageData::create(size, format, 0);
 }
 
 
@@ -1785,11 +1770,11 @@ void QImage::fill(const QColor &color)
         break;
     case QImage::Format_BGR30:
     case QImage::Format_A2BGR30_Premultiplied:
-        fill(qConvertRgb64ToRgb30<PixelOrderBGR>(color.rgba64()));
+        fill(qConvertArgb32ToA2rgb30<PixelOrderBGR>(color.rgba()));
         break;
     case QImage::Format_RGB30:
     case QImage::Format_A2RGB30_Premultiplied:
-        fill(qConvertRgb64ToRgb30<PixelOrderRGB>(color.rgba64()));
+        fill(qConvertArgb32ToA2rgb30<PixelOrderRGB>(color.rgba()));
         break;
     case QImage::Format_RGB16:
         fill((uint) qConvertRgb32To16(color.rgba()));
@@ -2117,7 +2102,7 @@ static QImage convertWithPalette(const QImage &src, QImage::Format format,
 */
 QImage QImage::convertToFormat(Format format, const QVector<QRgb> &colorTable, Qt::ImageConversionFlags flags) const
 {
-    if (!d || d->format == format)
+    if (d->format == format)
         return *this;
 
     if (format <= QImage::Format_Indexed8 && depth() == 32) {
@@ -2206,10 +2191,9 @@ int QImage::pixelIndex(int x, int y) const
     If the \a position is not valid, the results are undefined.
 
     \warning This function is expensive when used for massive pixel
-    manipulations. Use constBits() or constScanLine() when many
-    pixels needs to be read.
+    manipulations.
 
-    \sa setPixel(), valid(), constBits(), constScanLine(), {QImage#Pixel Manipulation}{Pixel
+    \sa setPixel(), valid(), {QImage#Pixel Manipulation}{Pixel
     Manipulation}
 */
 
@@ -2220,36 +2204,19 @@ int QImage::pixelIndex(int x, int y) const
 */
 QRgb QImage::pixel(int x, int y) const
 {
-    if (!d || x < 0 || x >= d->width || y < 0 || y >= d->height) {
+    if (!d || x < 0 || x >= d->width || y < 0 || y >= height()) {
         qWarning("QImage::pixel: coordinate (%d,%d) out of range", x, y);
         return 12345;
     }
 
-    const uchar *s = d->data + y * d->bytes_per_line;
-
-    int index = -1;
-    switch (d->format) {
+    const uchar * s = constScanLine(y);
+    switch(d->format) {
     case Format_Mono:
-        index = (*(s + (x >> 3)) >> (~x & 7)) & 1;
-        break;
+        return d->colortable.at((*(s + (x >> 3)) >> (~x & 7)) & 1);
     case Format_MonoLSB:
-        index = (*(s + (x >> 3)) >> (x & 7)) & 1;
-        break;
+        return d->colortable.at((*(s + (x >> 3)) >> (x & 7)) & 1);
     case Format_Indexed8:
-        index = s[x];
-        break;
-    default:
-        break;
-    }
-    if (index >= 0) {    // Indexed format
-        if (index >= d->colortable.size()) {
-            qWarning("QImage::pixel: color table index %d out of range.", index);
-            return 0;
-        }
-        return d->colortable.at(index);
-    }
-
-    switch (d->format) {
+        return d->colortable.at((int)s[x]);
     case Format_RGB32:
         return 0xff000000 | reinterpret_cast<const QRgb *>(s)[x];
     case Format_ARGB32: // Keep old behaviour.
@@ -2276,23 +2243,25 @@ QRgb QImage::pixel(int x, int y) const
     return *layout->convertToARGB32PM(&result, ptr, 1, layout, 0);
 }
 
+
 /*!
     \fn void QImage::setPixel(const QPoint &position, uint index_or_rgb)
 
     Sets the pixel index or color at the given \a position to \a
     index_or_rgb.
 
-    If the image's format is either monochrome or paletted, the given \a
+    If the image's format is either monochrome or 8-bit, the given \a
     index_or_rgb value must be an index in the image's color table,
     otherwise the parameter must be a QRgb value.
 
     If \a position is not a valid coordinate pair in the image, or if
     \a index_or_rgb >= colorCount() in the case of monochrome and
-    paletted images, the result is undefined.
+    8-bit images, the result is undefined.
 
     \warning This function is expensive due to the call of the internal
     \c{detach()} function called within; if performance is a concern, we
-    recommend the use of scanLine() or bits() to access pixel data directly.
+    recommend the use of \l{QImage::}{scanLine()} to access pixel data
+    directly.
 
     \sa pixel(), {QImage#Pixel Manipulation}{Pixel Manipulation}
 */
@@ -2377,116 +2346,6 @@ void QImage::setPixel(int x, int y, uint index_or_rgb)
     uint result;
     const uint *ptr = layout->convertFromARGB32PM(&result, &index_or_rgb, 1, layout, 0);
     qStorePixels[layout->bpp](s, ptr, x, 1);
-}
-
-/*!
-    \fn QColor QImage::pixelColor(const QPoint &position) const
-    \since 5.6
-
-    Returns the color of the pixel at the given \a position as a QColor.
-
-    If the \a position is not valid, an invalid QColor is returned.
-
-    \warning This function is expensive when used for massive pixel
-    manipulations. Use constBits() or constScanLine() when many
-    pixels needs to be read.
-
-    \sa setPixel(), valid(), constBits(), constScanLine(), {QImage#Pixel Manipulation}{Pixel
-    Manipulation}
-*/
-
-/*!
-    \overload
-    \since 5.6
-
-    Returns the color of the pixel at coordinates (\a x, \a y) as a QColor.
-*/
-QColor QImage::pixelColor(int x, int y) const
-{
-    if (!d || x < 0 || x >= d->width || y < 0 || y >= height()) {
-        qWarning("QImage::pixelColor: coordinate (%d,%d) out of range", x, y);
-        return QColor();
-    }
-
-    QRgba64 c;
-    const uchar * s = constScanLine(y);
-    switch (d->format) {
-    case Format_BGR30:
-    case Format_A2BGR30_Premultiplied:
-        c = qConvertA2rgb30ToRgb64<PixelOrderBGR>(reinterpret_cast<const quint32 *>(s)[x]);
-        break;
-    case Format_RGB30:
-    case Format_A2RGB30_Premultiplied:
-        c = qConvertA2rgb30ToRgb64<PixelOrderRGB>(reinterpret_cast<const quint32 *>(s)[x]);
-        break;
-    default:
-        c = QRgba64::fromArgb32(pixel(x, y));
-        break;
-    }
-    // QColor is always unpremultiplied
-    if (hasAlphaChannel() && qPixelLayouts[d->format].premultiplied)
-        c = c.unpremultiplied();
-    return QColor(c);
-}
-
-/*!
-    \fn void QImage::setPixelColor(const QPoint &position, const QColor &color)
-    \since 5.6
-
-    Sets the color at the given \a position to \a color.
-
-    If \a position is not a valid coordinate pair in the image, or
-    the image's format is either monochrome or paletted, the result is undefined.
-
-    \warning This function is expensive due to the call of the internal
-    \c{detach()} function called within; if performance is a concern, we
-    recommend the use of scanLine() or bits() to access pixel data directly.
-
-    \sa pixel(), bits(), scanLine(), {QImage#Pixel Manipulation}{Pixel Manipulation}
-*/
-
-/*!
-    \overload
-    \since 5.6
-
-    Sets the pixel color at (\a x, \a y) to \a color.
-*/
-void QImage::setPixelColor(int x, int y, const QColor &color)
-{
-    if (!d || x < 0 || x >= width() || y < 0 || y >= height() || !color.isValid()) {
-        qWarning("QImage::setPixelColor: coordinate (%d,%d) out of range", x, y);
-        return;
-    }
-    // QColor is always unpremultiplied
-    QRgba64 c = color.rgba64();
-    if (!hasAlphaChannel())
-        c.setAlpha(65535);
-    else if (qPixelLayouts[d->format].premultiplied)
-        c = c.premultiplied();
-    // detach is called from within scanLine
-    uchar * s = scanLine(y);
-    switch (d->format) {
-    case Format_Mono:
-    case Format_MonoLSB:
-    case Format_Indexed8:
-        qWarning("QImage::setPixelColor: called on monochrome or indexed format");
-        return;
-    case Format_BGR30:
-        ((uint *)s)[x] = qConvertRgb64ToRgb30<PixelOrderBGR>(c) | 0xc0000000;
-        return;
-    case Format_A2BGR30_Premultiplied:
-        ((uint *)s)[x] = qConvertRgb64ToRgb30<PixelOrderBGR>(c);
-        return;
-    case Format_RGB30:
-        ((uint *)s)[x] = qConvertRgb64ToRgb30<PixelOrderRGB>(c) | 0xc0000000;
-        return;
-    case Format_A2RGB30_Premultiplied:
-        ((uint *)s)[x] = qConvertRgb64ToRgb30<PixelOrderRGB>(c);
-        return;
-    default:
-        setPixel(x, y, c.toArgb32());
-        return;
-    }
 }
 
 /*!
@@ -3113,8 +2972,6 @@ void QImage::mirrored_inplace(bool horizontal, bool vertical)
         return;
 
     detach();
-    if (!d->own_data)
-        *this = copy();
 
     do_mirror(d, d, horizontal, vertical);
 }
@@ -3261,8 +3118,6 @@ void QImage::rgbSwapped_inplace()
         return;
 
     detach();
-    if (!d->own_data)
-        *this = copy();
 
     switch (d->format) {
     case Format_Invalid:
@@ -3938,10 +3793,6 @@ int QImage::metric(PaintDeviceMetric metric) const
         return d->devicePixelRatio;
         break;
 
-    case PdmDevicePixelRatioScaled:
-        return d->devicePixelRatio * QPaintDevice::devicePixelRatioFScale();
-        break;
-
     default:
         qWarning("QImage::metric(): Unhandled metric type %d", metric);
         break;
@@ -4231,8 +4082,6 @@ void QImage::setAlphaChannel(const QImage &alphaChannel)
 
     } else {
         const QImage sourceImage = alphaChannel.convertToFormat(QImage::Format_RGB32);
-        if (sourceImage.isNull())
-            return;
         const uchar *src_data = sourceImage.d->data;
         uchar *dest_data = d->data;
         for (int y=0; y<h; ++y) {
@@ -4430,15 +4279,12 @@ QImage QImage::smoothScaled(int w, int h) const {
             src = src.convertToFormat(QImage::Format_RGB32);
     }
     src = qSmoothScaleImage(src, w, h);
-    if (!src.isNull())
-        copyMetadata(src.d, d);
+    copyMetadata(src.d, d);
     return src;
 }
 
 static QImage rotated90(const QImage &image) {
     QImage out(image.height(), image.width(), image.format());
-    out.setDotsPerMeterX(image.dotsPerMeterY());
-    out.setDotsPerMeterY(image.dotsPerMeterX());
     if (image.colorCount() > 0)
         out.setColorTable(image.colorTable());
     int w = image.width();
@@ -4507,8 +4353,6 @@ static QImage rotated180(const QImage &image) {
 
 static QImage rotated270(const QImage &image) {
     QImage out(image.height(), image.width(), image.format());
-    out.setDotsPerMeterX(image.dotsPerMeterY());
-    out.setDotsPerMeterY(image.dotsPerMeterX());
     if (image.colorCount() > 0)
         out.setColorTable(image.colorTable());
     int w = image.width();
@@ -4658,7 +4502,32 @@ QImage QImage::transformed(const QTransform &matrix, Qt::TransformationMode mode
 
     if (complex_xform || mode == Qt::SmoothTransformation) {
         if (d->format < QImage::Format_RGB32 || !hasAlphaChannel()) {
-            target_format = qt_alphaVersion(d->format);
+            switch(d->format) {
+            case QImage::Format_RGB16:
+                target_format = Format_ARGB8565_Premultiplied;
+                break;
+            case QImage::Format_RGB555:
+                target_format = Format_ARGB8555_Premultiplied;
+                break;
+            case QImage::Format_RGB666:
+                target_format = Format_ARGB6666_Premultiplied;
+                break;
+            case QImage::Format_RGB444:
+                target_format = Format_ARGB4444_Premultiplied;
+                break;
+            case QImage::Format_RGBX8888:
+                target_format = Format_RGBA8888_Premultiplied;
+                break;
+            case QImage::Format_BGR30:
+                target_format = Format_A2BGR30_Premultiplied;
+                break;
+            case QImage::Format_RGB30:
+                target_format = Format_A2RGB30_Premultiplied;
+                break;
+            default:
+                target_format = Format_ARGB32_Premultiplied;
+                break;
+            }
         }
     }
 
@@ -4749,7 +4618,7 @@ bool QImageData::convertInPlace(QImage::Format newFormat, Qt::ImageConversionFla
         return true;
 
     // No in-place conversion if we have to detach
-    if (ref.load() > 1 || !own_data)
+    if (ref.load() > 1 || ro_data)
         return false;
 
     InPlace_Image_Converter converter = qimage_inplace_converter_map[format][newFormat];

@@ -42,6 +42,8 @@
 
 QT_BEGIN_NAMESPACE
 
+#ifndef QT_NO_PRINTER
+
 QPpdPrintDevice::QPpdPrintDevice()
     : QPlatformPrintDevice(),
       m_cupsDest(0),
@@ -267,7 +269,6 @@ void QPpdPrintDevice::loadInputSlots() const
     if (m_ppd) {
         ppd_option_t *inputSlots = ppdFindOption(m_ppd, "InputSlot");
         if (inputSlots) {
-            m_inputSlots.reserve(inputSlots->num_choices);
             for (int i = 0; i < inputSlots->num_choices; ++i)
                 m_inputSlots.append(QPrintUtils::ppdChoiceToInputSlot(inputSlots->choices[i]));
         }
@@ -308,7 +309,6 @@ void QPpdPrintDevice::loadOutputBins() const
     if (m_ppd) {
         ppd_option_t *outputBins = ppdFindOption(m_ppd, "OutputBin");
         if (outputBins) {
-            m_outputBins.reserve(outputBins->num_choices);
             for (int i = 0; i < outputBins->num_choices; ++i)
                 m_outputBins.append(QPrintUtils::ppdChoiceToOutputBin(outputBins->choices[i]));
         }
@@ -350,7 +350,6 @@ void QPpdPrintDevice::loadDuplexModes() const
     if (m_ppd) {
         ppd_option_t *duplexModes = ppdFindOption(m_ppd, "Duplex");
         if (duplexModes) {
-            m_duplexModes.reserve(duplexModes->num_choices);
             for (int i = 0; i < duplexModes->num_choices; ++i)
                 m_duplexModes.append(QPrintUtils::ppdChoiceToDuplexMode(duplexModes->choices[i].choice));
         }
@@ -472,5 +471,7 @@ cups_ptype_e QPpdPrintDevice::printerTypeFlags() const
 {
     return static_cast<cups_ptype_e>(printerOption("printer-type").toUInt());
 }
+
+#endif // QT_NO_PRINTER
 
 QT_END_NAMESPACE

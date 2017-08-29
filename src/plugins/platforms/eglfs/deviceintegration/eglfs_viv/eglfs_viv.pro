@@ -1,5 +1,9 @@
 TARGET = qeglfs-viv-integration
 
+PLUGIN_TYPE = egldeviceintegrations
+PLUGIN_CLASS_NAME = QEglFSVivIntegrationPlugin
+load(qt_plugin)
+
 QT += core-private gui-private platformsupport-private eglfs_device_lib-private
 
 INCLUDEPATH += $$PWD/../..
@@ -14,7 +18,3 @@ SOURCES += $$PWD/qeglfsvivmain.cpp \
 HEADERS += $$PWD/qeglfsvivintegration.h
 
 OTHER_FILES += $$PWD/eglfs_viv.json
-
-PLUGIN_TYPE = egldeviceintegrations
-PLUGIN_CLASS_NAME = QEglFSVivIntegrationPlugin
-load(qt_plugin)

@@ -7,12 +7,14 @@ MODULE_CONFIG = moc resources
 !isEmpty(QT_NAMESPACE): MODULE_DEFINES = QT_NAMESPACE=$$QT_NAMESPACE
 
 CONFIG += $$MODULE_CONFIG
-DEFINES += $$MODULE_DEFINES
 DEFINES   += QT_NO_USING_NAMESPACE
 win32-msvc*|win32-icc:QMAKE_LFLAGS += /BASE:0x67000000
 irix-cc*:QMAKE_CXXFLAGS += -no_prelink -ptused
 
 CONFIG += optimize_full
+
+# otherwise mingw headers do not declare common functions like putenv
+mingw:QMAKE_CXXFLAGS_CXX11 = -std=gnu++0x
 
 QMAKE_DOCS = $$PWD/doc/qtcore.qdocconf
 
@@ -28,11 +30,7 @@ ANDROID_PERMISSIONS = \
     android.permission.INTERNET \
     android.permission.WRITE_EXTERNAL_STORAGE
 
-# QtCore can't be compiled with -Wl,-no-undefined because it uses the "environ"
-# variable and on FreeBSD and OpenBSD, this variable is in the final executable itself.
-# OpenBSD 6.0 will include environ in libc.
-freebsd|openbsd: QMAKE_LFLAGS_NOUNDEF =
-
+load(qt_module)
 load(qfeatures)
 
 include(animation/animation.pri)
@@ -50,9 +48,6 @@ include(statemachine/statemachine.pri)
 include(mimetypes/mimetypes.pri)
 include(xml/xml.pri)
 
-# otherwise mingw headers do not declare common functions like putenv
-mingw: CONFIG -= strict_c++
-
 mac|darwin {
     !ios {
         LIBS_PRIVATE += -framework ApplicationServices
@@ -61,6 +56,8 @@ mac|darwin {
     LIBS_PRIVATE += -framework CoreFoundation
     LIBS_PRIVATE += -framework Foundation
 }
+win32:DEFINES-=QT_NO_CAST_TO_ASCII
+DEFINES += $$MODULE_DEFINES
 
 QMAKE_LIBS += $$QMAKE_LIBS_CORE
 
@@ -76,11 +73,6 @@ qt_conf.name = qt_config
 qt_conf.variable = QT_CONFIG
 
 QMAKE_PKGCONFIG_VARIABLES += host_bins qt_conf
-
-load(qt_module)
-
-# Override qt_module, so the symbols are actually included into the library.
-win32: DEFINES -= QT_NO_CAST_TO_ASCII
 
 ctest_macros_file.input = $$PWD/Qt5CTestMacros.cmake
 ctest_macros_file.output = $$DESTDIR/cmake/Qt5Core/Qt5CTestMacros.cmake

@@ -132,12 +132,12 @@ void tst_QDialogButtonBox::layoutReuse()
     QDialogButtonBox *box = new QDialogButtonBox(QDialogButtonBox::Ok);
     QPointer<QLayout> layout = box->layout();
     box->setCenterButtons(!box->centerButtons());
-    QCOMPARE(layout.data(), box->layout());
+    QVERIFY(layout == box->layout());
     QEvent event(QEvent::StyleChange);
     QApplication::sendEvent(box, &event);
-    QCOMPARE(layout.data(), box->layout());
+    QVERIFY(layout == box->layout());
     box->setOrientation(box->orientation() == Qt::Horizontal ? Qt::Vertical : Qt::Horizontal);
-    QVERIFY(layout.isNull());
+    QVERIFY(layout == 0);
     QVERIFY(layout != box->layout());
     delete box;
 }

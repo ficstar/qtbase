@@ -783,6 +783,4 @@ bool QStatusBar::event(QEvent *e)
 
 QT_END_NAMESPACE
 
-#include "moc_qstatusbar.cpp"
-
 #endif

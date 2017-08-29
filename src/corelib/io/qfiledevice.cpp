@@ -481,7 +481,7 @@ bool QFileDevicePrivate::putCharHelper(char c)
 #else
 
     // Cutoff for code that doesn't only touch the buffer.
-    qint64 writeBufferSize = writeBuffer.size();
+    int writeBufferSize = writeBuffer.size();
     if ((openMode & QIODevice::Unbuffered) || writeBufferSize + 1 >= QFILE_WRITEBUFFER_SIZE
 #ifdef Q_OS_WIN
         || ((openMode & QIODevice::Text) && c == '\n' && writeBufferSize + 2 >= QFILE_WRITEBUFFER_SIZE)
@@ -560,7 +560,7 @@ qint64 QFileDevice::writeData(const char *data, qint64 len)
     char *writePointer = d->writeBuffer.reserve(len);
     if (len == 1)
         *writePointer = *data;
-    else if (len)
+    else
         ::memcpy(writePointer, data, len);
     return len;
 }

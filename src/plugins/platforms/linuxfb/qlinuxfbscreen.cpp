@@ -256,15 +256,15 @@ static int openTtyDevice(const QString &device)
     return fd;
 }
 
-static void switchToGraphicsMode(int ttyfd, bool doSwitch, int *oldMode)
+static bool switchToGraphicsMode(int ttyfd, int *oldMode)
 {
-    // Do not warn if the switch fails: the ioctl fails when launching from a
-    // remote console and there is nothing we can do about it.  The matching
-    // call in resetTty should at least fail then, too, so we do no harm.
-    if (ioctl(ttyfd, KDGETMODE, oldMode) == 0) {
-        if (doSwitch && *oldMode != KD_GRAPHICS)
-            ioctl(ttyfd, KDSETMODE, KD_GRAPHICS);
+    ioctl(ttyfd, KDGETMODE, oldMode);
+    if (*oldMode != KD_GRAPHICS) {
+       if (ioctl(ttyfd, KDSETMODE, KD_GRAPHICS) != 0)
+            return false;
     }
+
+    return true;
 }
 
 static void resetTty(int ttyfd, int oldMode)
@@ -280,21 +280,21 @@ static void blankScreen(int fd, bool on)
 }
 
 QLinuxFbScreen::QLinuxFbScreen(const QStringList &args)
-    : mArgs(args), mFbFd(-1), mTtyFd(-1), mBlitter(0)
+    : mArgs(args), mFbFd(-1), mBlitter(0)
 {
-    mMmap.data = 0;
 }
 
 QLinuxFbScreen::~QLinuxFbScreen()
 {
     if (mFbFd != -1) {
-        if (mMmap.data)
-            munmap(mMmap.data - mMmap.offset, mMmap.size);
+        munmap(mMmap.data - mMmap.offset, mMmap.size);
         close(mFbFd);
     }
 
-    if (mTtyFd != -1)
+    if (mTtyFd != -1) {
         resetTty(mTtyFd, mOldTtyMode);
+        close(mTtyFd);
+    }
 
     delete mBlitter;
 }
@@ -389,7 +389,11 @@ bool QLinuxFbScreen::initialize()
     if (mTtyFd == -1)
         qErrnoWarning(errno, "Failed to open tty");
 
-    switchToGraphicsMode(mTtyFd, doSwitchToGraphicsMode, &mOldTtyMode);
+    if (doSwitchToGraphicsMode)
+        switchToGraphicsMode(mTtyFd, &mOldTtyMode);
+        // Do not warn if the switch fails: the ioctl fails when launching from
+        // a remote console and there is nothing we can do about it.
+
     blankScreen(mFbFd, false);
 
     return true;
@@ -405,12 +409,9 @@ QRegion QLinuxFbScreen::doRedraw()
     if (!mBlitter)
         mBlitter = new QPainter(&mFbScreenImage);
 
-    const QVector<QRect> rects = touched.rects();
-    mBlitter->setCompositionMode(QPainter::CompositionMode_Source);
-
-    for (int i = 0; i < rects.size(); ++i)
+    QVector<QRect> rects = touched.rects();
+    for (int i = 0; i < rects.size(); i++)
         mBlitter->drawImage(rects[i], *mScreenImage, rects[i]);
-
     return touched;
 }
 

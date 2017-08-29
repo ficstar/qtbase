@@ -83,7 +83,6 @@ private:
     QImage m_image;
     QRegion m_dirty;
     uint m_bsTexture;
-    QOpenGLContext *m_bsTextureContext;
     QPlatformTextureList *m_textures;
     QPlatformTextureList *m_lockedWidgetTextures;
 };

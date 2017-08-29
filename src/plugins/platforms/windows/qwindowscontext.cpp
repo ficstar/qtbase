@@ -33,15 +33,14 @@
 ****************************************************************************/
 
 #include "qwindowscontext.h"
-#include "qwindowsintegration.h"
 #include "qwindowswindow.h"
 #include "qwindowskeymapper.h"
+#include "qwindowsguieventdispatcher.h"
 #include "qwindowsmousehandler.h"
 #include "qtwindowsglobal.h"
 #include "qwindowsmime.h"
 #include "qwindowsinputcontext.h"
 #include "qwindowstabletsupport.h"
-#include "qwindowstheme.h"
 #include <private/qguiapplication_p.h>
 #ifndef QT_NO_ACCESSIBILITY
 # include "accessible/qwindowsaccessibility.h"
@@ -52,6 +51,7 @@
 #endif
 #include "qwindowsscreen.h"
 #include "qwindowstheme.h"
+#include "qwindowsscaling.h"
 
 #include <QtGui/QWindow>
 #include <qpa/qwindowsysteminterface.h>
@@ -65,8 +65,6 @@
 #include <QtCore/QSysInfo>
 #include <QtCore/QScopedArrayPointer>
 #include <QtCore/private/qsystemlibrary_p.h>
-
-#include <QtPlatformSupport/private/qwindowsguieventdispatcher_p.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -90,6 +88,20 @@ Q_LOGGING_CATEGORY(lcQpaAccessibility, "qt.qpa.accessibility")
 
 int QWindowsContext::verbose = 0;
 
+// Get verbosity of components from "foo:2,bar:3"
+static inline int componentVerbose(const char *v, const char *keyWord)
+{
+    if (const char *k = strstr(v, keyWord)) {
+        k += qstrlen(keyWord);
+        if (*k == ':') {
+            ++k;
+            if (isdigit(*k))
+                return *k - '0';
+        }
+    }
+    return 0;
+}
+
 #if !defined(LANG_SYRIAC)
 #    define LANG_SYRIAC 0x5a
 #endif
@@ -102,10 +114,10 @@ static inline bool useRTL_Extensions(QSysInfo::WinVersion ver)
     if ((ver & QSysInfo::WV_NT_based) && (ver >= QSysInfo::WV_VISTA)) {
         // Since the IsValidLanguageGroup/IsValidLocale functions always return true on
         // Vista, check the Keyboard Layouts for enabling RTL.
-        if (const int nLayouts = GetKeyboardLayoutList(0, 0)) {
+        if (const UINT nLayouts = GetKeyboardLayoutList(0, 0)) {
             QScopedArrayPointer<HKL> lpList(new HKL[nLayouts]);
             GetKeyboardLayoutList(nLayouts, lpList.data());
-            for (int i = 0; i < nLayouts; ++i) {
+            for (UINT i = 0; i < nLayouts; ++i) {
                 switch (PRIMARYLANGID((quintptr)lpList[i])) {
                 case LANG_ARABIC:
                 case LANG_HEBREW:
@@ -164,8 +176,7 @@ QWindowsUser32DLL::QWindowsUser32DLL() :
     isHungAppWindow(0), isTouchWindow(0),
     registerTouchWindow(0), unregisterTouchWindow(0),
     getTouchInputInfo(0), closeTouchInputHandle(0), setProcessDPIAware(0),
-    addClipboardFormatListener(0), removeClipboardFormatListener(0),
-    getDisplayAutoRotationPreferences(0), setDisplayAutoRotationPreferences(0)
+    addClipboardFormatListener(0), removeClipboardFormatListener(0)
 {
 }
 
@@ -186,20 +197,16 @@ void QWindowsUser32DLL::init()
         addClipboardFormatListener = (AddClipboardFormatListener)library.resolve("AddClipboardFormatListener");
         removeClipboardFormatListener = (RemoveClipboardFormatListener)library.resolve("RemoveClipboardFormatListener");
     }
-    getDisplayAutoRotationPreferences = (GetDisplayAutoRotationPreferences)library.resolve("GetDisplayAutoRotationPreferences");
-    setDisplayAutoRotationPreferences = (SetDisplayAutoRotationPreferences)library.resolve("SetDisplayAutoRotationPreferences");
 }
 
 bool QWindowsUser32DLL::initTouch()
 {
-    if (!isTouchWindow && QSysInfo::windowsVersion() >= QSysInfo::WV_WINDOWS7) {
-        QSystemLibrary library(QStringLiteral("user32"));
-        isTouchWindow = (IsTouchWindow)(library.resolve("IsTouchWindow"));
-        registerTouchWindow = (RegisterTouchWindow)(library.resolve("RegisterTouchWindow"));
-        unregisterTouchWindow = (UnregisterTouchWindow)(library.resolve("UnregisterTouchWindow"));
-        getTouchInputInfo = (GetTouchInputInfo)(library.resolve("GetTouchInputInfo"));
-        closeTouchInputHandle = (CloseTouchInputHandle)(library.resolve("CloseTouchInputHandle"));
-    }
+    QSystemLibrary library(QStringLiteral("user32"));
+    isTouchWindow = (IsTouchWindow)(library.resolve("IsTouchWindow"));
+    registerTouchWindow = (RegisterTouchWindow)(library.resolve("RegisterTouchWindow"));
+    unregisterTouchWindow = (UnregisterTouchWindow)(library.resolve("UnregisterTouchWindow"));
+    getTouchInputInfo = (GetTouchInputInfo)(library.resolve("GetTouchInputInfo"));
+    closeTouchInputHandle = (CloseTouchInputHandle)(library.resolve("CloseTouchInputHandle"));
     return isTouchWindow && registerTouchWindow && unregisterTouchWindow && getTouchInputInfo && closeTouchInputHandle;
 }
 
@@ -352,36 +359,6 @@ QWindowsContext::~QWindowsContext()
     m_instance = 0;
 }
 
-bool QWindowsContext::initTouch()
-{
-    return initTouch(QWindowsIntegration::instance()->options());
-}
-
-bool QWindowsContext::initTouch(unsigned integrationOptions)
-{
-    if (d->m_systemInfo & QWindowsContext::SI_SupportsTouch)
-        return true;
-
-    QTouchDevice *touchDevice = d->m_mouseHandler.ensureTouchDevice();
-    if (!touchDevice)
-        return false;
-
-#ifndef Q_OS_WINCE
-    if (!QWindowsContext::user32dll.initTouch()) {
-        delete touchDevice;
-        return false;
-    }
-#endif // !Q_OS_WINCE
-
-    if (!(integrationOptions & QWindowsIntegration::DontPassOsMouseEventsSynthesizedFromTouch))
-        touchDevice->setCapabilities(touchDevice->capabilities() | QTouchDevice::MouseEmulation);
-
-    QWindowSystemInterface::registerTouchDevice(touchDevice);
-
-    d->m_systemInfo |= QWindowsContext::SI_SupportsTouch;
-    return true;
-}
-
 void QWindowsContext::setTabletAbsoluteRange(int a)
 {
 #if !defined(QT_NO_TABLETEVENT) && !defined(Q_OS_WINCE)
@@ -392,31 +369,14 @@ void QWindowsContext::setTabletAbsoluteRange(int a)
 #endif
 }
 
-int QWindowsContext::processDpiAwareness()
-{
-#ifndef Q_OS_WINCE
-    int result;
-    if (QWindowsContext::shcoredll.getProcessDpiAwareness
-        && SUCCEEDED(QWindowsContext::shcoredll.getProcessDpiAwareness(NULL, &result))) {
-        return result;
-    }
-#endif // !Q_OS_WINCE
-    return -1;
-}
-
 void QWindowsContext::setProcessDpiAwareness(QtWindows::ProcessDpiAwareness dpiAwareness)
 {
 #ifndef Q_OS_WINCE
     qCDebug(lcQpaWindows) << __FUNCTION__ << dpiAwareness;
     if (QWindowsContext::shcoredll.isValid()) {
         const HRESULT hr = QWindowsContext::shcoredll.setProcessDpiAwareness(dpiAwareness);
-        // E_ACCESSDENIED means set externally (MSVC manifest or external app loading Qt plugin).
-        // Silence warning in that case unless debug is enabled.
-        if (FAILED(hr) && (hr != E_ACCESSDENIED || lcQpaWindows().isDebugEnabled())) {
-            qWarning().noquote().nospace() << "SetProcessDpiAwareness("
-                << dpiAwareness << ") failed: " << QWindowsContext::comErrorString(hr)
-                << ", using " << QWindowsContext::processDpiAwareness();
-        }
+        if (FAILED(hr))
+            qWarning() << "SetProcessDpiAwareness failed:" << QWindowsContext::comErrorString(hr);
     } else {
         if (dpiAwareness != QtWindows::ProcessDpiUnaware && QWindowsContext::user32dll.setProcessDPIAware) {
             if (!QWindowsContext::user32dll.setProcessDPIAware())
@@ -543,15 +503,15 @@ QString QWindowsContext::registerWindowClass(QString cname,
     // add an instance-specific ID, the address of the window proc.
     static int classExists = -1;
 
-    const HINSTANCE appInstance = static_cast<HINSTANCE>(GetModuleHandle(0));
+    const HINSTANCE appInstance = (HINSTANCE)GetModuleHandle(0);
     if (classExists == -1) {
         WNDCLASS wcinfo;
-        classExists = GetClassInfo(appInstance, reinterpret_cast<LPCWSTR>(cname.utf16()), &wcinfo);
+        classExists = GetClassInfo(appInstance, (wchar_t*)cname.utf16(), &wcinfo);
         classExists = classExists && wcinfo.lpfnWndProc != proc;
     }
 
     if (classExists)
-        cname += QString::number(reinterpret_cast<quintptr>(proc));
+        cname += QString::number((quintptr)proc);
 
     if (d->m_registeredWindowClassNames.contains(cname))        // already registered in our list
         return cname;
@@ -571,13 +531,13 @@ QString QWindowsContext::registerWindowClass(QString cname,
 #ifndef Q_OS_WINCE
     wc.hbrBackground = brush;
     if (icon) {
-        wc.hIcon = static_cast<HICON>(LoadImage(appInstance, L"IDI_ICON1", IMAGE_ICON, 0, 0, LR_DEFAULTSIZE));
+        wc.hIcon = (HICON)LoadImage(appInstance, L"IDI_ICON1", IMAGE_ICON, 0, 0, LR_DEFAULTSIZE);
         if (wc.hIcon) {
             int sw = GetSystemMetrics(SM_CXSMICON);
             int sh = GetSystemMetrics(SM_CYSMICON);
-            wc.hIconSm = static_cast<HICON>(LoadImage(appInstance, L"IDI_ICON1", IMAGE_ICON, sw, sh, 0));
+            wc.hIconSm = (HICON)LoadImage(appInstance, L"IDI_ICON1", IMAGE_ICON, sw, sh, 0);
         } else {
-            wc.hIcon = static_cast<HICON>(LoadImage(0, IDI_APPLICATION, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED));
+            wc.hIcon = (HICON)LoadImage(0, IDI_APPLICATION, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
             wc.hIconSm = 0;
         }
     } else {
@@ -593,7 +553,7 @@ QString QWindowsContext::registerWindowClass(QString cname,
 #endif
 
     wc.lpszMenuName  = 0;
-    wc.lpszClassName = reinterpret_cast<LPCWSTR>(cname.utf16());
+    wc.lpszClassName = (wchar_t*)cname.utf16();
 #ifndef Q_OS_WINCE
     ATOM atom = RegisterClassEx(&wc);
 #else
@@ -613,10 +573,10 @@ QString QWindowsContext::registerWindowClass(QString cname,
 
 void QWindowsContext::unregisterWindowClasses()
 {
-    const HINSTANCE appInstance = static_cast<HINSTANCE>(GetModuleHandle(0));
+    const HINSTANCE appInstance = (HINSTANCE)GetModuleHandle(0);
 
     foreach (const QString &name,  d->m_registeredWindowClassNames) {
-        if (!UnregisterClass(reinterpret_cast<LPCWSTR>(name.utf16()), appInstance) && QWindowsContext::verbose)
+        if (!UnregisterClass((wchar_t*)name.utf16(), appInstance) && QWindowsContext::verbose)
             qErrnoWarning("UnregisterClass failed for '%s'", qPrintable(name));
     }
     d->m_registeredWindowClassNames.clear();
@@ -632,11 +592,11 @@ QString QWindowsContext::windowsErrorMessage(unsigned long errorCode)
     QString rc = QString::fromLatin1("#%1: ").arg(errorCode);
     ushort *lpMsgBuf;
 
-    const DWORD len = FormatMessage(
+    const int len = FormatMessage(
             FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            NULL, errorCode, 0, reinterpret_cast<LPTSTR>(&lpMsgBuf), 0, NULL);
+            NULL, errorCode, 0, (LPTSTR)&lpMsgBuf, 0, NULL);
     if (len) {
-        rc = QString::fromUtf16(lpMsgBuf, int(len));
+        rc = QString::fromUtf16(lpMsgBuf, len);
         LocalFree(lpMsgBuf);
     } else {
         rc += QString::fromLatin1("<unknown error>");
@@ -800,11 +760,11 @@ HWND QWindowsContext::createDummyWindow(const QString &classNameIn,
     if (!wndProc)
         wndProc = DefWindowProc;
     QString className = registerWindowClass(classNameIn, wndProc);
-    return CreateWindowEx(0, reinterpret_cast<LPCWSTR>(className.utf16()),
+    return CreateWindowEx(0, (wchar_t*)className.utf16(),
                           windowName, style,
                           CW_USEDEFAULT, CW_USEDEFAULT,
                           CW_USEDEFAULT, CW_USEDEFAULT,
-                          HWND_MESSAGE, NULL, static_cast<HINSTANCE>(GetModuleHandle(0)), NULL);
+                          HWND_MESSAGE, NULL, (HINSTANCE)GetModuleHandle(0), NULL);
 }
 
 #ifndef Q_OS_WINCE
@@ -815,11 +775,11 @@ static inline QString errorMessageFromComError(const _com_error &comError)
 {
      TCHAR *message = Q_NULLPTR;
      FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                   NULL, DWORD(comError.Error()), MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
+                   NULL, comError.Error(), MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT),
                    message, 0, NULL);
      if (message) {
          const QString result = QString::fromWCharArray(message).trimmed();
-         LocalFree(static_cast<HLOCAL>(message));
+         LocalFree((HLOCAL)message);
          return result;
      }
      if (const WORD wCode = comError.WCode())
@@ -845,9 +805,6 @@ QByteArray QWindowsContext::comErrorString(HRESULT hr)
         break;
     case E_UNEXPECTED:
         result += QByteArrayLiteral("E_UNEXPECTED");
-        break;
-    case E_ACCESSDENIED:
-        result += QByteArrayLiteral("E_ACCESSDENIED");
         break;
     case CO_E_ALREADYINITIALIZED:
         result += QByteArrayLiteral("CO_E_ALREADYINITIALIZED");
@@ -903,11 +860,6 @@ QByteArray QWindowsContext::comErrorString(HRESULT hr)
     return result;
 }
 
-static inline QWindowsInputContext *windowsInputContext()
-{
-    return qobject_cast<QWindowsInputContext *>(QWindowsIntegration::instance()->inputContext());
-}
-
 /*!
      \brief Main windows procedure registered for windows.
 
@@ -956,29 +908,16 @@ bool QWindowsContext::windowsProc(HWND hwnd, UINT message,
             return true;
         }
     }
-    if (et & QtWindows::InputMethodEventFlag) {
-        QWindowsInputContext *windowsInputContext = ::windowsInputContext();
-        // Disable IME assuming this is a special implementation hooking into keyboard input.
-        // "Real" IME implementations should use a native event filter intercepting IME events.
-        if (!windowsInputContext) {
-            QWindowsInputContext::setWindowsImeEnabled(platformWindow, false);
-            return false;
-        }
-        switch (et) {
-        case QtWindows::InputMethodStartCompositionEvent:
-            return windowsInputContext->startComposition(hwnd);
-        case QtWindows::InputMethodCompositionEvent:
-            return windowsInputContext->composition(hwnd, lParam);
-        case QtWindows::InputMethodEndCompositionEvent:
-            return windowsInputContext->endComposition(hwnd);
-        case QtWindows::InputMethodRequest:
-            return windowsInputContext->handleIME_Request(wParam, lParam, result);
-        default:
-            break;
-        }
-    } // InputMethodEventFlag
 
     switch (et) {
+    case QtWindows::InputMethodStartCompositionEvent:
+        return QWindowsInputContext::instance()->startComposition(hwnd);
+    case QtWindows::InputMethodCompositionEvent:
+        return QWindowsInputContext::instance()->composition(hwnd, lParam);
+    case QtWindows::InputMethodEndCompositionEvent:
+        return QWindowsInputContext::instance()->endComposition(hwnd);
+    case QtWindows::InputMethodRequest:
+        return QWindowsInputContext::instance()->handleIME_Request(wParam, lParam, result);
     case QtWindows::GestureEvent:
 #if !defined(Q_OS_WINCE) && !defined(QT_NO_SESSIONMANAGER)
         return platformSessionManager()->isInteractionBlocked() ? true : d->m_mouseHandler.translateGestureEvent(platformWindow->window(), hwnd, et, msg, result);
@@ -1008,8 +947,6 @@ bool QWindowsContext::windowsProc(HWND hwnd, UINT message,
 #endif
     case QtWindows::DisplayChangedEvent:
         return d->m_screenManager.handleDisplayChange(wParam, lParam);
-        if (QWindowsTheme *t = QWindowsTheme::instance())
-            t->displayChanged();
     case QtWindows::SettingChangedEvent:
         return d->m_screenManager.handleScreenChanges();
     default:
@@ -1055,13 +992,11 @@ bool QWindowsContext::windowsProc(HWND hwnd, UINT message,
     }
 
     switch (et) {
-    case QtWindows::KeyboardLayoutChangeEvent:
-        if (QWindowsInputContext *wic = windowsInputContext())
-            wic->handleInputLanguageChanged(wParam, lParam); // fallthrough intended.
     case QtWindows::KeyDownEvent:
     case QtWindows::KeyEvent:
     case QtWindows::InputMethodKeyEvent:
     case QtWindows::InputMethodKeyDownEvent:
+    case QtWindows::KeyboardLayoutChangeEvent:
     case QtWindows::AppCommandEvent:
 #if !defined(Q_OS_WINCE) && !defined(QT_NO_SESSIONMANAGER)
         return platformSessionManager()->isInteractionBlocked() ? true : d->m_keyMapper.translateKeyEvent(platformWindow->window(), hwnd, msg, result);
@@ -1072,7 +1007,7 @@ bool QWindowsContext::windowsProc(HWND hwnd, UINT message,
         platformWindow->handleMoved();
         return true;
     case QtWindows::ResizeEvent:
-        platformWindow->handleResized(static_cast<int>(wParam));
+        platformWindow->handleResized((int)wParam);
         return true;
 #ifndef Q_OS_WINCE // maybe available on some SDKs revisit WM_GETMINMAXINFO
     case QtWindows::QuerySizeHints:
@@ -1211,7 +1146,7 @@ bool QWindowsContext::windowsProc(HWND hwnd, UINT message,
 
         sessionManager->setActive(false);
         sessionManager->allowsInteraction();
-        const bool endsession = wParam != 0;
+        bool endsession = (bool) wParam;
 
         // we receive the message for each toplevel window included internal hidden ones,
         // but the aboutToQuit signal should be emitted only once.
@@ -1278,7 +1213,7 @@ bool QWindowsContext::handleContextMenuEvent(QWindow *window, const MSG &msg)
     bool mouseTriggered = false;
     QPoint globalPos;
     QPoint pos;
-    if (msg.lParam != int(0xffffffff)) {
+    if (msg.lParam != (int)0xffffffff) {
         mouseTriggered = true;
         globalPos.setX(msg.pt.x);
         globalPos.setY(msg.pt.y);
@@ -1286,8 +1221,8 @@ bool QWindowsContext::handleContextMenuEvent(QWindow *window, const MSG &msg)
 
         RECT clientRect;
         if (GetClientRect(msg.hwnd, &clientRect)) {
-            if (pos.x() < clientRect.left || pos.x() >= clientRect.right ||
-                pos.y() < clientRect.top || pos.y() >= clientRect.bottom)
+            if (pos.x() < (int)clientRect.left || pos.x() >= (int)clientRect.right ||
+                pos.y() < (int)clientRect.top || pos.y() >= (int)clientRect.bottom)
             {
                 // This is the case that user has right clicked in the window's caption,
                 // We should call DefWindowProc() to display a default shortcut menu
@@ -1297,7 +1232,9 @@ bool QWindowsContext::handleContextMenuEvent(QWindow *window, const MSG &msg)
         }
     }
 
-    QWindowSystemInterface::handleContextMenuEvent(window, mouseTriggered, pos, globalPos,
+    QWindowSystemInterface::handleContextMenuEvent(window, mouseTriggered,
+                                                   pos / QWindowsScaling::factor(),
+                                                   globalPos / QWindowsScaling::factor(),
                                                    QWindowsKeyMapper::queryKeyboardModifiers());
     return true;
 }

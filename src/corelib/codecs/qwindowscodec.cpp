@@ -208,12 +208,10 @@ QByteArray QWindowsLocalCodec::convertFromUnicode(const QChar *ch, int uclen, Co
                                 0, 0, 0, &used_def));
                 // and try again...
         } else {
-            // Fail.  Probably can't happen in fact (dwFlags is 0).
 #ifndef QT_NO_DEBUG
-            // Can't use qWarning(), as it'll recurse to handle %ls
-            fprintf(stderr,
-                    "WideCharToMultiByte: Cannot convert multibyte text (error %d): %ls\n",
-                    r, reinterpret_cast<const wchar_t*>(QString(ch, uclen).utf16()));
+            // Fail.
+            qWarning("WideCharToMultiByte: Cannot convert multibyte text (error %d): %s (UTF-8)",
+                r, QString(ch, uclen).toLocal8Bit().data());
 #endif
             break;
         }

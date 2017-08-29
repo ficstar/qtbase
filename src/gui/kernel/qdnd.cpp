@@ -147,9 +147,7 @@ static QStringList imageReadMimeFormats()
 {
     QStringList formats;
     QList<QByteArray> imageFormats = QImageReader::supportedImageFormats();
-    const int numImageFormats = imageFormats.size();
-    formats.reserve(numImageFormats);
-    for (int i = 0; i < numImageFormats; ++i) {
+    for (int i = 0; i < imageFormats.size(); ++i) {
         QString format = QLatin1String("image/");
         format += QString::fromLatin1(imageFormats.at(i).toLower());
         formats.append(format);
@@ -168,9 +166,7 @@ static QStringList imageWriteMimeFormats()
 {
     QStringList formats;
     QList<QByteArray> imageFormats = QImageWriter::supportedImageFormats();
-    const int numImageFormats = imageFormats.size();
-    formats.reserve(numImageFormats);
-    for (int i = 0; i < numImageFormats; ++i) {
+    for (int i = 0; i < imageFormats.size(); ++i) {
         QString format = QLatin1String("image/");
         format += QString::fromLatin1(imageFormats.at(i).toLower());
         formats.append(format);

@@ -64,13 +64,10 @@ public:
             const QByteArray &passPhrase = QByteArray());
     explicit QSslKey(Qt::HANDLE handle, QSsl::KeyType type = QSsl::PrivateKey);
     QSslKey(const QSslKey &other);
-#ifdef Q_COMPILER_RVALUE_REFS
-    QSslKey &operator=(QSslKey &&other) Q_DECL_NOTHROW { swap(other); return *this; }
-#endif
-    QSslKey &operator=(const QSslKey &other);
     ~QSslKey();
+    QSslKey &operator=(const QSslKey &other);
 
-    void swap(QSslKey &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    inline void swap(QSslKey &other) { qSwap(d, other.d); }
 
     bool isNull() const;
     void clear();

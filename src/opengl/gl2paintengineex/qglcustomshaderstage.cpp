@@ -63,7 +63,6 @@ QGLCustomShaderStage::~QGLCustomShaderStage()
         d->m_manager->removeCustomStage();
         d->m_manager->sharedShaders->cleanupCustomStage(this);
     }
-    delete d_ptr;
 }
 
 void QGLCustomShaderStage::setUniformsDirty()

@@ -51,7 +51,7 @@ class Q_WIDGETS_EXPORT QButtonGroup : public QObject
 
     Q_PROPERTY(bool exclusive READ exclusive WRITE setExclusive)
 public:
-    explicit QButtonGroup(QObject *parent = Q_NULLPTR);
+    explicit QButtonGroup(QObject *parent = 0);
     ~QButtonGroup();
 
     void setExclusive(bool);

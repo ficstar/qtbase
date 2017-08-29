@@ -354,9 +354,7 @@ void QMimeData::setUrls(const QList<QUrl> &urls)
 {
     Q_D(QMimeData);
     QList<QVariant> list;
-    const int numUrls = urls.size();
-    list.reserve(numUrls);
-    for (int i = 0; i < numUrls; ++i)
+    for (int i = 0; i < urls.size(); ++i)
         list.append(urls.at(i));
 
     d->setData(QLatin1String("text/uri-list"), list);
@@ -563,7 +561,7 @@ QByteArray QMimeData::data(const QString &mimeType) const
     operators must then be registered with the qRegisterMetaTypeStreamOperators()
     function.
 
-    \sa hasFormat(), QMetaType, {QMetaType::}{qRegisterMetaTypeStreamOperators()}
+    \sa hasFormat(), QMetaType, qRegisterMetaTypeStreamOperators()
 */
 void QMimeData::setData(const QString &mimeType, const QByteArray &data)
 {

@@ -36,6 +36,7 @@
 
 #include "treewalker.h"
 
+#include <qhash.h>
 #include <qmap.h>
 #include <qset.h>
 #include <qstring.h>

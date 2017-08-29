@@ -44,8 +44,6 @@
 
 QT_BEGIN_NAMESPACE
 
-Q_CORE_EXPORT uint qHash(const QUrlQuery &key, uint seed = 0) Q_DECL_NOTHROW;
-
 class QUrlQueryPrivate;
 class Q_CORE_EXPORT QUrlQuery
 {
@@ -56,7 +54,8 @@ public:
     QUrlQuery(const QUrlQuery &other);
     QUrlQuery &operator=(const QUrlQuery &other);
 #ifdef Q_COMPILER_RVALUE_REFS
-    QUrlQuery &operator=(QUrlQuery &&other) Q_DECL_NOTHROW { swap(other); return *this; }
+    QUrlQuery &operator=(QUrlQuery &&other)
+    { qSwap(d, other.d); return *this; }
 #endif
     ~QUrlQuery();
 
@@ -64,7 +63,7 @@ public:
     bool operator!=(const QUrlQuery &other) const
     { return !(*this == other); }
 
-    void swap(QUrlQuery &other) Q_DECL_NOTHROW { qSwap(d, other.d); }
+    void swap(QUrlQuery &other) { qSwap(d, other.d); }
 
     bool isEmpty() const;
     bool isDetached() const;
@@ -96,7 +95,6 @@ public:
 
 private:
     friend class QUrl;
-    friend Q_CORE_EXPORT uint qHash(const QUrlQuery &key, uint seed) Q_DECL_NOTHROW;
     QSharedDataPointer<QUrlQueryPrivate> d;
 public:
     typedef QSharedDataPointer<QUrlQueryPrivate> DataPtr;
@@ -121,7 +119,7 @@ inline QStringList QUrl::allQueryItemValues(const QString &key) const
 inline void QUrl::removeQueryItem(const QString &key)
 { QUrlQuery q(*this); q.removeQueryItem(key); setQuery(q); }
 inline void QUrl::removeAllQueryItems(const QString &key)
-{ QUrlQuery q(*this); q.removeAllQueryItems(key); setQuery(q); }
+{ QUrlQuery q(*this); q.removeAllQueryItems(key); }
 
 inline void QUrl::addEncodedQueryItem(const QByteArray &key, const QByteArray &value)
 { QUrlQuery q(*this); q.addQueryItem(fromEncodedComponent_helper(key), fromEncodedComponent_helper(value)); setQuery(q); }
@@ -132,7 +130,7 @@ inline QByteArray QUrl::encodedQueryItemValue(const QByteArray &key) const
 inline void QUrl::removeEncodedQueryItem(const QByteArray &key)
 { QUrlQuery q(*this); q.removeQueryItem(fromEncodedComponent_helper(key)); setQuery(q); }
 inline void QUrl::removeAllEncodedQueryItems(const QByteArray &key)
-{ QUrlQuery q(*this); q.removeAllQueryItems(fromEncodedComponent_helper(key)); setQuery(q); }
+{ QUrlQuery q(*this); q.removeAllQueryItems(fromEncodedComponent_helper(key)); }
 
 inline void QUrl::setEncodedQueryItems(const QList<QPair<QByteArray, QByteArray> > &qry)
 {

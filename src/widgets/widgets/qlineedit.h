@@ -84,8 +84,8 @@ public:
     };
     Q_ENUM(ActionPosition)
 
-    explicit QLineEdit(QWidget *parent = Q_NULLPTR);
-    explicit QLineEdit(const QString &, QWidget *parent = Q_NULLPTR);
+    explicit QLineEdit(QWidget* parent=0);
+    explicit QLineEdit(const QString &, QWidget* parent=0);
     ~QLineEdit();
 
     QString text() const;

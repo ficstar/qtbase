@@ -79,8 +79,7 @@ void QElapsedTimer::start() Q_DECL_NOTHROW
     and then starting the timer again with start(), but it does so in one
     single operation, avoiding the need to obtain the clock value twice.
 
-    Calling this function on a QElapsedTimer that is invalid
-    results in undefined behavior.
+    Restarting the timer makes it valid again.
 
     The following example illustrates how to use this function to calibrate a
     parameter to a slow operation (for example, an iteration count) so that
@@ -88,7 +87,7 @@ void QElapsedTimer::start() Q_DECL_NOTHROW
 
     \snippet qelapsedtimer/main.cpp 3
 
-    \sa start(), invalidate(), elapsed(), isValid()
+    \sa start(), invalidate(), elapsed()
 */
 qint64 QElapsedTimer::restart() Q_DECL_NOTHROW
 {
@@ -101,10 +100,8 @@ qint64 QElapsedTimer::restart() Q_DECL_NOTHROW
 /*! \since 4.8
 
     Returns the number of nanoseconds since this QElapsedTimer was last
-    started.
-
-    Calling this function on a QElapsedTimer that is invalid
-    results in undefined behavior.
+    started. Calling this function in a QElapsedTimer that was invalidated
+    will result in undefined results.
 
     On platforms that do not provide nanosecond resolution, the value returned
     will be the best estimate available.
@@ -118,12 +115,10 @@ qint64 QElapsedTimer::nsecsElapsed() const Q_DECL_NOTHROW
 
 /*!
     Returns the number of milliseconds since this QElapsedTimer was last
-    started.
+    started. Calling this function in a QElapsedTimer that was invalidated
+    will result in undefined results.
 
-    Calling this function on a QElapsedTimer that is invalid
-    results in undefined behavior.
-
-    \sa start(), restart(), hasExpired(), isValid(), invalidate()
+    \sa start(), restart(), hasExpired(), invalidate()
 */
 qint64 QElapsedTimer::elapsed() const Q_DECL_NOTHROW
 {
@@ -139,7 +134,7 @@ qint64 QElapsedTimer::elapsed() const Q_DECL_NOTHROW
     number of milliseconds since January 1st, 1970 at 0:00 UTC (that is, it
     is the Unix time expressed in milliseconds).
 
-    On Linux, Windows and Apple platforms, this value is usually the time
+    On Linux, Windows and OS X/iOS systems, this value is usually the time
     since the system boot, though it usually does not include the time the
     system has spent in sleep states.
 
@@ -171,8 +166,7 @@ qint64 QElapsedTimer::msecsTo(const QElapsedTimer &other) const Q_DECL_NOTHROW
     \a other was started before this object, the returned value will be
     negative. If it was started later, the returned value will be positive.
 
-    Calling this function on or with a QElapsedTimer that is invalid
-    results in undefined behavior.
+    The return value is undefined if this object or \a other were invalidated.
 
     \sa msecsTo(), elapsed()
 */

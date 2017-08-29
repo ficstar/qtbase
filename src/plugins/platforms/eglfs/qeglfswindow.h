@@ -34,25 +34,20 @@
 #ifndef QEGLFSWINDOW_H
 #define QEGLFSWINDOW_H
 
-#include "qeglfsglobal.h"
 #include "qeglfsintegration.h"
 #include "qeglfsscreen.h"
-
-#include <qpa/qplatformwindow.h>
-#include <QtPlatformSupport/private/qopenglcompositor_p.h>
+#include "qeglfsglobal.h"
+#include <QtPlatformSupport/private/qeglplatformwindow_p.h>
 
 QT_BEGIN_NAMESPACE
 
-class QOpenGLCompositorBackingStore;
-class QPlatformTextureList;
-
-class Q_EGLFS_EXPORT QEglFSWindow : public QPlatformWindow, public QOpenGLCompositorWindow
+class Q_EGLFS_EXPORT QEglFSWindow : public QEGLPlatformWindow
 {
 public:
     QEglFSWindow(QWindow *w);
     ~QEglFSWindow();
 
-    void create();
+    void create() Q_DECL_OVERRIDE;
     void destroy();
 
     void setGeometry(const QRect &) Q_DECL_OVERRIDE;
@@ -63,15 +58,13 @@ public:
     void lower() Q_DECL_OVERRIDE;
 
     void propagateSizeHints() Q_DECL_OVERRIDE { }
+    void setOpacity(qreal) Q_DECL_OVERRIDE { }
     void setMask(const QRegion &) Q_DECL_OVERRIDE { }
     bool setKeyboardGrabEnabled(bool) Q_DECL_OVERRIDE { return false; }
     bool setMouseGrabEnabled(bool) Q_DECL_OVERRIDE { return false; }
-    void setOpacity(qreal) Q_DECL_OVERRIDE;
-    WId winId() const Q_DECL_OVERRIDE;
 
     QSurfaceFormat format() const Q_DECL_OVERRIDE;
-
-    EGLNativeWindowType eglWindow() const;
+    EGLNativeWindowType eglWindow() const Q_DECL_OVERRIDE;
     EGLSurface surface() const;
     QEglFSScreen *screen() const;
 
@@ -80,22 +73,11 @@ public:
     virtual void invalidateSurface() Q_DECL_OVERRIDE;
     virtual void resetSurface();
 
-    QOpenGLCompositorBackingStore *backingStore() { return m_backingStore; }
-    void setBackingStore(QOpenGLCompositorBackingStore *backingStore) { m_backingStore = backingStore; }
-    bool isRaster() const;
-
-    QWindow *sourceWindow() const Q_DECL_OVERRIDE;
-    const QPlatformTextureList *textures() const Q_DECL_OVERRIDE;
-    void endCompositing() Q_DECL_OVERRIDE;
-
 protected:
-    QOpenGLCompositorBackingStore *m_backingStore;
-    bool m_raster;
-    WId m_winId;
-
     EGLSurface m_surface;
     EGLNativeWindowType m_window;
 
+private:
     EGLConfig m_config;
     QSurfaceFormat m_format;
 

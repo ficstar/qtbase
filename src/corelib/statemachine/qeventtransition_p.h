@@ -55,10 +55,8 @@ class Q_CORE_EXPORT QEventTransitionPrivate : public QAbstractTransitionPrivate
     Q_DECLARE_PUBLIC(QEventTransition)
 public:
     QEventTransitionPrivate();
-    ~QEventTransitionPrivate();
 
-    static QEventTransitionPrivate *get(QEventTransition *q)
-    { return q->d_func(); }
+    static QEventTransitionPrivate *get(QEventTransition *q);
 
     void unregister();
     void maybeRegister();

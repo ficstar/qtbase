@@ -641,7 +641,6 @@ namespace QTest {
         make.setProcessChannelMode(channelMode);
 
         static const char makes[] =
-            "jom.exe\0" //preferred for visual c++ or mingw
             "nmake.exe\0" //for visual c++
             "mingw32-make.exe\0" //for mingw
             "gmake\0"

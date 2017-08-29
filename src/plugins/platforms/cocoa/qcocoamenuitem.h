@@ -40,70 +40,61 @@
 
 //#define QT_COCOA_ENABLE_MENU_DEBUG
 
-Q_FORWARD_DECLARE_OBJC_CLASS(NSMenuItem);
-Q_FORWARD_DECLARE_OBJC_CLASS(NSMenu);
-Q_FORWARD_DECLARE_OBJC_CLASS(NSObject);
-Q_FORWARD_DECLARE_OBJC_CLASS(NSView);
+#ifdef __OBJC__
+#define QT_FORWARD_DECLARE_OBJC_CLASS(__KLASS__) @class __KLASS__
+#else
+#define QT_FORWARD_DECLARE_OBJC_CLASS(__KLASS__) typedef struct objc_object __KLASS__
+#endif
+
+QT_FORWARD_DECLARE_OBJC_CLASS(NSMenuItem);
+QT_FORWARD_DECLARE_OBJC_CLASS(NSMenu);
+QT_FORWARD_DECLARE_OBJC_CLASS(NSObject);
+QT_FORWARD_DECLARE_OBJC_CLASS(NSView);
+
 
 QT_BEGIN_NAMESPACE
 
 class QCocoaMenu;
 
-class QCocoaMenuObject
-{
-public:
-    void setMenuParent(QObject *o)
-    {
-        parent = o;
-    }
-
-    QObject *menuParent() const
-    {
-        return parent;
-    }
-
-private:
-    QPointer<QObject> parent;
-};
-
-class QCocoaMenuItem : public QPlatformMenuItem, public QCocoaMenuObject
+class QCocoaMenuItem : public QPlatformMenuItem
 {
 public:
     QCocoaMenuItem();
-    ~QCocoaMenuItem();
+    virtual ~QCocoaMenuItem();
 
-    void setTag(quintptr tag) Q_DECL_OVERRIDE
+    inline virtual void setTag(quintptr tag)
         { m_tag = tag; }
-    quintptr tag() const Q_DECL_OVERRIDE
+    inline virtual quintptr tag() const
         { return m_tag; }
 
-    void setText(const QString &text) Q_DECL_OVERRIDE;
-    void setIcon(const QIcon &icon) Q_DECL_OVERRIDE;
-    void setMenu(QPlatformMenu *menu) Q_DECL_OVERRIDE;
-    void setVisible(bool isVisible) Q_DECL_OVERRIDE;
-    void setIsSeparator(bool isSeparator) Q_DECL_OVERRIDE;
-    void setFont(const QFont &font) Q_DECL_OVERRIDE;
-    void setRole(MenuRole role) Q_DECL_OVERRIDE;
-    void setShortcut(const QKeySequence& shortcut) Q_DECL_OVERRIDE;
-    void setCheckable(bool checkable) Q_DECL_OVERRIDE { Q_UNUSED(checkable) }
-    void setChecked(bool isChecked) Q_DECL_OVERRIDE;
-    void setEnabled(bool isEnabled) Q_DECL_OVERRIDE;
-    void setIconSize(int size) Q_DECL_OVERRIDE;
+    void setText(const QString &text);
+    void setIcon(const QIcon &icon);
+    void setMenu(QPlatformMenu *menu);
+    void setVisible(bool isVisible);
+    void setIsSeparator(bool isSeparator);
+    void setFont(const QFont &font);
+    void setRole(MenuRole role);
+    void setShortcut(const QKeySequence& shortcut);
+    void setCheckable(bool checkable) { Q_UNUSED(checkable) }
+    void setChecked(bool isChecked);
+    void setEnabled(bool isEnabled);
+    void setIconSize(int size);
 
-    void setNativeContents(WId item) Q_DECL_OVERRIDE;
+    void setNativeContents(WId item);
 
     inline QString text() const { return m_text; }
     inline NSMenuItem * nsItem() { return m_native; }
     NSMenuItem *sync();
 
     void syncMerged();
-    void setParentEnabled(bool enabled);
+    void syncModalState(bool modal);
 
     inline bool isMerged() const { return m_merged; }
-    inline bool isEnabled() const { return m_enabled && m_parentEnabled; }
+    inline bool isEnabled() const { return m_enabled; }
     inline bool isSeparator() const { return m_isSeparator; }
 
     QCocoaMenu *menu() const { return m_menu; }
+    void clearMenu(QCocoaMenu *menu);
     MenuRole effectiveRole() const;
 
 private:
@@ -113,22 +104,24 @@ private:
     NSMenuItem *m_native;
     NSView *m_itemView;
     QString m_text;
+    bool m_textSynced;
     QIcon m_icon;
-    QPointer<QCocoaMenu> m_menu;
+    QCocoaMenu *m_menu;
+    bool m_isVisible;
+    bool m_enabled;
+    bool m_isSeparator;
     QFont m_font;
     MenuRole m_role;
     MenuRole m_detectedRole;
     QKeySequence m_shortcut;
+    bool m_checked;
+    bool m_merged;
     quintptr m_tag;
     int m_iconSize;
-    bool m_textSynced:1;
-    bool m_isVisible:1;
-    bool m_enabled:1;
-    bool m_parentEnabled:1;
-    bool m_isSeparator:1;
-    bool m_checked:1;
-    bool m_merged:1;
 };
+
+#define COCOA_MENU_ANCESTOR(m) ((m)->property("_qCocoaMenuAncestor").value<QObject *>())
+#define SET_COCOA_MENU_ANCESTOR(m, ancestor) (m)->setProperty("_qCocoaMenuAncestor", QVariant::fromValue<QObject *>(ancestor))
 
 QT_END_NAMESPACE
 

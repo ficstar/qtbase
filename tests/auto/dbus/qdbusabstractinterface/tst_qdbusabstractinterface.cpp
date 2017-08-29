@@ -1012,14 +1012,8 @@ void tst_QDBusAbstractInterface::followSignal()
     QVERIFY(!con.interface()->isServiceRegistered(serviceToFollow));
     Pinger control = getPinger("");
 
-    // connect our test signal
-    // FRAGILE CODE AHEAD:
-    // Connection order is important: we connect the control first because that
-    // needs to be delivered last, to ensure that we don't exitLoop() before
-    // the signal delivery to QSignalSpy is posted to the current thread. That
-    // happens because QDBusConnectionPrivate runs in a separate thread and
-    // uses a QMultiHash and insertMulti prepends to the list of items with the
-    // same key.
+    // we need to connect the signal somewhere in order for D-Bus to enable the rules
+    QTestEventLoop::instance().connect(p.data(), SIGNAL(voidSignal()), SLOT(exitLoop()));
     QTestEventLoop::instance().connect(control.data(), SIGNAL(voidSignal()), SLOT(exitLoop()));
     QSignalSpy s(p.data(), SIGNAL(voidSignal()));
 

@@ -33,7 +33,6 @@
 
 #include "qtextdocument.h"
 #include <qtextformat.h>
-#include "qtextcursor_p.h"
 #include "qtextdocumentlayout_p.h"
 #include "qtextdocumentfragment.h"
 #include "qtextdocumentfragment_p.h"
@@ -533,7 +532,7 @@ QTextOption QTextDocument::defaultTextOption() const
 /*!
     \since 4.3
 
-    Sets the default text option to \a option.
+    Sets the default text option.
 */
 void QTextDocument::setDefaultTextOption(const QTextOption &option)
 {
@@ -1274,7 +1273,7 @@ static bool findInBlock(const QTextBlock &block, const QString &expression, int 
             }
         }
         //we have a hit, return the cursor for that.
-        *cursor = QTextCursorPrivate::fromPosition(block.docHandle(), block.position() + idx);
+        *cursor = QTextCursor(block.docHandle(), block.position() + idx);
         cursor->setPosition(cursor->position() + expression.length(), QTextCursor::KeepAnchor);
         return true;
     }
@@ -1309,7 +1308,7 @@ QTextCursor QTextDocument::find(const QString &subString, int from, FindFlags op
     //do not include the character given in the position.
     if (options & FindBackward) {
         --pos ;
-        if (pos < 0)
+        if (pos < subString.size())
             return QTextCursor();
     }
 
@@ -1392,7 +1391,7 @@ static bool findInBlock(const QTextBlock &block, const QRegExp &expression, int 
             }
         }
         //we have a hit, return the cursor for that.
-        *cursor = QTextCursorPrivate::fromPosition(block.docHandle(), block.position() + idx);
+        *cursor = QTextCursor(block.docHandle(), block.position() + idx);
         cursor->setPosition(cursor->position() + expr.matchedLength(), QTextCursor::KeepAnchor);
         return true;
     }
@@ -1402,9 +1401,7 @@ static bool findInBlock(const QTextBlock &block, const QRegExp &expression, int 
 /*!
     \overload
 
-    Finds the next occurrence that matches the given regular expression,
-    \a expr, within the same paragraph in the document.
-
+    Finds the next occurrence, matching the regular expression, \a expr, in the document.
     The search starts at the given \a from position, and proceeds forwards
     through the document unless specified otherwise in the search options.
     The \a options control the type of search performed. The FindCaseSensitively
@@ -1457,9 +1454,7 @@ QTextCursor QTextDocument::find(const QRegExp & expr, int from, FindFlags option
 /*!
     \overload
 
-    Finds the next occurrence that matches the given regular expression,
-    \a expr, within the same paragraph in the document.
-
+    Finds the next occurrence, matching the regular expression, \a expr, in the document.
     The search starts at the position of the given from \a cursor, and proceeds
     forwards through the document unless specified otherwise in the search
     options. The \a options control the type of search performed. The FindCaseSensitively
@@ -1468,7 +1463,7 @@ QTextCursor QTextDocument::find(const QRegExp & expr, int from, FindFlags option
     Returns a cursor with the match selected if a match was found; otherwise
     returns a null cursor.
 
-    If the given \a cursor has a selection, the search begins after the
+    If the given \a from cursor has a selection, the search begins after the
     selection; otherwise it begins at the cursor's position.
 
     By default the search is case-sensitive, and can match text anywhere in the
@@ -1520,7 +1515,7 @@ static bool findInBlock(const QTextBlock &block, const QRegularExpression &expre
             }
         }
         //we have a hit, return the cursor for that.
-        *cursor = QTextCursorPrivate::fromPosition(block.docHandle(), block.position() + idx);
+        *cursor = QTextCursor(block.docHandle(), block.position() + idx);
         cursor->setPosition(cursor->position() + match.capturedLength(), QTextCursor::KeepAnchor);
         return true;
     }
@@ -1530,9 +1525,7 @@ static bool findInBlock(const QTextBlock &block, const QRegularExpression &expre
 /*!
     \since 5.5
 
-    Finds the next occurrence that matches the given regular expression,
-    \a expr, within the same paragraph in the document.
-
+    Finds the next occurrence, matching the regular expression, \a expr, in the document.
     The search starts at the given \a from position, and proceeds forwards
     through the document unless specified otherwise in the search options.
     The \a options control the type of search performed.
@@ -1585,9 +1578,7 @@ QTextCursor QTextDocument::find(const QRegularExpression &expr, int from, FindFl
 /*!
     \since 5.5
 
-    Finds the next occurrence that matches the given regular expression,
-    \a expr, within the same paragraph in the document.
-
+    Finds the next occurrence, matching the regular expression, \a expr, in the document.
     The search starts at the position of the given \a cursor, and proceeds
     forwards through the document unless specified otherwise in the search
     options. The \a options control the type of search performed.
@@ -1957,7 +1948,7 @@ void QTextDocument::print(QPagedPaintDevice *printer) const
         for (QTextBlock srcBlock = firstBlock(), dstBlock = clonedDoc->firstBlock();
              srcBlock.isValid() && dstBlock.isValid();
              srcBlock = srcBlock.next(), dstBlock = dstBlock.next()) {
-            dstBlock.layout()->setFormats(srcBlock.layout()->formats());
+            dstBlock.layout()->setAdditionalFormats(srcBlock.layout()->additionalFormats());
         }
 
         QAbstractTextDocumentLayout *layout = doc->documentLayout();

@@ -37,6 +37,7 @@
 
 #include <QtCore/qdebug.h>
 
+#ifndef QT_NO_BEARERMANAGEMENT
 #ifndef QT_NO_DBUS
 
 QT_BEGIN_NAMESPACE
@@ -76,3 +77,4 @@ QT_END_NAMESPACE
 #include "main.moc"
 
 #endif // QT_NO_DBUS
+#endif // QT_NO_BEARERMANAGEMENT

@@ -352,6 +352,4 @@ bool QSplashScreen::event(QEvent *e)
 
 QT_END_NAMESPACE
 
-#include "moc_qsplashscreen.cpp"
-
 #endif //QT_NO_SPLASHSCREEN

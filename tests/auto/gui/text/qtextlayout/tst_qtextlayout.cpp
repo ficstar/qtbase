@@ -142,7 +142,6 @@ private slots:
     void xToCursorForLigatures();
     void cursorInNonStopChars();
     void nbsp();
-    void noModificationOfInputString();
 
 private:
     QFont testFont;
@@ -1676,7 +1675,6 @@ void tst_QTextLayout::testTabDPIScale()
             case QPaintDevice::PdmPhysicalDpiY:
                 return 72;
             case QPaintDevice::PdmDevicePixelRatio:
-            case QPaintDevice::PdmDevicePixelRatioScaled:
                 ; // fall through
             }
             return 0;
@@ -1746,7 +1744,7 @@ void tst_QTextLayout::capitalization_allUpperCase()
     QTextEngine *engine = layout.engine();
     engine->itemize();
     QCOMPARE(engine->layoutData->items.count(), 1);
-    QCOMPARE(engine->layoutData->items.at(0).analysis.flags, ushort(QScriptAnalysis::Uppercase));
+    QVERIFY(engine->layoutData->items.at(0).analysis.flags == QScriptAnalysis::Uppercase);
 }
 
 void tst_QTextLayout::capitalization_allUpperCase_newline()
@@ -1766,9 +1764,9 @@ void tst_QTextLayout::capitalization_allUpperCase_newline()
     QTextEngine *engine = layout.engine();
     engine->itemize();
     QCOMPARE(engine->layoutData->items.count(), 3);
-    QCOMPARE(engine->layoutData->items.at(0).analysis.flags, ushort(QScriptAnalysis::Uppercase));
-    QCOMPARE(engine->layoutData->items.at(1).analysis.flags, ushort(QScriptAnalysis::LineOrParagraphSeparator));
-    QCOMPARE(engine->layoutData->items.at(2).analysis.flags, ushort(QScriptAnalysis::Uppercase));
+    QVERIFY(engine->layoutData->items.at(0).analysis.flags == QScriptAnalysis::Uppercase);
+    QVERIFY(engine->layoutData->items.at(1).analysis.flags == QScriptAnalysis::LineOrParagraphSeparator);
+    QVERIFY(engine->layoutData->items.at(2).analysis.flags == QScriptAnalysis::Uppercase);
 }
 
 void tst_QTextLayout::capitalization_allLowerCase()
@@ -1784,7 +1782,7 @@ void tst_QTextLayout::capitalization_allLowerCase()
     QTextEngine *engine = layout.engine();
     engine->itemize();
     QCOMPARE(engine->layoutData->items.count(), 1);
-    QCOMPARE(engine->layoutData->items.at(0).analysis.flags, ushort(QScriptAnalysis::Lowercase));
+    QVERIFY(engine->layoutData->items.at(0).analysis.flags == QScriptAnalysis::Lowercase);
 }
 
 void tst_QTextLayout::capitalization_smallCaps()
@@ -1800,8 +1798,8 @@ void tst_QTextLayout::capitalization_smallCaps()
     QTextEngine *engine = layout.engine();
     engine->itemize();
     QCOMPARE(engine->layoutData->items.count(), 2);
-    QCOMPARE(engine->layoutData->items.at(0).analysis.flags, ushort(QScriptAnalysis::None));
-    QCOMPARE(engine->layoutData->items.at(1).analysis.flags, ushort(QScriptAnalysis::SmallCaps));
+    QVERIFY(engine->layoutData->items.at(0).analysis.flags == QScriptAnalysis::None);
+    QVERIFY(engine->layoutData->items.at(1).analysis.flags == QScriptAnalysis::SmallCaps);
 }
 
 void tst_QTextLayout::capitalization_capitalize()
@@ -1817,11 +1815,11 @@ void tst_QTextLayout::capitalization_capitalize()
     QTextEngine *engine = layout.engine();
     engine->itemize();
     QCOMPARE(engine->layoutData->items.count(), 5);
-    QCOMPARE(engine->layoutData->items.at(0).analysis.flags, ushort(QScriptAnalysis::Uppercase));
-    QCOMPARE(engine->layoutData->items.at(1).analysis.flags, ushort(QScriptAnalysis::None));
-    QCOMPARE(engine->layoutData->items.at(2).analysis.flags, ushort(QScriptAnalysis::Tab));
-    QCOMPARE(engine->layoutData->items.at(3).analysis.flags, ushort(QScriptAnalysis::Uppercase));
-    QCOMPARE(engine->layoutData->items.at(4).analysis.flags, ushort(QScriptAnalysis::None));
+    QVERIFY(engine->layoutData->items.at(0).analysis.flags == QScriptAnalysis::Uppercase);
+    QVERIFY(engine->layoutData->items.at(1).analysis.flags == QScriptAnalysis::None);
+    QVERIFY(engine->layoutData->items.at(2).analysis.flags == QScriptAnalysis::Tab);
+    QVERIFY(engine->layoutData->items.at(3).analysis.flags == QScriptAnalysis::Uppercase);
+    QVERIFY(engine->layoutData->items.at(4).analysis.flags == QScriptAnalysis::None);
 }
 
 void tst_QTextLayout::longText()
@@ -1986,12 +1984,7 @@ void tst_QTextLayout::textWidthVsWIdth()
                        "./libs -I/home/ettrich/dev/creator/tools -I../../plugins -I../../shared/scriptwrapper -I../../libs/3rdparty/botan/build -Idialogs -Iactionmanager -Ieditorma"
                        "nager -Iprogressmanager -Iscriptmanager -I.moc/debug-shared -I.uic -o .obj/debug-shared/sidebar.o sidebar.cpp"));
 
-    // The naturalTextWidth includes right bearing, but should never be LARGER than line width if
-    // there is space for at least one character. Unfortunately that assumption may not hold if the
-    // font engine fails to report an accurate minimum right bearing for the font, eg. when the
-    // minimum right bearing reported by the font engine doesn't cover all the glyphs in the font.
-    // The result is that this test may fail in some cases. We should fix this by running the test
-    // with a font that we know have no suprising right bearings. See qtextlayout.cpp for details.
+    // textWidth includes right bearing, but it should never be LARGER than width if there is space for at least one character
     for (int width = 100; width < 1000; ++width) {
         layout.beginLayout();
         QTextLine line = layout.createLine();
@@ -2103,8 +2096,8 @@ void tst_QTextLayout::cursorInNonStopChars()
     QTextLine line = layout.createLine();
     layout.endLayout();
 
-    QCOMPARE(line.cursorToX(1), line.cursorToX(3));
-    QCOMPARE(line.cursorToX(2), line.cursorToX(3));
+    QVERIFY(line.cursorToX(1) == line.cursorToX(3));
+    QVERIFY(line.cursorToX(2) == line.cursorToX(3));
 }
 
 void tst_QTextLayout::justifyTrailingSpaces()
@@ -2175,38 +2168,6 @@ void tst_QTextLayout::layoutWithCustomTabStops()
     qreal longWidth = textLayout->maximumWidth();
 
     QVERIFY(longWidth > shortWidth);
-}
-
-void tst_QTextLayout::noModificationOfInputString()
-{
-    QString s = QString(QChar(QChar::LineSeparator));
-    {
-        QTextLayout layout;
-        layout.setText(s);
-
-        layout.beginLayout();
-        layout.createLine();
-        layout.endLayout();
-
-        QCOMPARE(s.size(), 1);
-        QCOMPARE(s.at(0), QChar(QChar::LineSeparator));
-    }
-
-    {
-        QTextLayout layout;
-        layout.setText(s);
-
-        QTextOption option;
-        option.setFlags(QTextOption::ShowLineAndParagraphSeparators);
-        layout.setTextOption(option);
-
-        layout.beginLayout();
-        layout.createLine();
-        layout.endLayout();
-
-        QCOMPARE(s.size(), 1);
-        QCOMPARE(s.at(0), QChar(QChar::LineSeparator));
-    }
 }
 
 QTEST_MAIN(tst_QTextLayout)

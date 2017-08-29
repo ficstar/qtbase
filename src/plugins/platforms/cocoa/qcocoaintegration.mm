@@ -33,6 +33,7 @@
 
 #include "qcocoaintegration.h"
 
+#include "qcocoaautoreleasepool.h"
 #include "qcocoawindow.h"
 #include "qcocoabackingstore.h"
 #include "qcocoanativeinterface.h"
@@ -47,9 +48,7 @@
 #include "qcocoamimetypes.h"
 #include "qcocoaaccessibility.h"
 
-#include <qpa/qplatforminputcontextfactory_p.h>
 #include <qpa/qplatformaccessibility.h>
-#include <qpa/qplatforminputcontextfactory_p.h>
 #include <QtCore/qcoreapplication.h>
 
 #include <IOKit/graphics/IOGraphicsLib.h>
@@ -138,19 +137,9 @@ void QCocoaScreen::updateGeometry()
 
 qreal QCocoaScreen::devicePixelRatio() const
 {
-    QMacAutoReleasePool pool;
+    QCocoaAutoReleasePool pool;
     NSScreen * screen = osScreen();
     return qreal(screen ? [screen backingScaleFactor] : 1.0);
-}
-
-QPlatformScreen::SubpixelAntialiasingType QCocoaScreen::subpixelAntialiasingTypeHint() const
-{
-    QPlatformScreen::SubpixelAntialiasingType type = QPlatformScreen::subpixelAntialiasingTypeHint();
-    if (type == QPlatformScreen::Subpixel_None) {
-        // Every OSX machine has RGB pixels unless a peculiar or rotated non-Apple screen is attached
-        type = QPlatformScreen::Subpixel_RGB;
-    }
-    return type;
 }
 
 QWindow *QCocoaScreen::topLevelAt(const QPoint &point) const
@@ -255,25 +244,11 @@ QPixmap QCocoaScreen::grabWindow(WId window, int x, int y, int width, int height
     return windowPixmap;
 }
 
-static QCocoaIntegration::Options parseOptions(const QStringList &paramList)
-{
-    QCocoaIntegration::Options options;
-    foreach (const QString &param, paramList) {
-#ifndef QT_NO_FREETYPE
-        if (param == QLatin1String("fontengine=freetype"))
-            options |= QCocoaIntegration::UseFreeTypeFontEngine;
-        else
-#endif
-            qWarning() << "Unknown option" << param;
-    }
-    return options;
-}
-
 QCocoaIntegration *QCocoaIntegration::mInstance = 0;
 
-QCocoaIntegration::QCocoaIntegration(const QStringList &paramList)
-    : mOptions(parseOptions(paramList))
-    , mFontDb(new QCoreTextFontDatabase(mOptions.testFlag(UseFreeTypeFontEngine)))
+QCocoaIntegration::QCocoaIntegration()
+    : mFontDb(new QCoreTextFontDatabase())
+    , mInputContext(new QCocoaInputContext)
 #ifndef QT_NO_ACCESSIBILITY
     , mAccessibility(new QCocoaAccessibility)
 #endif
@@ -287,12 +262,8 @@ QCocoaIntegration::QCocoaIntegration(const QStringList &paramList)
         qWarning("Creating multiple Cocoa platform integrations is not supported");
     mInstance = this;
 
-    QString icStr = QPlatformInputContextFactory::requested();
-    icStr.isNull() ? mInputContext.reset(new QCocoaInputContext)
-                   : mInputContext.reset(QPlatformInputContextFactory::create(icStr));
-
     initResources();
-    QMacAutoReleasePool pool;
+    QCocoaAutoReleasePool pool;
 
     qApp->setAttribute(Qt::AA_DontUseNativeMenuBar, false);
 
@@ -331,15 +302,6 @@ QCocoaIntegration::QCocoaIntegration(const QStringList &paramList)
         [newDelegate setMenuLoader:qtMenuLoader];
     }
 
-    // The presentation options such as whether or not the dock and/or menu bar is
-    // hidden (automatically by the system) affects the main screen's available
-    // geometry. Since we're initializing the screens synchronously at application
-    // startup we need to ensure that the presentation options have been propagated
-    // to the screen before we read out its properties. Normally OS X does this in
-    // an asynchronous callback, but that's too late for us. We force the propagation
-    // by explicitly setting the presentation option to the magic 'default value',
-    // which will resolve to an actual value and result in screen invalidation.
-    cocoaApplication.presentationOptions = NSApplicationPresentationDefault;
     updateScreens();
 
     QMacInternalPasteboardMime::initializeMimeTypes();
@@ -352,7 +314,7 @@ QCocoaIntegration::~QCocoaIntegration()
 
     qt_resetNSApplicationSendEvent();
 
-    QMacAutoReleasePool pool;
+    QCocoaAutoReleasePool pool;
     if (!QCoreApplication::testAttribute(Qt::AA_MacPluginApplication)) {
         // remove the apple event handlers installed by QCocoaApplicationDelegate
         QCocoaApplicationDelegate *delegate = [QCocoaApplicationDelegate sharedDelegate];
@@ -378,11 +340,6 @@ QCocoaIntegration::~QCocoaIntegration()
 QCocoaIntegration *QCocoaIntegration::instance()
 {
     return mInstance;
-}
-
-QCocoaIntegration::Options QCocoaIntegration::options() const
-{
-    return mOptions;
 }
 
 /*!
@@ -431,18 +388,14 @@ void QCocoaIntegration::updateScreens()
         }
         siblings << screen;
     }
-
-    // Set virtual siblings list. All screens in mScreens are siblings, because we ignored the
-    // mirrors. Note that some of the screens we update the siblings list for here may be deleted
-    // below, but update anyway to keep the to-be-deleted screens out of the siblings list.
-    foreach (QCocoaScreen* screen, mScreens)
-        screen->setVirtualSiblings(siblings);
-
     // Now the leftovers in remainingScreens are no longer current, so we can delete them.
     foreach (QCocoaScreen* screen, remainingScreens) {
         mScreens.removeOne(screen);
         destroyScreen(screen);
     }
+    // All screens in mScreens are siblings, because we ignored the mirrors.
+    foreach (QCocoaScreen* screen, mScreens)
+        screen->setVirtualSiblings(siblings);
 }
 
 QCocoaScreen *QCocoaIntegration::screenAtIndex(int index)
@@ -450,10 +403,6 @@ QCocoaScreen *QCocoaIntegration::screenAtIndex(int index)
     if (index >= mScreens.count())
         updateScreens();
 
-    // It is possible that the screen got removed while updateScreens was called
-    // so we do a sanity check to be certain
-    if (index >= mScreens.count())
-        return 0;
     return mScreens.at(index);
 }
 
@@ -514,17 +463,19 @@ QCocoaNativeInterface *QCocoaIntegration::nativeInterface() const
     return mNativeInterface.data();
 }
 
-QPlatformInputContext *QCocoaIntegration::inputContext() const
+QCocoaInputContext *QCocoaIntegration::inputContext() const
 {
     return mInputContext.data();
 }
 
-#ifndef QT_NO_ACCESSIBILITY
 QCocoaAccessibility *QCocoaIntegration::accessibility() const
 {
+#ifndef QT_NO_ACCESSIBILITY
     return mAccessibility.data();
-}
+#else
+    return 0;
 #endif
+}
 
 QCocoaClipboard *QCocoaIntegration::clipboard() const
 {

@@ -41,7 +41,6 @@
 #include <QtPlatformSupport/private/qdevicediscovery_p.h>
 #include <private/qguiapplication_p.h>
 #include <private/qinputdevicemanager_p_p.h>
-#include <private/qhighdpiscaling_p.h>
 
 QT_BEGIN_NAMESPACE
 
@@ -107,8 +106,7 @@ QEvdevMouseManager::~QEvdevMouseManager()
 void QEvdevMouseManager::clampPosition()
 {
     // clamp to screen geometry
-    QScreen *primaryScreen = QGuiApplication::primaryScreen();
-    QRect g = QHighDpi::toNativePixels(primaryScreen->virtualGeometry(), primaryScreen);
+    QRect g = QGuiApplication::primaryScreen()->virtualGeometry();
     if (m_x + m_xoffset < g.left())
         m_x = g.left() - m_xoffset;
     else if (m_x + m_xoffset > g.right())

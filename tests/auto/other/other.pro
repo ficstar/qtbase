@@ -24,10 +24,6 @@ SUBDIRS=\
    windowsmobile \
    toolsupport \
 
-!qtHaveModule(gui): SUBDIRS -= \
-   qcomplextext \
-   qprocess_and_guieventloop \
-
 !qtHaveModule(widgets): SUBDIRS -= \
    gestures \
    lancelot \

@@ -50,6 +50,7 @@
 #include <qlist.h>
 #include <qlocale.h>
 #include <qevent.h>
+#include <qhash.h>
 
 
 QT_BEGIN_NAMESPACE

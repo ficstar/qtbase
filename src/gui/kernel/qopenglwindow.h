@@ -58,8 +58,8 @@ public:
         PartialUpdateBlend
     };
 
-    explicit QOpenGLWindow(UpdateBehavior updateBehavior = NoPartialUpdate, QWindow *parent = Q_NULLPTR);
-    explicit QOpenGLWindow(QOpenGLContext *shareContext, UpdateBehavior updateBehavior = NoPartialUpdate, QWindow *parent = Q_NULLPTR);
+    explicit QOpenGLWindow(UpdateBehavior updateBehavior = NoPartialUpdate, QWindow *parent = 0);
+    explicit QOpenGLWindow(QOpenGLContext *shareContext, UpdateBehavior updateBehavior = NoPartialUpdate, QWindow *parent = 0);
     ~QOpenGLWindow();
 
     UpdateBehavior updateBehavior() const;

@@ -3,8 +3,7 @@ TARGET = qtfreetype
 CONFIG += \
     static \
     hide_symbols \
-    exceptions_off rtti_off warn_off \
-    installed
+    exceptions_off rtti_off warn_off
 
 load(qt_helper_lib)
 
@@ -64,13 +63,9 @@ win32 {
 INCLUDEPATH += $$PWD/include
 
 DEFINES += FT2_BUILD_LIBRARY
-
-DEFINES += FT_CONFIG_OPTION_SYSTEM_ZLIB
-include(../zlib_dependency.pri)
-
-contains(QT_CONFIG, system-png) {
-    DEFINES += FT_CONFIG_OPTION_USE_PNG
-    include($$PWD/../png_dependency.pri)
+contains(QT_CONFIG, system-zlib) {
+    DEFINES += FT_CONFIG_OPTION_SYSTEM_ZLIB
+    include($$PWD/../zlib_dependency.pri)
 }
 
 DEFINES += TT_CONFIG_OPTION_SUBPIXEL_HINTING

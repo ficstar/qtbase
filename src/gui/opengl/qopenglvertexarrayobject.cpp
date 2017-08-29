@@ -352,11 +352,9 @@ QOpenGLVertexArrayObject::~QOpenGLVertexArrayObject()
 
     Q_D(QOpenGLVertexArrayObject);
     QOpenGLContext *oldContext = 0;
-    QSurface *oldContextSurface = 0;
     QScopedPointer<QOffscreenSurface> offscreenSurface;
     if (d->context && ctx && d->context != ctx) {
         oldContext = ctx;
-        oldContextSurface = ctx->surface();
         // Cannot just make the current surface current again with another context.
         // The format may be incompatible and some platforms (iOS) may impose
         // restrictions on using a window with different contexts. Create an
@@ -376,7 +374,7 @@ QOpenGLVertexArrayObject::~QOpenGLVertexArrayObject()
         destroy();
 
     if (oldContext) {
-        if (!oldContext->makeCurrent(oldContextSurface))
+        if (!oldContext->makeCurrent(oldContext->surface()))
             qWarning("QOpenGLVertexArrayObject::~QOpenGLVertexArrayObject() failed to restore current context");
     }
 }

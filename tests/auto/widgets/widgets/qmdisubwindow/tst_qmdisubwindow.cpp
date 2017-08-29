@@ -191,7 +191,6 @@ private slots:
     void fixedMinMaxSize();
 #if !defined (Q_OS_MAC) && !defined (Q_OS_WINCE)
     void replaceMenuBarWhileMaximized();
-    void closeOnDoubleClick_data();
     void closeOnDoubleClick();
 #endif
     void setFont();
@@ -1794,23 +1793,9 @@ void tst_QMdiSubWindow::replaceMenuBarWhileMaximized()
     QVERIFY(!subWindow->maximizedSystemMenuIconWidget());
 }
 
-void tst_QMdiSubWindow::closeOnDoubleClick_data()
-{
-    QTest::addColumn<int>("actionIndex");
-    QTest::addColumn<bool>("expectClosed");
-
-    QTest::newRow("close") << 1 << true;
-    QTest::newRow("disabled-restore-action") << 0 << false; // QTBUG-48493
-}
-
 void tst_QMdiSubWindow::closeOnDoubleClick()
 {
-    QFETCH(int, actionIndex);
-    QFETCH(bool, expectClosed);
-
     QMdiArea mdiArea;
-    mdiArea.setWindowTitle(QLatin1String(QTest::currentTestFunction())
-                           + QLatin1Char(' ') + QLatin1String(QTest::currentDataTag()));
     QPointer<QMdiSubWindow> subWindow = mdiArea.addSubWindow(new QWidget);
     mdiArea.show();
     QVERIFY(QTest::qWaitForWindowExposed(&mdiArea));
@@ -1822,13 +1807,12 @@ void tst_QMdiSubWindow::closeOnDoubleClick()
     QVERIFY(systemMenu);
     QVERIFY(systemMenu->isVisible());
 
-    const QRect actionGeometry = systemMenu->actionGeometry(systemMenu->actions().at(actionIndex));
-    sendMouseDoubleClick(systemMenu, actionGeometry.center());
+    sendMouseDoubleClick(systemMenu, QPoint(10, 10));
     if (qApp->activePopupWidget() == static_cast<QWidget *>(systemMenu))
         systemMenu->hide();
     qApp->processEvents();
+    QVERIFY(!subWindow || !subWindow->isVisible());
     QVERIFY(!systemMenu || !systemMenu->isVisible());
-    QCOMPARE(subWindow.isNull() || !subWindow->isVisible(), expectClosed);
 }
 #endif
 

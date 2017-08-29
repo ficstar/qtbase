@@ -62,6 +62,9 @@ typedef HANDLE Q_PIPE;
 #else
 typedef int Q_PIPE;
 #define INVALID_Q_PIPE -1
+#  ifdef Q_OS_QNX
+#    define QPROCESS_USE_SPAWN
+#  endif
 #endif
 
 #ifndef QT_NO_PROCESS
@@ -344,10 +347,12 @@ public:
 
     void start(QIODevice::OpenMode mode);
     void startProcess();
-#if defined(Q_OS_UNIX)
+#if defined(Q_OS_UNIX) && !defined(QPROCESS_USE_SPAWN)
     void execChild(const char *workingDirectory, char **path, char **argv, char **envp);
+#elif defined(QPROCESS_USE_SPAWN)
+    pid_t spawnChild(pid_t *ppid, const char *workingDirectory, char **argv, char **envp);
 #endif
-    bool processStarted(QString *errorMessage = Q_NULLPTR);
+    bool processStarted();
     void terminateProcess();
     void killProcess();
     void findExitCode();
@@ -375,11 +380,9 @@ public:
 
     qint64 bytesAvailableInChannel(const Channel *channel) const;
     qint64 readFromChannel(const Channel *channel, char *data, qint64 maxlen);
-    bool writeToStdin();
+    qint64 writeToStdin(const char *data, qint64 maxlen);
 
     void cleanup();
-    void setError(QProcess::ProcessError error, const QString &description = QString());
-    void setErrorAndEmit(QProcess::ProcessError error, const QString &description = QString());
 
 #ifdef Q_OS_BLACKBERRY
     QList<QSocketNotifier *> defaultNotifiers() const;

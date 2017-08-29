@@ -63,5 +63,4 @@ winrt: SUBDIRS -= \
     qprocess \
     qprocess-noapplication \
     qprocessenvironment \
-    qstorageinfo \
     qwinoverlappedionotifier

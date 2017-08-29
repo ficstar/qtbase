@@ -57,20 +57,20 @@ bool QQnxNavigatorEventHandler::handleOrientationCheck(int angle)
 {
     // reply to navigator that (any) orientation is acceptable
     // TODO: check if top window flags prohibit orientation change
-    qNavigatorEventHandlerDebug() << "angle=" << angle;
+    qNavigatorEventHandlerDebug() << Q_FUNC_INFO << "angle=" << angle;
     return true;
 }
 
 void QQnxNavigatorEventHandler::handleOrientationChange(int angle)
 {
     // update screen geometry and reply to navigator that we're ready
-    qNavigatorEventHandlerDebug() << "angle=" << angle;
+    qNavigatorEventHandlerDebug() << Q_FUNC_INFO << "angle=" << angle;
     emit rotationChanged(angle);
 }
 
 void QQnxNavigatorEventHandler::handleSwipeDown()
 {
-    qNavigatorEventHandlerDebug();
+    qNavigatorEventHandlerDebug() << Q_FUNC_INFO;
 
     Q_EMIT swipeDown();
 }
@@ -78,25 +78,25 @@ void QQnxNavigatorEventHandler::handleSwipeDown()
 void QQnxNavigatorEventHandler::handleExit()
 {
     // shutdown everything
-    qNavigatorEventHandlerDebug();
+    qNavigatorEventHandlerDebug() << Q_FUNC_INFO;
     QCoreApplication::quit();
 }
 
 void QQnxNavigatorEventHandler::handleWindowGroupActivated(const QByteArray &id)
 {
-    qNavigatorEventHandlerDebug() << id;
+    qNavigatorEventHandlerDebug() << Q_FUNC_INFO << id;
     Q_EMIT windowGroupActivated(id);
 }
 
 void QQnxNavigatorEventHandler::handleWindowGroupDeactivated(const QByteArray &id)
 {
-    qNavigatorEventHandlerDebug() << id;
+    qNavigatorEventHandlerDebug() << Q_FUNC_INFO << id;
     Q_EMIT windowGroupDeactivated(id);
 }
 
 void QQnxNavigatorEventHandler::handleWindowGroupStateChanged(const QByteArray &id, Qt::WindowState state)
 {
-    qNavigatorEventHandlerDebug() << id;
+    qNavigatorEventHandlerDebug() << Q_FUNC_INFO << id;
     Q_EMIT windowGroupStateChanged(id, state);
 }
 

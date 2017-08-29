@@ -278,7 +278,6 @@ int QDBusInterfacePrivate::metacall(QMetaObject::Call c, int id, void **argv)
 
             // we will assume that the input arguments were passed correctly
             QVariantList args;
-            args.reserve(inputTypesCount);
             int i = 1;
             for ( ; i <= inputTypesCount; ++i)
                 args << QVariant(inputTypes[i], argv[i]);

@@ -62,6 +62,7 @@ class tst_QImageWriter : public QObject
 
 public:
     tst_QImageWriter();
+    virtual ~tst_QImageWriter();
 
 public slots:
     void init();
@@ -88,7 +89,6 @@ private slots:
 
     void saveToTemporaryFile();
 private:
-    QTemporaryDir m_temporaryDir;
     QString prefix;
     QString writePrefix;
 };
@@ -112,11 +112,14 @@ static void initializePadding(QImage *image)
 
 void tst_QImageWriter::initTestCase()
 {
-    QVERIFY(m_temporaryDir.isValid());
     prefix = QFINDTESTDATA("images/");
     if (prefix.isEmpty())
         QFAIL("Can't find images directory!");
-    writePrefix = m_temporaryDir.path() + QLatin1Char('/');
+#if defined(Q_OS_ANDROID) && !defined(Q_OS_ANDROID_NO_SDK)
+    writePrefix = QDir::homePath();
+#else
+    writePrefix = prefix;
+#endif
 }
 
 // Testing get/set functions
@@ -166,6 +169,16 @@ tst_QImageWriter::tst_QImageWriter()
 {
 }
 
+tst_QImageWriter::~tst_QImageWriter()
+{
+    QDir dir(prefix);
+    QStringList filesToDelete = dir.entryList(QStringList() << "gen-*" , QDir::NoDotAndDotDot | QDir::Files);
+    foreach( QString file, filesToDelete) {
+        QFile::remove(dir.absoluteFilePath(file));
+    }
+
+}
+
 void tst_QImageWriter::init()
 {
 }
@@ -188,7 +201,6 @@ void tst_QImageWriter::writeImage_data()
     QTest::newRow("PBM: ship63") << QString("ship63.pbm") << true << QByteArray("pbm");
     QTest::newRow("XBM: gnus") << QString("gnus.xbm") << false << QByteArray("xbm");
     QTest::newRow("JPEG: beavis") << QString("beavis.jpg") << true << QByteArray("jpeg");
-    QTest::newRow("ICO: App") << QString("App.ico") << true << QByteArray("ico");
 }
 
 void tst_QImageWriter::writeImage()
@@ -250,7 +262,7 @@ void tst_QImageWriter::writeImage2_data()
     QTest::addColumn<QImage>("image");
 
     const QStringList formats = QStringList() << "bmp" << "xpm" << "png"
-                                              << "ppm" << "ico"; //<< "jpeg";
+                                              << "ppm"; //<< "jpeg";
     QImage image0(70, 70, QImage::Format_ARGB32);
     image0.fill(QColor(Qt::red).rgb());
 
@@ -404,7 +416,7 @@ void tst_QImageWriter::testCanWrite()
     {
         // check if canWrite won't leave an empty file
         QTemporaryDir dir;
-        QVERIFY2(dir.isValid(), qPrintable(dir.errorString()));
+        QVERIFY(dir.isValid());
         QString fileName(dir.path() + QLatin1String("/001.garble"));
         QVERIFY(!QFileInfo(fileName).exists());
         QImageWriter writer(fileName);
@@ -512,7 +524,7 @@ void tst_QImageWriter::saveToTemporaryFile()
     {
         // 1) Via QImageWriter's API, with a standard temp file name
         QTemporaryFile file;
-        QVERIFY2(file.open(), qPrintable(file.errorString()));
+        QVERIFY(file.open());
         QImageWriter writer(&file, "PNG");
         if (writer.canWrite())
             QVERIFY(writer.write(image));
@@ -526,7 +538,7 @@ void tst_QImageWriter::saveToTemporaryFile()
     {
         // 2) Via QImage's API, with a standard temp file name
         QTemporaryFile file;
-        QVERIFY2(file.open(), qPrintable(file.errorString()));
+        QVERIFY(file.open());
         QVERIFY(image.save(&file, "PNG"));
         file.reset();
         QImage tmp;
@@ -536,7 +548,7 @@ void tst_QImageWriter::saveToTemporaryFile()
     {
         // 3) Via QImageWriter's API, with a named temp file
         QTemporaryFile file("tempXXXXXX");
-        QVERIFY2(file.open(), qPrintable(file.errorString()));
+        QVERIFY(file.open());
         QImageWriter writer(&file, "PNG");
         QVERIFY(writer.write(image));
 #if defined(Q_OS_WINCE)
@@ -547,7 +559,7 @@ void tst_QImageWriter::saveToTemporaryFile()
     {
         // 4) Via QImage's API, with a named temp file
         QTemporaryFile file("tempXXXXXX");
-        QVERIFY2(file.open(), qPrintable(file.errorString()));
+        QVERIFY(file.open());
         QVERIFY(image.save(&file, "PNG"));
         file.reset();
         QImage tmp;

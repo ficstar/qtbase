@@ -46,6 +46,7 @@
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusMessage>
 #include <QtDBus/QDBusReply>
+#ifndef QT_NO_BEARERMANAGEMENT
 #ifndef QT_NO_DBUS
 
 QT_BEGIN_NAMESPACE
@@ -85,7 +86,7 @@ void QConnmanEngine::initialize()
             this, SLOT(updateServices(ConnmanMapList,QList<QDBusObjectPath>)));
 
     connect(connmanManager,SIGNAL(servicesReady(QStringList)),this,SLOT(servicesReady(QStringList)));
-    connect(connmanManager,SIGNAL(scanFinished(bool)),this,SLOT(finishedScan(bool)));
+    connect(connmanManager,SIGNAL(scanFinished()),this,SLOT(finishedScan()));
 
     foreach (const QString &servPath, connmanManager->getServices()) {
         addServiceConfiguration(servPath);
@@ -121,10 +122,8 @@ QList<QNetworkConfigurationPrivate *> QConnmanEngine::getConfigurations()
     QMutexLocker locker(&mutex);
     QList<QNetworkConfigurationPrivate *> fetchedConfigurations;
     QNetworkConfigurationPrivate* cpPriv = 0;
-    const int numFoundConfigurations = foundConfigurations.count();
-    fetchedConfigurations.reserve(numFoundConfigurations);
 
-    for (int i = 0; i < numFoundConfigurations; ++i) {
+    for (int i = 0; i < foundConfigurations.count(); ++i) {
         QNetworkConfigurationPrivate *config = new QNetworkConfigurationPrivate;
         cpPriv = foundConfigurations.at(i);
 
@@ -197,15 +196,11 @@ void QConnmanEngine::requestUpdate()
 
 void QConnmanEngine::doRequestUpdate()
 {
-    bool scanned = connmanManager->requestScan("wifi");
-    if (!scanned)
-        Q_EMIT updateCompleted();
+    connmanManager->requestScan("wifi");
 }
 
-void QConnmanEngine::finishedScan(bool error)
+void QConnmanEngine::finishedScan()
 {
-    if (error)
-        Q_EMIT updateCompleted();
 }
 
 void QConnmanEngine::updateServices(const ConnmanMapList &changed, const QList<QDBusObjectPath> &removed)
@@ -561,3 +556,4 @@ void QConnmanEngine::reEvaluateCellular()
 QT_END_NAMESPACE
 
 #endif // QT_NO_DBUS
+#endif // QT_NO_BEARERMANAGEMENT

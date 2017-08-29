@@ -51,11 +51,8 @@
 #include <QMutex>
 #include <QList>
 #include <QWaitCondition>
-#include <QAtomicInt>
 
 QT_BEGIN_NAMESPACE
-
-class QWindowSystemEventHandler;
 
 class Q_GUI_EXPORT QWindowSystemInterfacePrivate {
 public:
@@ -102,7 +99,7 @@ public:
         };
 
         explicit WindowSystemEvent(EventType t)
-            : type(t), flags(0), eventAccepted(true) { }
+            : type(t), flags(0) { }
         virtual ~WindowSystemEvent() { }
 
         bool synthetic() const  { return flags & Synthetic; }
@@ -110,7 +107,6 @@ public:
 
         EventType type;
         int flags;
-        bool eventAccepted;
     };
 
     class CloseEvent : public WindowSystemEvent {
@@ -236,7 +232,8 @@ public:
     class WheelEvent : public InputEvent {
     public:
         WheelEvent(QWindow *w, ulong time, const QPointF & local, const QPointF & global, QPoint pixelD, QPoint angleD, int qt4D, Qt::Orientation qt4O,
-                   Qt::KeyboardModifiers mods, Qt::ScrollPhase phase = Qt::NoScrollPhase, Qt::MouseEventSource src = Qt::MouseEventNotSynthesized);
+                   Qt::KeyboardModifiers mods, Qt::ScrollPhase phase = Qt::ScrollUpdate, Qt::MouseEventSource src = Qt::MouseEventNotSynthesized)
+            : InputEvent(w, time, Wheel, mods), pixelDelta(pixelD), angleDelta(angleD), qt4Delta(qt4D), qt4Orientation(qt4O), localPos(local), globalPos(global), phase(phase), source(src) { }
         QPoint pixelDelta;
         QPoint angleDelta;
         int qt4Delta;
@@ -481,33 +478,15 @@ public:
     static WindowSystemEvent *getNonUserInputWindowSystemEvent();
     static WindowSystemEvent *peekWindowSystemEvent(EventType t);
     static void removeWindowSystemEvent(WindowSystemEvent *event);
-    static void postWindowSystemEvent(WindowSystemEvent *ev);
-    static bool handleWindowSystemEvent(WindowSystemEvent *ev);
+    static void handleWindowSystemEvent(WindowSystemEvent *ev);
 
     static QElapsedTimer eventTime;
-    static bool synchronousWindowSystemEvents;
+    static bool synchronousWindowsSystemEvents;
 
     static QWaitCondition eventsFlushed;
     static QMutex flushEventMutex;
-    static QAtomicInt eventAccepted;
 
-    static QList<QTouchEvent::TouchPoint>
-        fromNativeTouchPoints(const QList<QWindowSystemInterface::TouchPoint> &points,
-                              const QWindow *window, QEvent::Type *type = Q_NULLPTR);
-    static QList<QWindowSystemInterface::TouchPoint>
-        toNativeTouchPoints(const QList<QTouchEvent::TouchPoint>& pointList,
-                            const QWindow *window);
-
-    static void installWindowSystemEventHandler(QWindowSystemEventHandler *handler);
-    static void removeWindowSystemEventhandler(QWindowSystemEventHandler *handler);
-    static QWindowSystemEventHandler *eventHandler;
-};
-
-class Q_GUI_EXPORT QWindowSystemEventHandler
-{
-public:
-    virtual ~QWindowSystemEventHandler();
-    virtual bool sendEvent(QWindowSystemInterfacePrivate::WindowSystemEvent *event);
+    static QList<QTouchEvent::TouchPoint> convertTouchPoints(const QList<QWindowSystemInterface::TouchPoint> &points, QEvent::Type *type);
 };
 
 QT_END_NAMESPACE

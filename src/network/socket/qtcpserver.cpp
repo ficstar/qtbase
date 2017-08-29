@@ -160,23 +160,6 @@ QNetworkProxy QTcpServerPrivate::resolveProxy(const QHostAddress &address, quint
 
 /*! \internal
 */
-void QTcpServerPrivate::configureCreatedSocket()
-{
-#if defined(Q_OS_UNIX)
-    // Under Unix, we want to be able to bind to the port, even if a socket on
-    // the same address-port is in TIME_WAIT. Under Windows this is possible
-    // anyway -- furthermore, the meaning of reusable on Windows is different:
-    // it means that you can use the same address-port for multiple listening
-    // sockets.
-    // Don't abort though if we can't set that option. For example the socks
-    // engine doesn't support that option, but that shouldn't prevent us from
-    // trying to bind/listen.
-    socketEngine->setOption(QAbstractSocketEngine::AddressReusable, 1);
-#endif
-}
-
-/*! \internal
-*/
 void QTcpServerPrivate::readNotification()
 {
     Q_Q(QTcpServer);
@@ -222,9 +205,6 @@ void QTcpServerPrivate::readNotification()
 QTcpServer::QTcpServer(QObject *parent)
     : QObject(*new QTcpServerPrivate, parent)
 {
-#if defined(QTCPSERVER_DEBUG)
-    qDebug("QTcpServer::QTcpServer(%p)", parent);
-#endif
 }
 
 /*!
@@ -238,9 +218,6 @@ QTcpServer::QTcpServer(QObject *parent)
 */
 QTcpServer::~QTcpServer()
 {
-#if defined(QTCPSERVER_DEBUG)
-    qDebug("QTcpServer::~QTcpServer()");
-#endif
     close();
 }
 
@@ -249,9 +226,6 @@ QTcpServer::~QTcpServer()
 QTcpServer::QTcpServer(QTcpServerPrivate &dd, QObject *parent)
     : QObject(dd, parent)
 {
-#if defined(QTCPSERVER_DEBUG)
-    qDebug("QTcpServer::QTcpServer(QTcpServerPrivate == %p, parent == %p)", &dd, parent);
-#endif
 }
 
 /*!
@@ -301,7 +275,17 @@ bool QTcpServer::listen(const QHostAddress &address, quint16 port)
     if (addr.protocol() == QAbstractSocket::AnyIPProtocol && proto == QAbstractSocket::IPv4Protocol)
         addr = QHostAddress::AnyIPv4;
 
-    d->configureCreatedSocket();
+#if defined(Q_OS_UNIX)
+    // Under Unix, we want to be able to bind to the port, even if a socket on
+    // the same address-port is in TIME_WAIT. Under Windows this is possible
+    // anyway -- furthermore, the meaning of reusable on Windows is different:
+    // it means that you can use the same address-port for multiple listening
+    // sockets.
+    // Don't abort though if we can't set that option. For example the socks
+    // engine doesn't support that option, but that shouldn't prevent us from
+    // trying to bind/listen.
+    d->socketEngine->setOption(QAbstractSocketEngine::AddressReusable, 1);
+#endif
 
     if (!d->socketEngine->bind(addr, port)) {
         d->serverSocketError = d->socketEngine->error();
@@ -558,10 +542,6 @@ QTcpSocket *QTcpServer::nextPendingConnection()
     If this server is using QNetworkProxy then the \a socketDescriptor
     may not be usable with native socket functions, and should only be
     used with QTcpSocket::setSocketDescriptor().
-
-    \note If another socket is created in the reimplementation
-    of this method, it needs to be added to the Pending Connections mechanism
-    by calling addPendingConnection().
 
     \note If you want to handle an incoming connection as a new QTcpSocket
     object in another thread you have to pass the socketDescriptor

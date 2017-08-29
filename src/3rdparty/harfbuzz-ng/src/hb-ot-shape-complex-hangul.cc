@@ -205,12 +205,17 @@ preprocess_text_hangul (const hb_ot_shape_plan_t *plan,
 	buffer->next_glyph ();
 	if (!is_zero_width_char (font, u))
 	{
-	  buffer->merge_out_clusters (start, end + 1);
 	  hb_glyph_info_t *info = buffer->out_info;
 	  hb_glyph_info_t tone = info[end];
 	  memmove (&info[start + 1], &info[start], (end - start) * sizeof (hb_glyph_info_t));
 	  info[start] = tone;
 	}
+	/* Merge clusters across the (possibly reordered) syllable+tone.
+	 * We want to merge even in the zero-width tone mark case here,
+	 * so that clustering behavior isn't dependent on how the tone mark
+	 * is handled by the font.
+	 */
+	buffer->merge_out_clusters (start, end + 1);
       }
       else
       {
@@ -291,8 +296,7 @@ preprocess_text_hangul (const hb_ot_shape_plan_t *plan,
 	}
 	else
 	  end = start + 2;
-	if (buffer->cluster_level == HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES)
-	  buffer->merge_out_clusters (start, end);
+	buffer->merge_out_clusters (start, end);
 	continue;
       }
     }
@@ -364,8 +368,7 @@ preprocess_text_hangul (const hb_ot_shape_plan_t *plan,
 	  info[i++].hangul_shaping_feature() = VJMO;
 	  if (i < end)
 	    info[i++].hangul_shaping_feature() = TJMO;
-	  if (buffer->cluster_level == HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES)
-	    buffer->merge_out_clusters (start, end);
+	  buffer->merge_out_clusters (start, end);
 	  continue;
 	}
       }

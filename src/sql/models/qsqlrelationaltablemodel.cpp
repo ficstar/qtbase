@@ -652,11 +652,9 @@ void QSqlRelationalTableModel::revertRow(int row)
 void QSqlRelationalTableModel::clear()
 {
     Q_D(QSqlRelationalTableModel);
-    beginResetModel();
     d->clearChanges();
     d->relations.clear();
     QSqlTableModel::clear();
-    endResetModel();
 }
 
 

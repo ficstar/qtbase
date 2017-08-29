@@ -78,7 +78,6 @@ QStringList QXcbGlIntegrationFactory::keys(const QString &pluginPath)
     list.append(loader()->keyMap().values());
     return list;
 #else
-    Q_UNUSED(pluginPath);
     return QStringList();
 #endif
 }
@@ -94,9 +93,6 @@ QXcbGlIntegration *QXcbGlIntegrationFactory::create(const QString &platform, con
     }
     if (QXcbGlIntegration *ret = loadIntegration(loader(), platform))
         return ret;
-#else
-    Q_UNUSED(platform);
-    Q_UNUSED(pluginPath);
 #endif
     return Q_NULLPTR;
 }

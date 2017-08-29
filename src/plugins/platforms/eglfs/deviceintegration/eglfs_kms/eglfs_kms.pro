@@ -1,5 +1,9 @@
 TARGET = qeglfs-kms-integration
 
+PLUGIN_TYPE = egldeviceintegrations
+PLUGIN_CLASS_NAME = QEglFSKmsIntegrationPlugin
+load(qt_plugin)
+
 QT += core-private gui-private platformsupport-private eglfs_device_lib-private
 
 INCLUDEPATH += $$PWD/../..
@@ -25,7 +29,3 @@ HEADERS += $$PWD/qeglfskmsintegration.h \
            $$PWD/qeglfskmscursor.h
 
 OTHER_FILES += $$PWD/eglfs_kms.json
-
-PLUGIN_TYPE = egldeviceintegrations
-PLUGIN_CLASS_NAME = QEglFSKmsIntegrationPlugin
-load(qt_plugin)

@@ -35,14 +35,15 @@
 #define QEGLFSSCREEN_H
 
 #include "qeglfsglobal.h"
-#include <QtCore/QPointer>
+#include <QtPlatformSupport/private/qeglplatformscreen_p.h>
+#include <EGL/egl.h>
 
 QT_BEGIN_NAMESPACE
 
 class QEglFSWindow;
 class QOpenGLContext;
 
-class Q_EGLFS_EXPORT QEglFSScreen : public QPlatformScreen
+class Q_EGLFS_EXPORT QEglFSScreen : public QEGLPlatformScreen
 {
 public:
     QEglFSScreen(EGLDisplay display);
@@ -54,7 +55,6 @@ public:
 
     QSizeF physicalSize() const Q_DECL_OVERRIDE;
     QDpi logicalDpi() const Q_DECL_OVERRIDE;
-    qreal pixelDensity() const Q_DECL_OVERRIDE;
     Qt::ScreenOrientation nativeOrientation() const Q_DECL_OVERRIDE;
     Qt::ScreenOrientation orientation() const Q_DECL_OVERRIDE;
 
@@ -62,23 +62,16 @@ public:
 
     qreal refreshRate() const Q_DECL_OVERRIDE;
 
-    QPixmap grabWindow(WId wid, int x, int y, int width, int height) const Q_DECL_OVERRIDE;
-
     EGLSurface primarySurface() const { return m_surface; }
 
-    EGLDisplay display() const { return m_dpy; }
-
-    void handleCursorMove(const QPoint &pos);
-
-private:
+protected:
     void setPrimarySurface(EGLSurface surface);
 
-    EGLDisplay m_dpy;
-    QPointer<QWindow> m_pointerWindow;
+private:
+    friend class QEglFSWindow;
+
     EGLSurface m_surface;
     QPlatformCursor *m_cursor;
-
-    friend class QEglFSWindow;
 };
 
 QT_END_NAMESPACE

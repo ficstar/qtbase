@@ -48,10 +48,10 @@ void tst_qringbuffer::reserveAndRead()
 {
     QRingBuffer ringBuffer;
     QBENCHMARK {
-        for (qint64 i = 1; i < 256; ++i)
+        for (int i = 1; i < 256; ++i)
             ringBuffer.reserve(i);
 
-        for (qint64 i = 1; i < 256; ++i)
+        for (int i = 1; i < 256; ++i)
             ringBuffer.read(0, i);
     }
 }

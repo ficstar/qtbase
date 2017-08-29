@@ -156,8 +156,9 @@ class QPathSegments
 {
 public:
     struct Intersection {
-        qreal t;
         int vertex;
+        qreal t;
+
         int next;
 
         bool operator<(const Intersection &o) const {

@@ -33,6 +33,8 @@
 
 #include "qcupsprintengine_p.h"
 
+#ifndef QT_NO_PRINTER
+
 #include <qpa/qplatformprintplugin.h>
 #include <qpa/qplatformprintersupport.h>
 
@@ -224,9 +226,7 @@ void QCupsPrintEnginePrivate::closePrintDevice()
             it += 2;
         }
 
-        const int numOptions = options.size();
-        cupsOptStruct.reserve(numOptions);
-        for (int c = 0; c < numOptions; ++c) {
+        for (int c = 0; c < options.size(); ++c) {
             cups_option_t opt;
             opt.name = options[c].first.data();
             opt.value = options[c].second.data();
@@ -315,3 +315,5 @@ void QCupsPrintEnginePrivate::setPageSize(const QPageSize &pageSize)
 }
 
 QT_END_NAMESPACE
+
+#endif // QT_NO_PRINTER

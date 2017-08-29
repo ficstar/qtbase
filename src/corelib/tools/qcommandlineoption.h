@@ -58,10 +58,11 @@ public:
 
     QCommandLineOption &operator=(const QCommandLineOption &other);
 #ifdef Q_COMPILER_RVALUE_REFS
-    QCommandLineOption &operator=(QCommandLineOption &&other) Q_DECL_NOTHROW { swap(other); return *this; }
+    inline QCommandLineOption &operator=(QCommandLineOption &&other)
+    { qSwap(d, other.d); return *this; }
 #endif
 
-    void swap(QCommandLineOption &other) Q_DECL_NOTHROW
+    inline void swap(QCommandLineOption &other)
     { qSwap(d, other.d); }
 
     QStringList names() const;
@@ -75,9 +76,6 @@ public:
     void setDefaultValue(const QString &defaultValue);
     void setDefaultValues(const QStringList &defaultValues);
     QStringList defaultValues() const;
-
-    void setHidden(bool hidden);
-    bool isHidden() const;
 
 private:
     QSharedDataPointer<QCommandLineOptionPrivate> d;

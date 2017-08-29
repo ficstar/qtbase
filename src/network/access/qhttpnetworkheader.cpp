@@ -79,8 +79,16 @@ QByteArray QHttpNetworkHeaderPrivate::headerField(const QByteArray &name, const 
     QList<QByteArray> allValues = headerFieldValues(name);
     if (allValues.isEmpty())
         return defaultValue;
-    else
-        return allValues.join(", ");
+
+    QByteArray result;
+    bool first = true;
+    foreach (const QByteArray &value, allValues) {
+        if (!first)
+            result += ", ";
+        first = false;
+        result += value;
+    }
+    return result;
 }
 
 QList<QByteArray> QHttpNetworkHeaderPrivate::headerFieldValues(const QByteArray &name) const

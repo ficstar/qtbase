@@ -1,4 +1,1 @@
-HEADERS += \
-    $$PWD/qxcbwindowfunctions.h \
-    $$PWD/qxcbintegrationfunctions.h \
-    $$PWD/qxcbscreenfunctions.h
+HEADERS += $$PWD/qxcbwindowfunctions.h

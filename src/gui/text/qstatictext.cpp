@@ -39,10 +39,6 @@
 
 QT_BEGIN_NAMESPACE
 
-QStaticTextUserData::~QStaticTextUserData()
-{
-}
-
 /*!
     \class QStaticText
     \brief The QStaticText class enables optimized drawing of text when the text and its layout
@@ -53,6 +49,7 @@ QStaticTextUserData::~QStaticTextUserData()
     \ingroup multimedia
     \ingroup text
     \ingroup shared
+    \mainclass
 
     QStaticText provides a way to cache layout data for a block of text so that it can be drawn
     more efficiently than by using QPainter::drawText() in which the layout information is
@@ -557,9 +554,6 @@ namespace {
                 break;
             case PdmDevicePixelRatio:
                 val = 1;
-                break;
-            case PdmDevicePixelRatioScaled:
-                val = devicePixelRatioFScale();
                 break;
             default:
                 val = 0;

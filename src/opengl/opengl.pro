@@ -8,6 +8,8 @@ irix-cc*:QMAKE_CXXFLAGS += -no_prelink -ptused
 
 QMAKE_DOCS = $$PWD/doc/qtopengl.qdocconf
 
+load(qt_module)
+
 contains(QT_CONFIG, opengl):CONFIG += opengl
 contains(QT_CONFIG, opengles2):CONFIG += opengles2
 
@@ -51,5 +53,3 @@ SOURCES +=  qglshaderprogram.cpp \
             gl2paintengineex/qpaintengineex_opengl2.cpp \
             gl2paintengineex/qglcustomshaderstage.cpp \
             gl2paintengineex/qtextureglyphcache_gl.cpp
-
-load(qt_module)

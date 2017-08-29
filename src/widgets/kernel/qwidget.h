@@ -89,9 +89,6 @@ class QGraphicsEffect;
 class QRasterWindowSurface;
 class QUnifiedToolbarSurface;
 class QPixmap;
-#ifndef QT_NO_DEBUG_STREAM
-class QDebug;
-#endif
 
 class QWidgetData
 {
@@ -168,7 +165,7 @@ class Q_WIDGETS_EXPORT QWidget : public QObject, public QPaintDevice
     Q_PROPERTY(bool acceptDrops READ acceptDrops WRITE setAcceptDrops)
     Q_PROPERTY(QString windowTitle READ windowTitle WRITE setWindowTitle NOTIFY windowTitleChanged DESIGNABLE isWindow)
     Q_PROPERTY(QIcon windowIcon READ windowIcon WRITE setWindowIcon NOTIFY windowIconChanged DESIGNABLE isWindow)
-    Q_PROPERTY(QString windowIconText READ windowIconText WRITE setWindowIconText NOTIFY windowIconTextChanged DESIGNABLE isWindow) // deprecated
+    Q_PROPERTY(QString windowIconText READ windowIconText WRITE setWindowIconText NOTIFY windowIconTextChanged DESIGNABLE isWindow)
     Q_PROPERTY(double windowOpacity READ windowOpacity WRITE setWindowOpacity DESIGNABLE isWindow)
     Q_PROPERTY(bool windowModified READ isWindowModified WRITE setWindowModified DESIGNABLE isWindow)
 #ifndef QT_NO_TOOLTIP
@@ -203,7 +200,7 @@ public:
     };
     Q_DECLARE_FLAGS(RenderFlags, RenderFlag)
 
-    explicit QWidget(QWidget* parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
+    explicit QWidget(QWidget* parent = 0, Qt::WindowFlags f = 0);
     ~QWidget();
 
     int devType() const Q_DECL_OVERRIDE;
@@ -593,7 +590,7 @@ public:
 
     QWindow *windowHandle() const;
 
-    static QWidget *createWindowContainer(QWindow *window, QWidget *parent=Q_NULLPTR, Qt::WindowFlags flags=Qt::WindowFlags());
+    static QWidget *createWindowContainer(QWindow *window, QWidget *parent=0, Qt::WindowFlags flags=0);
 
     friend class QDesktopScreenWidget;
 
@@ -605,43 +602,43 @@ Q_SIGNALS:
 
 protected:
     // Event handlers
-    bool event(QEvent *event) Q_DECL_OVERRIDE;
-    virtual void mousePressEvent(QMouseEvent *event);
-    virtual void mouseReleaseEvent(QMouseEvent *event);
-    virtual void mouseDoubleClickEvent(QMouseEvent *event);
-    virtual void mouseMoveEvent(QMouseEvent *event);
+    bool event(QEvent *) Q_DECL_OVERRIDE;
+    virtual void mousePressEvent(QMouseEvent *);
+    virtual void mouseReleaseEvent(QMouseEvent *);
+    virtual void mouseDoubleClickEvent(QMouseEvent *);
+    virtual void mouseMoveEvent(QMouseEvent *);
 #ifndef QT_NO_WHEELEVENT
-    virtual void wheelEvent(QWheelEvent *event);
+    virtual void wheelEvent(QWheelEvent *);
 #endif
-    virtual void keyPressEvent(QKeyEvent *event);
-    virtual void keyReleaseEvent(QKeyEvent *event);
-    virtual void focusInEvent(QFocusEvent *event);
-    virtual void focusOutEvent(QFocusEvent *event);
-    virtual void enterEvent(QEvent *event);
-    virtual void leaveEvent(QEvent *event);
-    virtual void paintEvent(QPaintEvent *event);
-    virtual void moveEvent(QMoveEvent *event);
-    virtual void resizeEvent(QResizeEvent *event);
-    virtual void closeEvent(QCloseEvent *event);
+    virtual void keyPressEvent(QKeyEvent *);
+    virtual void keyReleaseEvent(QKeyEvent *);
+    virtual void focusInEvent(QFocusEvent *);
+    virtual void focusOutEvent(QFocusEvent *);
+    virtual void enterEvent(QEvent *);
+    virtual void leaveEvent(QEvent *);
+    virtual void paintEvent(QPaintEvent *);
+    virtual void moveEvent(QMoveEvent *);
+    virtual void resizeEvent(QResizeEvent *);
+    virtual void closeEvent(QCloseEvent *);
 #ifndef QT_NO_CONTEXTMENU
-    virtual void contextMenuEvent(QContextMenuEvent *event);
+    virtual void contextMenuEvent(QContextMenuEvent *);
 #endif
 #ifndef QT_NO_TABLETEVENT
-    virtual void tabletEvent(QTabletEvent *event);
+    virtual void tabletEvent(QTabletEvent *);
 #endif
 #ifndef QT_NO_ACTION
-    virtual void actionEvent(QActionEvent *event);
+    virtual void actionEvent(QActionEvent *);
 #endif
 
 #ifndef QT_NO_DRAGANDDROP
-    virtual void dragEnterEvent(QDragEnterEvent *event);
-    virtual void dragMoveEvent(QDragMoveEvent *event);
-    virtual void dragLeaveEvent(QDragLeaveEvent *event);
-    virtual void dropEvent(QDropEvent *event);
+    virtual void dragEnterEvent(QDragEnterEvent *);
+    virtual void dragMoveEvent(QDragMoveEvent *);
+    virtual void dragLeaveEvent(QDragLeaveEvent *);
+    virtual void dropEvent(QDropEvent *);
 #endif
 
-    virtual void showEvent(QShowEvent *event);
-    virtual void hideEvent(QHideEvent *event);
+    virtual void showEvent(QShowEvent *);
+    virtual void hideEvent(QHideEvent *);
     virtual bool nativeEvent(const QByteArray &eventType, void *message, long *result);
 
     // Misc. protected functions
@@ -668,7 +665,6 @@ protected:
     void destroy(bool destroyWindow = true,
                  bool destroySubWindows = true);
 
-    friend class QDataWidgetMapperPrivate; // for access to focusNextPrevChild
     virtual bool focusNextPrevChild(bool next);
     inline bool focusNextChild() { return focusNextPrevChild(true); }
     inline bool focusPreviousChild() { return focusNextPrevChild(false); }
@@ -735,12 +731,12 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(QWidget::RenderFlags)
 #ifndef Q_QDOC
 template <> inline QWidget *qobject_cast<QWidget*>(QObject *o)
 {
-    if (!o || !o->isWidgetType()) return Q_NULLPTR;
+    if (!o || !o->isWidgetType()) return 0;
     return static_cast<QWidget*>(o);
 }
 template <> inline const QWidget *qobject_cast<const QWidget*>(const QObject *o)
 {
-    if (!o || !o->isWidgetType()) return Q_NULLPTR;
+    if (!o || !o->isWidgetType()) return 0;
     return static_cast<const QWidget*>(o);
 }
 #endif // !Q_QDOC
@@ -861,10 +857,6 @@ inline bool QWidget::testAttribute(Qt::WidgetAttribute attribute) const
 
 
 #define QWIDGETSIZE_MAX ((1<<24)-1)
-
-#ifndef QT_NO_DEBUG_STREAM
-Q_WIDGETS_EXPORT QDebug operator<<(QDebug, const QWidget *);
-#endif
 
 QT_END_NAMESPACE
 

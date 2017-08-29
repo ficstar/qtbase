@@ -170,10 +170,10 @@ void tst_QToolButton::collapseTextOnPriority()
 
     QStyleOptionToolButton option;
     button.initStyleOption(&option);
-    QCOMPARE(option.toolButtonStyle, Qt::ToolButtonTextBesideIcon);
+    QVERIFY(option.toolButtonStyle == Qt::ToolButtonTextBesideIcon);
     action.setPriority(QAction::LowPriority);
     button.initStyleOption(&option);
-    QCOMPARE(option.toolButtonStyle, Qt::ToolButtonIconOnly);
+    QVERIFY(option.toolButtonStyle == Qt::ToolButtonIconOnly);
 }
 
 

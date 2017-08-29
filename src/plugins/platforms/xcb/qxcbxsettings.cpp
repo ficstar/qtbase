@@ -147,7 +147,7 @@ public:
             return;
         char byteOrder = xSettings.at(0);
         if (byteOrder != LSBFirst && byteOrder != MSBFirst) {
-            qWarning("ByteOrder byte %d not 0 or 1", byteOrder);
+            qWarning("%s ByteOrder byte %d not 0 or 1", Q_FUNC_INFO , byteOrder);
             return;
         }
 
@@ -157,7 +157,7 @@ public:
          qFromBigEndian<t>((const uchar *)(x)))
 #define VALIDATE_LENGTH(x)    \
         if ((size_t)xSettings.length() < (offset + local_offset + 12 + x)) { \
-            qWarning("Length %d runs past end of data", x); \
+            qWarning("%s Length %d runs past end of data", Q_FUNC_INFO , x); \
             return;                                                     \
         }
 

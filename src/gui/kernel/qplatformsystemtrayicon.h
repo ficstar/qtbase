@@ -57,10 +57,8 @@ public:
         Trigger,
         MiddleClick
     };
-    Q_ENUM(ActivationReason)
 
     enum MessageIcon { NoIcon, Information, Warning, Critical };
-    Q_ENUM(MessageIcon)
 
     QPlatformSystemTrayIcon();
     ~QPlatformSystemTrayIcon();
